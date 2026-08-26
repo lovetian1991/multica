@@ -18,7 +18,11 @@
     "android": "expo run:android",
     "android:staging": "dotenv -e .env.staging -- cross-env APP_ENV=staging expo run:android",
     "android:prod": "dotenv -e .env.production -- cross-env APP_ENV=production expo run:android",
-    "android:prod:release": "dotenv -e .env.production -- cross-env APP_ENV=production expo run:android --variant release",
+    "android:prod:release": "node ./scripts/android-build.mjs",
+    "android:build": "node ./scripts/android-build.mjs",
+    "android:build:sync": "node ./scripts/android-build.mjs --sync-native",
+    "android:build:clean": "node ./scripts/android-build.mjs --clean",
+    "android:build:universal": "node ./scripts/android-build.mjs --universal",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run && bash scripts/ios-run.test.sh"
