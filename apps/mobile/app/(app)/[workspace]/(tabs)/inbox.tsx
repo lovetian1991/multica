@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import {
-  ActionSheetIOS,
   Alert,
   FlatList,
   View,
@@ -13,8 +12,14 @@ import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Header } from "@/components/ui/header";
-import { IconButton } from "@/components/ui/icon-button";
 import { HeaderActions } from "@/components/ui/app-header-actions";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { SwipeableInboxRow } from "@/components/inbox/swipeable-inbox-row";
 import { inboxListOptions } from "@/data/queries/inbox";
 import {
@@ -71,58 +76,57 @@ export default function Inbox() {
     }
   };
 
-  // Trailing batch menu — mirrors web's dropdown
-  // (packages/views/inbox/components/inbox-page.tsx). "Mark all read" is
-  // first (most common batch op); "Archive all" is destructive so it gets
-  // the iOS red treatment + Alert confirm.
-  const onPressMenu = () => {
-    const options = [
-      "Cancel",
-      "Mark all read",
-      "Archive all read",
-      "Archive completed",
-      "Archive all",
-    ];
-    ActionSheetIOS.showActionSheetWithOptions(
-      {
-        options,
-        cancelButtonIndex: 0,
-        destructiveButtonIndex: 4,
-        title: "Inbox",
-      },
-      (i) => {
-        if (i === 1) markAllRead.mutate();
-        else if (i === 2) archiveAllRead.mutate();
-        else if (i === 3) archiveCompleted.mutate();
-        else if (i === 4) {
-          Alert.alert(
-            "Archive all?",
-            "This archives every inbox item, read or unread. You can still find them via the issue pages.",
-            [
-              { text: "Cancel", style: "cancel" },
-              {
-                text: "Archive all",
-                style: "destructive",
-                onPress: () => archiveAll.mutate(),
-              },
-            ],
-          );
-        }
-      },
+  const confirmArchiveAll = () => {
+    Alert.alert(
+      "归档全部消息？",
+      "这会归档收件箱中的全部消息，包括已读和未读消息。之后仍可在对应任务页面中找到它们。",
+      [
+        { text: "取消", style: "cancel" },
+        {
+          text: "全部归档",
+          style: "destructive",
+          onPress: () => archiveAll.mutate(),
+        },
+      ],
     );
   };
 
   return (
     <View className="flex-1 bg-background">
       <Header
-        title="Inbox"
+        title="收件箱"
         right={
           <>
-            <IconButton
-              name="ellipsis-horizontal"
-              onPress={onPressMenu}
-              accessibilityLabel="Inbox actions"
-            />
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="size-10 items-center justify-center rounded-md active:bg-accent"
+                accessibilityLabel="收件箱操作"
+              >
+                <Ionicons
+                  name="ellipsis-horizontal"
+                  size={20}
+                  color={THEME[colorScheme].foreground}
+                />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onPress={() => markAllRead.mutate()}>
+                  <Text>全部标为已读</Text>
+                </DropdownMenuItem>
+                <DropdownMenuItem onPress={() => archiveAllRead.mutate()}>
+                  <Text>归档全部已读消息</Text>
+                </DropdownMenuItem>
+                <DropdownMenuItem onPress={() => archiveCompleted.mutate()}>
+                  <Text>归档已完成任务</Text>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  onPress={confirmArchiveAll}
+                >
+                  <Text>归档全部消息</Text>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <HeaderActions />
           </>
         }
@@ -132,11 +136,10 @@ export default function Inbox() {
       ) : error ? (
         <View className="px-4 gap-3 pt-4">
           <Text className="text-sm text-destructive">
-            Failed to load inbox:{" "}
-            {error instanceof Error ? error.message : "unknown error"}
+            收件箱加载失败：{error instanceof Error ? error.message : "未知错误"}
           </Text>
           <Button variant="outline" onPress={() => refetch()}>
-            <Text>Retry</Text>
+            <Text>重试</Text>
           </Button>
         </View>
       ) : !data || data.length === 0 ? (
@@ -188,11 +191,10 @@ function InboxEmpty({ iconColor }: { iconColor: string }) {
     <View className="flex-1 items-center justify-center px-8 gap-3">
       <Ionicons name="mail-open-outline" size={42} color={iconColor} />
       <Text className="text-base font-medium text-foreground text-center">
-        Inbox zero
+        收件箱为空
       </Text>
       <Text className="text-sm text-muted-foreground text-center">
-        When someone @mentions you, assigns an issue, or an agent finishes a
-        task, it shows up here.
+        当有人提及你、给你分配任务，或智能体完成任务时，消息会显示在这里。
       </Text>
     </View>
   );

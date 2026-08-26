@@ -43,6 +43,7 @@ function connectAuthenticatedClient() {
     url: "wss://example.test/ws",
     token: "token",
     workspaceSlug: "workspace",
+    clientOS: "android",
   });
   client.connect();
   const socket = MockWebSocket.instances[0];
@@ -83,6 +84,9 @@ describe("WSClient application heartbeat", () => {
 
   it("keeps a healthy socket connected when its pong arrives", () => {
     const { client, socket } = connectAuthenticatedClient();
+    expect(socket.url).toBe(
+      "wss://example.test/ws?workspace_slug=workspace&client_platform=mobile&client_os=android",
+    );
     socket.receive({ type: "pong" });
 
     vi.advanceTimersByTime(10_000);

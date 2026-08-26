@@ -4,9 +4,9 @@ import { ContactSalesPageClient } from "@/features/landing/components/contact-sa
 export const metadata: Metadata = {
   title: "Contact Sales",
   description:
-    "Talk to the Multica team about rolling out human + agent workflows at your company.",
+    "Talk to the 鸿翼灵工 team about rolling out human + agent workflows at your company.",
   openGraph: {
-    title: "Contact Sales — Multica",
+    title: "Contact Sales — 鸿翼灵工",
     description:
       "Tell us about your team. We’ll respond within three business days.",
     url: "/contact-sales",

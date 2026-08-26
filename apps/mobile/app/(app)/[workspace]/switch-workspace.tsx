@@ -25,7 +25,7 @@ import {
   ScrollView,
   View,
 } from "react-native";
-import { Image as ExpoImage } from "expo-image";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import type { Workspace } from "@multica/core/types";
@@ -46,12 +46,12 @@ export default function SwitchWorkspaceRoute() {
   const onSelect = (ws: Workspace) => {
     if (ws.slug === activeSlug) return;
     Alert.alert(
-      "Switch workspace",
-      `Switch to "${ws.name}"?`,
+      "切换工作区",
+      `确定切换到“${ws.name}”吗？`,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: "取消", style: "cancel" },
         {
-          text: "Switch",
+          text: "切换",
           onPress: () => {
             router.dismiss();
             router.replace(`/${ws.slug}/inbox`);
@@ -65,7 +65,7 @@ export default function SwitchWorkspaceRoute() {
     <View className="flex-1">
       <View className="px-4 pt-4 pb-3">
         <Text className="text-base font-semibold text-foreground">
-          Switch workspace
+          切换工作区
         </Text>
       </View>
       {isLoading ? (
@@ -106,8 +106,8 @@ function WorkspaceRow({
       disabled={active}
       accessibilityLabel={
         active
-          ? `${workspace.name}, current workspace`
-          : `Switch to ${workspace.name}`
+          ? `${workspace.name}，当前工作区`
+          : `切换到 ${workspace.name}`
       }
       className={cn(
         "flex-row items-center gap-3 px-4 py-3 active:bg-secondary",
@@ -129,11 +129,7 @@ function WorkspaceRow({
         {workspace.name}
       </Text>
       {active ? (
-        <ExpoImage
-          source="sf:checkmark"
-          tintColor={iconTint}
-          style={{ width: 16, height: 16 }}
-        />
+        <Ionicons name="checkmark" color={iconTint} size={18} />
       ) : null}
     </Pressable>
   );

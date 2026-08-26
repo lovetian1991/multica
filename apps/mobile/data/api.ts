@@ -121,19 +121,12 @@ import {
   WorkspaceListSchema,
 } from "./schemas";
 import type { ZodType } from "zod";
+import { Platform } from "react-native";
 import { getCurrentSlug } from "./workspace-store";
 import { parseWithFallback } from "@/lib/parse-response";
 import { createRequestId } from "@/lib/request-id";
+import { getCurrentServerUrl } from "@/lib/server-url";
 import { buildCommentUpdateBody } from "./revision";
-
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
-
-if (!API_URL) {
-  throw new Error(
-    "EXPO_PUBLIC_API_URL is not set. Add it to apps/mobile/.env.development.local " +
-      "(see apps/mobile/.env.staging for an example).",
-  );
-}
 
 export interface LoginResponse {
   token: string;
@@ -160,7 +153,7 @@ const MAX_FILE_SIZE = 100 * 1024 * 1024;
  *  timeout, a refetch fired after returning to foreground can leave the
  *  query stuck in `isRefetching` state forever (visible as the
  *  pull-to-refresh spinner never going away). 30s is generous for any
- *  reasonable Multica payload size on cellular. */
+ *  reasonable 鸿翼灵工 payload size on cellular. */
 const FETCH_TIMEOUT_MS = 30_000;
 
 export class ApiError extends Error {
@@ -193,6 +186,10 @@ class ApiClient {
     this.options = { ...this.options, ...options };
   }
 
+  getBaseUrl(): string {
+    return getCurrentServerUrl();
+  }
+
   private async fetch<T>(
     path: string,
     init: RequestInit & { signal?: AbortSignal } = {},
@@ -204,7 +201,7 @@ class ApiClient {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       "X-Client-Platform": "mobile",
-      "X-Client-OS": "ios",
+      "X-Client-OS": Platform.OS,
       "X-Client-Version": "0.1.0",
       "X-Request-ID": rid,
       ...((init.headers as Record<string, string>) ?? {}),
@@ -245,7 +242,7 @@ class ApiClient {
 
     let res: Response;
     try {
-      res = await fetch(`${API_URL}${path}`, {
+      res = await fetch(`${this.getBaseUrl()}${path}`, {
         ...init,
         signal: controller.signal,
         headers,
@@ -1232,7 +1229,7 @@ class ApiClient {
     const headers: Record<string, string> = {
       // No Content-Type — let fetch set the multipart boundary.
       "X-Client-Platform": "mobile",
-      "X-Client-OS": "ios",
+      "X-Client-OS": Platform.OS,
       "X-Client-Version": "0.1.0",
       "X-Request-ID": rid,
     };
@@ -1252,7 +1249,7 @@ class ApiClient {
 
     console.log(`[api] → POST ${path}`, { rid, filename: asset.name });
 
-    const res = await fetch(`${API_URL}${path}`, {
+    const res = await fetch(`${this.getBaseUrl()}${path}`, {
       method: "POST",
       headers,
       body: formData,

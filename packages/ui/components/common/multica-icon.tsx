@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { cn } from "../../lib/utils";
+import { HONGYI_LINGGONG_MARK_DATA_URI } from "./hongyi-linggong-mark";
 
 interface MulticaIconProps extends React.ComponentProps<"span"> {
   /**
@@ -26,11 +27,6 @@ const borderedSizes = {
   lg: { wrapper: "p-2.5", icon: "size-5" },
 };
 
-/**
- * Pure CSS 8-pointed asterisk icon matching the Multica logo.
- * Uses currentColor so it adapts to light/dark themes automatically.
- * Clip-path polygon traced from the original SVG path coordinates.
- */
 export function MulticaIcon({
   className,
   animate = false,
@@ -47,14 +43,18 @@ export function MulticaIcon({
     return () => clearTimeout(timer);
   }, [animate]);
 
-  const clipPath = `polygon(
-    45% 62.1%, 45% 100%, 55% 100%, 55% 62.1%,
-    81.8% 88.9%, 88.9% 81.8%, 62.1% 55%, 100% 55%,
-    100% 45%, 62.1% 45%, 88.9% 18.2%, 81.8% 11.1%,
-    55% 37.9%, 55% 0%, 45% 0%, 45% 37.9%,
-    18.2% 11.1%, 11.1% 18.2%, 37.9% 45%, 0% 45%,
-    0% 55%, 37.9% 55%, 11.1% 81.8%, 18.2% 88.9%
-  )`;
+  const mark = (
+    <img
+      src={HONGYI_LINGGONG_MARK_DATA_URI}
+      alt=""
+      className={cn(
+        "block size-full object-contain",
+        !entranceDone && "animate-entrance-spin",
+        entranceDone && !noSpin && "hover:animate-spin",
+      )}
+      draggable={false}
+    />
+  );
 
   if (bordered) {
     const sizeConfig = borderedSizes[size];
@@ -68,19 +68,7 @@ export function MulticaIcon({
         aria-hidden="true"
         {...props}
       >
-        <span
-          className={cn(
-            "block",
-            sizeConfig.icon,
-            !entranceDone && "animate-entrance-spin",
-            entranceDone && !noSpin && "hover:animate-spin"
-          )}
-        >
-          <span
-            className="block size-full bg-current"
-            style={{ clipPath }}
-          />
-        </span>
+        <span className={cn("block", sizeConfig.icon)}>{mark}</span>
       </span>
     );
   }
@@ -96,10 +84,7 @@ export function MulticaIcon({
       aria-hidden="true"
       {...props}
     >
-      <span
-        className="block size-full bg-current"
-        style={{ clipPath }}
-      />
+      {mark}
     </span>
   );
 }

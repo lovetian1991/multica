@@ -330,12 +330,12 @@ describe("AgentTranscriptDialog", () => {
           { seq: 2, type: "text", content: "Now adding the Feishu row:" },
           { seq: 3, type: "text", content: "Now the version bump:" },
         ]}
-        agentName="【Chores|Opus5】Multica Helper"
+        agentName="【Chores|Opus5】鸿翼灵工 Helper"
       />,
     );
 
     expect(screen.getAllByTestId("rich-content")).toHaveLength(3);
-    expect(screen.getAllByText("【Chores|Opus5】Multica Helper")).toHaveLength(1);
+    expect(screen.getAllByText("【Chores|Opus5】鸿翼灵工 Helper")).toHaveLength(1);
     expect(screen.getAllByTestId("actor-avatar")).toHaveLength(1);
   });
 
