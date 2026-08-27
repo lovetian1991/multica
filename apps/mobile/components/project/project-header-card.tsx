@@ -45,7 +45,7 @@ export function ProjectHeaderCard({ project, onEdit }: Props) {
           </Text>
         ) : onEdit ? (
           <Text className="text-sm text-muted-foreground/60 italic">
-            Add a description
+            添加描述
           </Text>
         ) : null}
         {project.issue_count > 0 ? (
@@ -65,7 +65,7 @@ function ProgressSection({ done, total }: { done: number; total: number }) {
     <View className="w-full pt-2 gap-1.5">
       <View className="flex-row items-center justify-between">
         <Text className="text-xs uppercase tracking-wider text-muted-foreground">
-          Progress
+          进度
         </Text>
         <Text className="text-xs text-muted-foreground">
           {done} / {total} · {pct}%

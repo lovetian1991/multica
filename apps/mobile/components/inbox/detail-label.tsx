@@ -7,8 +7,8 @@
  * status to ✓ Done", mobile must show "Set status to ✓ Done" (rendered
  * with mobile primitives, not the literal HTML).
  *
- * Web is i18n-driven (useT). Mobile v1 is English-only; when mobile ships
- * i18n, mirror the namespace structure.
+ * Web is i18n-driven (useT). Mobile currently keeps the matching Simplified
+ * Chinese labels locally until it adopts the shared translation layer.
  */
 import { View } from "react-native";
 import type {
@@ -21,44 +21,36 @@ import { Text } from "@/components/ui/text";
 import { StatusIcon } from "@/components/ui/status-icon";
 import { PriorityIcon } from "@/components/ui/priority-icon";
 import { useActorLookup } from "@/data/use-actor-name";
+import { PRIORITY_LABEL } from "@/lib/issue-status";
 import { useIssueStatuses } from "@/lib/use-issue-statuses";
 import { cn } from "@/lib/utils";
 
-// Mirrors PRIORITY_CONFIG.label in packages/core/issues/config/priority.ts
-const PRIORITY_LABEL: Record<IssuePriority, string> = {
-  urgent: "Urgent",
-  high: "High",
-  medium: "Medium",
-  low: "Low",
-  none: "No priority",
-};
-
 // Mirrors useTypeLabels in packages/views/inbox/components/inbox-detail-label.tsx
 const TYPE_LABEL: Record<InboxItemType, string> = {
-  issue_assigned: "Assigned",
-  issue_subscribed: "Subscribed",
-  unassigned: "Unassigned",
-  assignee_changed: "Reassigned",
-  status_changed: "Status changed",
-  priority_changed: "Priority changed",
-  start_date_changed: "Start date changed",
-  due_date_changed: "Due date changed",
-  new_comment: "New comment",
-  mentioned: "Mentioned",
-  review_requested: "Review requested",
-  task_completed: "Task completed",
-  task_failed: "Task failed",
-  agent_blocked: "Agent blocked",
-  agent_completed: "Agent completed",
-  reaction_added: "Reaction added",
-  quick_create_done: "Quick-create done",
-  quick_create_failed: "Quick-create failed",
-  quick_create_unconfirmed: "Quick-create needs a check",
+  issue_assigned: "已分配",
+  issue_subscribed: "已订阅",
+  unassigned: "已取消分配",
+  assignee_changed: "负责人已变更",
+  status_changed: "状态已变更",
+  priority_changed: "优先级已变更",
+  start_date_changed: "开始日期已变更",
+  due_date_changed: "截止日期已变更",
+  new_comment: "新评论",
+  mentioned: "提及了你",
+  review_requested: "请求审核",
+  task_completed: "执行已完成",
+  task_failed: "执行失败",
+  agent_blocked: "智能体受阻",
+  agent_completed: "智能体已完成",
+  reaction_added: "添加了回应",
+  quick_create_done: "快速创建完成",
+  quick_create_failed: "快速创建失败",
+  quick_create_unconfirmed: "快速创建结果待确认",
 };
 
 // due_date is a calendar day — format timezone-safely (no offset day shift).
 function shortDate(dateStr: string): string {
-  return formatDateOnly(dateStr, { month: "short", day: "numeric" }, "en-US");
+  return formatDateOnly(dateStr, { month: "short", day: "numeric" }, "zh-CN");
 }
 
 function singleLine(value: string | null | undefined): string {
@@ -83,7 +75,7 @@ export function InboxDetailLabel({
     const status = details.to;
     return (
       <View className={cn("flex-row items-center gap-1", className)}>
-        <Text className="text-xs text-muted-foreground">Set status to</Text>
+        <Text className="text-xs text-muted-foreground">状态设为</Text>
         <StatusIcon
           status={status}
           category={categoryOf(status)}
@@ -101,7 +93,7 @@ export function InboxDetailLabel({
     const priority = details.to as IssuePriority;
     return (
       <View className={cn("flex-row items-center gap-1", className)}>
-        <Text className="text-xs text-muted-foreground">Set priority to</Text>
+        <Text className="text-xs text-muted-foreground">优先级设为</Text>
         <PriorityIcon priority={priority} size={12} />
         <Text className="text-xs text-muted-foreground" numberOfLines={1}>
           {PRIORITY_LABEL[priority] ?? priority}
@@ -120,28 +112,28 @@ export function InboxDetailLabel({
             (details.new_assignee_type ?? "member") as "member" | "agent",
             details.new_assignee_id,
           );
-          return `Assigned to ${name}`;
+          return `已分配给 ${name}`;
         }
         return TYPE_LABEL[item.type];
       case "unassigned":
-        return "Removed assignee";
+        return "已移除负责人";
       case "due_date_changed":
         return details.to
-          ? `Set due date to ${shortDate(details.to)}`
-          : "Removed due date";
+          ? `截止日期设为 ${shortDate(details.to)}`
+          : "已移除截止日期";
       case "new_comment":
         return singleLine(item.body) || TYPE_LABEL[item.type];
       case "reaction_added":
         return details.emoji
-          ? `Reacted with ${details.emoji}`
+          ? `添加了回应 ${details.emoji}`
           : TYPE_LABEL[item.type];
       case "quick_create_done":
         return details.identifier
-          ? `Created with agent: ${details.identifier}`
+          ? `智能体已创建：${details.identifier}`
           : TYPE_LABEL[item.type];
       case "quick_create_failed": {
         const detail = singleLine(details.error) || singleLine(item.body);
-        return detail ? `Failed: ${detail}` : TYPE_LABEL[item.type];
+        return detail ? `失败：${detail}` : TYPE_LABEL[item.type];
       }
       // Mirrors packages/views/inbox/components/inbox-detail-label.tsx: the
       // unconfirmed outcome deliberately drops the "Failed:" prefix, because

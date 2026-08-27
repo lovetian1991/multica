@@ -22,9 +22,9 @@ import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 
 const STARTER_PROMPTS: { icon: string; text: string }[] = [
-  { icon: "📋", text: "List my open issues by priority" },
-  { icon: "📝", text: "Summarize what I did today" },
-  { icon: "💡", text: "Help me plan what to do next" },
+  { icon: "📋", text: "按优先级列出我的未完成任务" },
+  { icon: "📝", text: "总结我今天完成的工作" },
+  { icon: "💡", text: "帮我规划下一步工作" },
 ];
 
 interface Props {
@@ -41,19 +41,19 @@ export function ChatEmptyState({ hasSessions, agentName, onPickPrompt }: Props) 
       <View className="flex-1 items-center justify-center px-6 py-8">
         <View className="max-w-xs items-center gap-3">
           <Text className="text-base font-semibold text-foreground text-center">
-            Chat with your agents
+            与智能体聊天
           </Text>
           <Text className="text-sm text-muted-foreground text-center">
             <Text className="text-sm text-muted-foreground">
-              ✨ They know your workspace —{" "}
+              ✨ 智能体了解工作区中的{" "}
             </Text>
             <Text className="text-sm font-medium text-foreground">
-              issues, projects, skills
+              任务、项目和技能
             </Text>
             <Text className="text-sm text-muted-foreground">.</Text>
           </Text>
           <Text className="text-sm text-muted-foreground text-center">
-            Ask for a summary, plan your day, or hand off a small task.
+            你可以让智能体总结工作、规划日程或处理一项小任务。
           </Text>
         </View>
       </View>
@@ -61,7 +61,7 @@ export function ChatEmptyState({ hasSessions, agentName, onPickPrompt }: Props) 
   }
 
   // Returning user: starter prompts are the fastest path back to action.
-  const title = agentName ? `Hi, I'm ${agentName}` : "Welcome back to 鸿翼灵工";
+  const title = agentName ? `你好，我是 ${agentName}` : "欢迎回到鸿翼灵工";
   return (
     <View className="flex-1 items-center justify-center px-6 py-8 gap-5">
       <View className="items-center gap-1">
@@ -69,7 +69,7 @@ export function ChatEmptyState({ hasSessions, agentName, onPickPrompt }: Props) 
           {title}
         </Text>
         <Text className="text-sm text-muted-foreground text-center">
-          Try asking
+          试着问问
         </Text>
       </View>
       <View className="w-full max-w-xs gap-2">

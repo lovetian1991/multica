@@ -15,11 +15,14 @@
  * Expo Router formSheet route body, so the iOS UISheetPresentationController
  * still owns the chrome (grabber, detents, drag-to-dismiss).
  */
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, type ComponentProps } from "react";
 import { View } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
-import { EmojiKeyboard, type EmojiType } from "rn-emoji-keyboard";
+import {
+  EmojiKeyboard,
+  type EmojiType,
+} from "rn-emoji-keyboard";
 import type { Reaction } from "@multica/core/types";
 import { Text } from "@/components/ui/text";
 import { issueTimelineOptions } from "@/data/queries/issues";
@@ -28,6 +31,24 @@ import { useAuthStore } from "@/data/auth-store";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { useColorScheme } from "@/lib/use-color-scheme";
 import { THEME } from "@/lib/theme";
+
+type EmojiKeyboardTranslation = NonNullable<
+  ComponentProps<typeof EmojiKeyboard>["translation"]
+>;
+
+const EMOJI_TRANSLATION: EmojiKeyboardTranslation = {
+  recently_used: "最近使用",
+  smileys_emotion: "笑脸与情绪",
+  people_body: "人物与身体",
+  animals_nature: "动物与自然",
+  food_drink: "食物与饮品",
+  travel_places: "旅行与地点",
+  activities: "活动",
+  objects: "物品",
+  symbols: "符号",
+  flags: "旗帜",
+  search: "搜索",
+};
 
 export default function CommentEmojiPickerRoute() {
   const { id, commentId } = useLocalSearchParams<{
@@ -70,12 +91,13 @@ export default function CommentEmojiPickerRoute() {
     <View className="flex-1">
       <View className="px-4 pt-3 pb-2">
         <Text className="text-lg font-semibold text-foreground">
-          Add Reaction
+          添加回应
         </Text>
       </View>
       <View className="flex-1">
         <EmojiKeyboard
           onEmojiSelected={onSelect}
+          translation={EMOJI_TRANSLATION}
           enableSearchBar
           enableRecentlyUsed
           categoryPosition="top"

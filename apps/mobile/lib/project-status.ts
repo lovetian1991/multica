@@ -8,10 +8,9 @@
  * Behavioral parity (apps/mobile/CLAUDE.md "Behavioral parity"):
  *   - Status enum order is identical to web. All 5 values render — `cancelled`
  *     is NOT hidden.
- *   - Priority enum order is identical to web. `none` renders as "No
- *     priority", not as an absence.
- *   - Labels are the canonical English strings; i18n lands later when
- *     mobile picks an i18n lib (web uses i18next).
+ *   - Priority enum order is identical to web. `none` renders as an explicit
+ *     "无优先级" option, not as an absence.
+ *   - Labels are the canonical Simplified Chinese strings used by mobile.
  */
 import type { ProjectPriority, ProjectStatus } from "@multica/core/types";
 
@@ -32,19 +31,19 @@ export const PROJECT_PRIORITIES: ProjectPriority[] = [
 ];
 
 export const PROJECT_STATUS_LABEL: Record<ProjectStatus, string> = {
-  planned: "Planned",
-  in_progress: "In Progress",
-  paused: "Paused",
-  completed: "Completed",
-  cancelled: "Cancelled",
+  planned: "计划中",
+  in_progress: "进行中",
+  paused: "已暂停",
+  completed: "已完成",
+  cancelled: "已取消",
 };
 
 export const PROJECT_PRIORITY_LABEL: Record<ProjectPriority, string> = {
-  urgent: "Urgent",
-  high: "High",
-  medium: "Medium",
-  low: "Low",
-  none: "No priority",
+  urgent: "紧急",
+  high: "高",
+  medium: "中",
+  low: "低",
+  none: "无优先级",
 };
 
 // Single hex per status, used by the SVG status icon (NativeWind classes

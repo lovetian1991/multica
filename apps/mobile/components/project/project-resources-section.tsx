@@ -45,12 +45,12 @@ export function ProjectResourcesSection({ projectId, onAdd }: Props) {
 
   const onLongPress = (resource: ProjectResource) => {
     Alert.alert(
-      "Detach resource?",
+      "取消关联资源？",
       describeResource(resource),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: "取消", style: "cancel" },
         {
-          text: "Detach",
+          text: "取消关联",
           style: "destructive",
           onPress: () => remove.mutate(resource.id),
         },
@@ -62,10 +62,10 @@ export function ProjectResourcesSection({ projectId, onAdd }: Props) {
     <View>
       <View className="flex-row items-center justify-between px-4 py-2 bg-background">
         <Text className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
-          Resources
+          资源
         </Text>
         <Pressable onPress={onAdd} className="px-2 py-1 active:bg-secondary rounded">
-          <Text className="text-xs text-brand">Add</Text>
+          <Text className="text-xs text-brand">添加</Text>
         </Pressable>
       </View>
       {isLoading ? (
@@ -75,7 +75,7 @@ export function ProjectResourcesSection({ projectId, onAdd }: Props) {
       ) : !resources || resources.length === 0 ? (
         <View className="px-4 py-3">
           <Text className="text-sm text-muted-foreground/70">
-            No resources attached.
+            暂无关联资源。
           </Text>
         </View>
       ) : (

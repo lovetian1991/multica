@@ -245,15 +245,14 @@ function ResolvedThreadBar({
         onPress={onExpand}
         className="flex-row items-center gap-2.5 px-4 py-3 rounded-2xl bg-surface-1 active:opacity-70"
         accessibilityRole="button"
-        accessibilityLabel={`Resolved thread by ${authorsLabel}, ${total} ${total === 1 ? "message" : "messages"}. Tap to expand.`}
+        accessibilityLabel={`已解决的评论，由 ${authorsLabel} 参与，共 ${total} 条消息。点击展开。`}
       >
         <Ionicons name="checkmark-circle" size={18} color={mutedFg} />
         <Text
           className="flex-1 text-sm text-muted-foreground"
           numberOfLines={1}
         >
-          Resolved · {total} {total === 1 ? "message" : "messages"} by{" "}
-          {authorsLabel}
+          已解决 · {total} 条消息 · {authorsLabel}
         </Text>
         <Ionicons name="chevron-down" size={14} color={mutedFg} />
       </Pressable>
@@ -291,17 +290,17 @@ function ResolvedIndicator({
       onPress={onCollapse}
       className="flex-row items-center gap-2 active:opacity-60"
       accessibilityRole="button"
-      accessibilityLabel="Collapse resolved thread"
+      accessibilityLabel="收起已解决的评论"
     >
       <Ionicons name="checkmark-circle" size={14} color={mutedFg} />
       <Text className="text-xs text-muted-foreground flex-1" numberOfLines={1}>
-        Resolved by{" "}
+        由{" "}
         <Text className="text-xs text-foreground font-medium">
           {resolverName}
         </Text>
         {entry.resolved_at ? ` · ${timeAgo(entry.resolved_at)}` : ""}
       </Text>
-      <Text className="text-xs text-muted-foreground">Collapse</Text>
+      <Text className="text-xs text-muted-foreground">收起</Text>
     </Pressable>
   );
 }
@@ -489,7 +488,7 @@ function CommentBody({
         <Text className="text-sm font-medium text-foreground">{name}</Text>
         <Text className="text-xs text-muted-foreground">
           · {timeAgo(entry.created_at)}
-          {edited ? " · (edited)" : ""}
+          {edited ? " ·（已编辑）" : ""}
         </Text>
       </View>
       {entry.content ? (
@@ -553,24 +552,24 @@ function FailedActions({
         className="flex-1 text-xs text-destructive"
         numberOfLines={1}
       >
-        {error || "Couldn't send"}
+        {error || "发送失败"}
       </Text>
       <Pressable
         onPress={onRetry}
         hitSlop={6}
         accessibilityRole="button"
-        accessibilityLabel="Retry sending comment"
+        accessibilityLabel="重新发送评论"
       >
-        <Text className="text-xs text-primary font-medium">Retry</Text>
+        <Text className="text-xs text-primary font-medium">重试</Text>
       </Pressable>
       <Pressable
         onPress={onDiscard}
         hitSlop={6}
         accessibilityRole="button"
-        accessibilityLabel="Discard failed comment"
+        accessibilityLabel="丢弃发送失败的评论"
       >
         <Text className="text-xs text-muted-foreground font-medium">
-          Discard
+          丢弃
         </Text>
       </Pressable>
     </View>

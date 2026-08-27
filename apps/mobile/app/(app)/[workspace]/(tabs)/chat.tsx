@@ -287,15 +287,15 @@ export default function ChatTab() {
       // this state; this is the belt-and-braces guard.
       if (accessRevoked) {
         Alert.alert(
-          "No permission to run this agent",
-          "You no longer have permission to run this agent, so the message was not sent. Ask its owner for access.",
+          "没有运行权限",
+          "你已没有运行此智能体的权限，因此消息未发送。请联系智能体所有者获取权限。",
         );
         return;
       }
       if (!runtimeBound) {
         Alert.alert(
-          "Runtime required",
-          "Bind a runtime to this agent on web or desktop before sending a message.",
+          "需要运行时",
+          "发送消息前，请先在 Web 端或桌面端为此智能体绑定运行时。",
         );
         return;
       }
@@ -308,7 +308,7 @@ export default function ChatTab() {
         // Session create runs the same invoke gate as a send, so a permission
         // change refuses here too — and this is the only layer that sees the
         // reason code (MUL-6380).
-        Alert.alert("Message not sent", sendFailureMessage(err));
+        Alert.alert("消息未发送", sendFailureMessage(err));
         throw err;
       }
       if (!sessionId) return;
@@ -390,7 +390,7 @@ export default function ChatTab() {
         // The composer restores the draft on a thrown rejection but says nothing
         // about it, so a revoked-permission 403 used to read as a silent no-op
         // (MUL-6380). Name the cause here: only this layer sees the error body.
-        Alert.alert("Message not sent", sendFailureMessage(err));
+        Alert.alert("消息未发送", sendFailureMessage(err));
         throw err;
       }
     },
@@ -449,12 +449,12 @@ export default function ChatTab() {
   const handleDeleteActive = useCallback(() => {
     if (!activeSession) return;
     Alert.alert(
-      "Delete this chat?",
-      activeSession.title || "Untitled chat",
+      "删除此聊天？",
+      activeSession.title || "未命名聊天",
       [
-        { text: "Cancel", style: "cancel" },
+        { text: "取消", style: "cancel" },
         {
-          text: "Delete",
+          text: "删除",
           style: "destructive",
           onPress: () => {
             const id = activeSession.id;
@@ -475,15 +475,15 @@ export default function ChatTab() {
     isArchived === true ||
     !runtimeBound;
   const disabledReason = !currentAgent
-    ? "No agent selected"
+    ? "未选择智能体"
     : accessRevoked
-      ? "You can no longer run this agent"
+      ? "你已没有运行此智能体的权限"
       : availability === "none"
-        ? "No agents in this workspace"
+        ? "当前工作区没有可用的智能体"
         : isArchived
-          ? "This chat is archived"
+          ? "此聊天已归档"
           : !runtimeBound
-            ? "Agent needs a runtime"
+            ? "智能体需要绑定运行时"
           : undefined;
 
   return (
