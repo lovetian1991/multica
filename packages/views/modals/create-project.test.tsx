@@ -1,6 +1,6 @@
 import React from "react";
-import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithI18n } from "../test/i18n";
 
@@ -8,6 +8,10 @@ const longRepoUrl =
   "https://github.com/multica-ai/a-very-long-repository-name-that-needs-a-tooltip";
 const apiRepoUrl = "https://github.com/multica-ai/api";
 const webRepoUrl = "https://github.com/multica-ai/web";
+
+const mocks = vi.hoisted(() => ({
+  createProject: vi.fn().mockResolvedValue({ id: "project-1" }),
+}));
 
 vi.mock("@tanstack/react-query", () => ({
   useQuery: () => ({ data: [] }),
@@ -17,7 +21,7 @@ vi.mock("@tanstack/react-query", () => ({
 }));
 
 vi.mock("@multica/core/projects/mutations", () => ({
-  useCreateProject: () => ({ mutateAsync: vi.fn() }),
+  useCreateProject: () => ({ mutateAsync: mocks.createProject }),
 }));
 
 vi.mock("@multica/core/projects", () => ({
@@ -67,9 +71,13 @@ vi.mock("../navigation", () => ({
 }));
 
 vi.mock("../editor", () => {
-  const ContentEditor = React.forwardRef<HTMLTextAreaElement, { placeholder?: string }>(
-    ({ placeholder }, ref) => <textarea ref={ref} placeholder={placeholder} />,
-  );
+  const ContentEditor = React.forwardRef<
+    { getMarkdown: () => string },
+    { placeholder?: string }
+  >(({ placeholder }, ref) => {
+    React.useImperativeHandle(ref, () => ({ getMarkdown: () => "" }));
+    return <textarea placeholder={placeholder} />;
+  });
   ContentEditor.displayName = "ContentEditor";
 
   return {
@@ -177,6 +185,10 @@ vi.mock("sonner", () => ({
 import { CreateProjectModal } from "./create-project";
 
 describe("CreateProjectModal", () => {
+  beforeEach(() => {
+    mocks.createProject.mockClear();
+  });
+
   it("exposes full repository URLs in the repository picker", () => {
     render(<CreateProjectModal onClose={vi.fn()} />);
 
@@ -224,5 +236,51 @@ describe("CreateProjectModal", () => {
     await user.type(repoSearchInput, "no-match");
 
     expect(screen.getByText("No repositories match your search.")).toBeInTheDocument();
+  });
+
+  it("includes a repository ref when creating a project", async () => {
+    const user = userEvent.setup();
+    renderWithI18n(<CreateProjectModal onClose={vi.fn()} />);
+
+    await user.type(screen.getByPlaceholderText("Project title"), "Ref project");
+    await user.click(screen.getByRole("button", { name: (name) => name.includes(apiRepoUrl) }));
+    await user.type(
+      screen.getByRole("textbox", { name: "Branch/ref for multica-ai/api" }),
+      " develop ",
+    );
+    await user.click(screen.getByRole("button", { name: "Create Project" }));
+
+    await waitFor(() => expect(mocks.createProject).toHaveBeenCalledTimes(1));
+    expect(mocks.createProject.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        resources: [
+          {
+            resource_type: "github_repo",
+            resource_ref: { url: apiRepoUrl, ref: "develop" },
+          },
+        ],
+      }),
+    );
+  });
+
+  it("omits an empty repository ref when creating a project", async () => {
+    const user = userEvent.setup();
+    renderWithI18n(<CreateProjectModal onClose={vi.fn()} />);
+
+    await user.type(screen.getByPlaceholderText("Project title"), "Default ref project");
+    await user.click(screen.getByRole("button", { name: (name) => name.includes(webRepoUrl) }));
+    await user.click(screen.getByRole("button", { name: "Create Project" }));
+
+    await waitFor(() => expect(mocks.createProject).toHaveBeenCalledTimes(1));
+    expect(mocks.createProject.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        resources: [
+          {
+            resource_type: "github_repo",
+            resource_ref: { url: webRepoUrl },
+          },
+        ],
+      }),
+    );
   });
 });

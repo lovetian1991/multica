@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   ChevronRight,
@@ -173,16 +173,45 @@ export function ProjectResourcesSection({ projectId }: { projectId: string }) {
   const filteredRepos =
     workspace?.repos?.filter((repo) => repo.url.toLowerCase().includes(repoQuery)) ?? [];
 
-  const handleAttach = async (url: string) => {
+  const handleAttach = async ({ url, ref }: { url: string; ref?: string }) => {
     try {
       await createResource.mutateAsync({
         resource_type: "github_repo",
-        resource_ref: { url },
+        resource_ref: {
+          url,
+          ...(ref ? { ref } : {}),
+        },
       });
       toast.success(t(($) => $.resources.toast_attached));
     } catch (err) {
       const msg = err instanceof Error ? err.message : t(($) => $.resources.toast_attach_failed);
       toast.error(msg);
+    }
+  };
+
+  const handleUpdateGithubRef = async (
+    resource: ProjectResource & { resource_ref: GithubRepoResourceRef },
+    nextRefValue: string,
+  ): Promise<boolean> => {
+    const trimmed = nextRefValue.trim();
+    const nextRef: GithubRepoResourceRef = { ...resource.resource_ref };
+    delete nextRef.ref;
+    if (trimmed) nextRef.ref = trimmed;
+    if ((resource.resource_ref.ref ?? "") === (nextRef.ref ?? "")) return true;
+    try {
+      await updateResource.mutateAsync({
+        resourceId: resource.id,
+        data: { resource_ref: nextRef },
+      });
+      toast.success(t(($) => $.resources.toast_repo_ref_updated));
+      return true;
+    } catch (err) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : t(($) => $.resources.toast_repo_ref_update_failed);
+      toast.error(msg);
+      return false;
     }
   };
 
@@ -384,6 +413,7 @@ export function ProjectResourcesSection({ projectId }: { projectId: string }) {
                   canEdit={desktopMode}
                   onRemove={() => handleRemove(resource)}
                   onRenameLocalDirectory={handleRenameLocalDirectory}
+                  onUpdateGithubRef={handleUpdateGithubRef}
                   onEditLocalDirectoryMode={(target) => {
                     setModeError(null);
                     setModeDialog({
@@ -457,7 +487,7 @@ export function ProjectResourcesSection({ projectId }: { projectId: string }) {
                           aria-disabled={isDisabled}
                           onClick={async () => {
                             if (isDisabled) return;
-                            await handleAttach(repo.url);
+                            await handleAttach({ url: repo.url });
                             setAddOpen(false);
                           }}
                           className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-caption text-left hover:bg-accent transition-colors aria-disabled:opacity-50 aria-disabled:cursor-not-allowed aria-disabled:hover:bg-transparent"
@@ -483,8 +513,8 @@ export function ProjectResourcesSection({ projectId }: { projectId: string }) {
                 </>
               )}
               <CustomRepoForm
-                onSubmit={async (url) => {
-                  await handleAttach(url);
+                onSubmit={async (input) => {
+                  await handleAttach(input);
                   setAddOpen(false);
                 }}
               />
@@ -584,6 +614,10 @@ interface ResourceRowProps {
     resource: ProjectResource & { resource_ref: LocalDirectoryResourceRef },
     nextLabel: string,
   ) => Promise<void>;
+  onUpdateGithubRef: (
+    resource: ProjectResource & { resource_ref: GithubRepoResourceRef },
+    nextRefValue: string,
+  ) => Promise<boolean>;
   onEditLocalDirectoryMode: (
     resource: ProjectResource & { resource_ref: LocalDirectoryResourceRef },
   ) => void;
@@ -595,40 +629,17 @@ function ResourceRow({
   canEdit,
   onRemove,
   onRenameLocalDirectory,
+  onUpdateGithubRef,
   onEditLocalDirectoryMode,
 }: ResourceRowProps) {
   const { t } = useT("projects");
   if (isGithubRef(resource)) {
-    const ref = resource.resource_ref;
-    const display = resource.label || (ref.ref ? `${githubShortLabel(ref.url)} @ ${ref.ref}` : githubShortLabel(ref.url));
-    const tooltip = ref.ref ? `${ref.url}\nref: ${ref.ref}` : ref.url;
     return (
-      <div className="flex items-center gap-2 text-caption group">
-        <FolderGit className="size-3.5 text-muted-foreground shrink-0" />
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <a
-                href={ref.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="truncate flex-1 hover:underline"
-              >
-                {display}
-              </a>
-            }
-          />
-          <TooltipContent side="top" className="whitespace-pre-line">{tooltip}</TooltipContent>
-        </Tooltip>
-        <button
-          type="button"
-          onClick={onRemove}
-          className="opacity-0 group-hover:opacity-100 transition-opacity rounded-sm p-0.5 hover:bg-accent"
-          title={t(($) => $.resources.remove_tooltip)}
-        >
-          <Trash2 className="size-3 text-muted-foreground" />
-        </button>
-      </div>
+      <GithubRepoRow
+        resource={resource}
+        onRemove={onRemove}
+        onUpdateRef={onUpdateGithubRef}
+      />
     );
   }
 
@@ -657,6 +668,133 @@ function ResourceRow({
         title={t(($) => $.resources.remove_tooltip)}
       >
         <Trash2 className="size-3" />
+      </button>
+    </div>
+  );
+}
+
+interface GithubRepoRowProps {
+  resource: ProjectResource & { resource_ref: GithubRepoResourceRef };
+  onRemove: () => void;
+  onUpdateRef: (
+    resource: ProjectResource & { resource_ref: GithubRepoResourceRef },
+    nextRefValue: string,
+  ) => Promise<boolean>;
+}
+
+function GithubRepoRow({ resource, onRemove, onUpdateRef }: GithubRepoRowProps) {
+  const { t } = useT("projects");
+  const ref = resource.resource_ref;
+  const baseLabel = resource.label || githubShortLabel(ref.url);
+  const display = ref.ref ? `${baseLabel} @ ${ref.ref}` : baseLabel;
+  const tooltip = ref.ref ? `${ref.url}\nref: ${ref.ref}` : ref.url;
+  const [editOpen, setEditOpen] = useState(false);
+  const [draftRef, setDraftRef] = useState(ref.ref ?? "");
+  const [saving, setSaving] = useState(false);
+
+  const handleOpenChange = (open: boolean) => {
+    setEditOpen(open);
+    if (open) setDraftRef(ref.ref ?? "");
+  };
+
+  const save = async (e: FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const updated = await onUpdateRef(resource, draftRef);
+      if (updated) setEditOpen(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2 text-caption group">
+      <FolderGit className="size-3.5 text-muted-foreground shrink-0" />
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <a
+              href={ref.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="truncate flex-1 hover:underline"
+            >
+              {display}
+            </a>
+          }
+        />
+        <TooltipContent side="top" className="whitespace-pre-line">{tooltip}</TooltipContent>
+      </Tooltip>
+      <Popover open={editOpen} onOpenChange={handleOpenChange}>
+        <PopoverTrigger
+          render={
+            <button
+              type="button"
+              className="opacity-0 group-hover:opacity-100 transition-opacity rounded-sm p-0.5 hover:bg-accent"
+              title={t(($) => $.resources.repo_ref_edit_tooltip)}
+            >
+              <Pencil className="size-3 text-muted-foreground" />
+            </button>
+          }
+        />
+        <PopoverContent align="end" className="w-72 p-3">
+          <form onSubmit={save} className="space-y-2">
+            <div className="space-y-1">
+              <div className="text-caption font-medium">
+                {t(($) => $.resources.repo_ref_edit_title)}
+              </div>
+              <div className="truncate text-micro text-muted-foreground">
+                {githubShortLabel(ref.url)}
+              </div>
+            </div>
+            <label className="block space-y-1">
+              <span className="text-micro font-medium text-muted-foreground">
+                {t(($) => $.resources.repo_ref_label)}
+              </span>
+              <input
+                autoFocus
+                type="text"
+                value={draftRef}
+                onChange={(e) => setDraftRef(e.target.value)}
+                placeholder={t(($) => $.resources.repo_ref_placeholder)}
+                className="h-8 w-full rounded-md border bg-transparent px-2 text-caption outline-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring"
+              />
+            </label>
+            <p className="text-micro text-muted-foreground">
+              {t(($) => $.resources.repo_ref_hint)}
+            </p>
+            <div className="flex justify-end gap-1.5">
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-7 text-caption"
+                onClick={() => setEditOpen(false)}
+              >
+                {t(($) => $.resources.repo_ref_cancel)}
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                className="h-7 text-caption"
+                disabled={saving}
+              >
+                {saving
+                  ? t(($) => $.resources.repo_ref_saving)
+                  : t(($) => $.resources.repo_ref_save)}
+              </Button>
+            </div>
+          </form>
+        </PopoverContent>
+      </Popover>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="opacity-0 group-hover:opacity-100 transition-opacity rounded-sm p-0.5 hover:bg-accent"
+        title={t(($) => $.resources.remove_tooltip)}
+      >
+        <Trash2 className="size-3 text-muted-foreground" />
       </button>
     </div>
   );
@@ -816,41 +954,60 @@ function LocalDirectoryRow({
 function CustomRepoForm({
   onSubmit,
 }: {
-  onSubmit: (url: string) => Promise<void> | void;
+  onSubmit: (input: { url: string; ref?: string }) => Promise<void> | void;
 }) {
   const { t } = useT("projects");
   const [url, setUrl] = useState("");
+  const [ref, setRef] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const handle = async (e: React.FormEvent) => {
+  const handle = async (e: FormEvent) => {
     e.preventDefault();
-    const trimmed = url.trim();
-    if (!trimmed) return;
+    const trimmedUrl = url.trim();
+    const trimmedRef = ref.trim();
+    if (!trimmedUrl) return;
     setSubmitting(true);
     try {
-      await onSubmit(trimmed);
+      await onSubmit({
+        url: trimmedUrl,
+        ...(trimmedRef ? { ref: trimmedRef } : {}),
+      });
       setUrl("");
+      setRef("");
     } finally {
       setSubmitting(false);
     }
   };
   return (
-    <form onSubmit={handle} className="flex items-center gap-1.5 pt-1 border-t">
+    <form onSubmit={handle} className="space-y-1.5 pt-1 border-t">
       <input
         type="text"
         value={url}
         onChange={(e) => setUrl(e.target.value)}
         placeholder={t(($) => $.resources.url_placeholder)}
-        className="flex-1 bg-transparent text-caption px-2 py-1 outline-none placeholder:text-muted-foreground"
+        className="w-full bg-transparent text-caption px-2 py-1 outline-none placeholder:text-muted-foreground"
       />
-      <Button
-        type="submit"
-        size="sm"
-        variant="ghost"
-        className="h-6 px-2 text-caption"
-        disabled={!url.trim() || submitting}
-      >
-        {t(($) => $.resources.url_submit)}
-      </Button>
+      <div className="flex items-center gap-1.5">
+        <input
+          type="text"
+          value={ref}
+          onChange={(e) => setRef(e.target.value)}
+          aria-label={t(($) => $.resources.repo_ref_label)}
+          placeholder={t(($) => $.resources.repo_ref_placeholder)}
+          className="min-w-0 flex-1 rounded-sm border bg-transparent px-2 py-1 text-caption outline-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring"
+        />
+        <Button
+          type="submit"
+          size="sm"
+          variant="ghost"
+          className="h-6 px-2 text-caption"
+          disabled={!url.trim() || submitting}
+        >
+          {t(($) => $.resources.url_submit)}
+        </Button>
+      </div>
+      <p className="px-2 text-micro text-muted-foreground">
+        {t(($) => $.resources.repo_ref_hint)}
+      </p>
     </form>
   );
 }

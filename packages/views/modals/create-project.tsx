@@ -126,6 +126,11 @@ function RepoUrlText({
   );
 }
 
+type SelectedRepoResource = {
+  url: string;
+  ref: string;
+};
+
 export function CreateProjectModal({ onClose }: { onClose: () => void }) {
   const { t } = useT("modals");
   // The execution-mode copy lives in the projects namespace alongside the
@@ -163,9 +168,9 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
   const [submitting, setSubmitting] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   // Repos selected to attach as github_repo resources after the project is
-  // created. Stored as URLs (not full ProjectResource rows) — they're not
-  // persisted until handleSubmit fires the createProjectResource calls.
-  const [selectedRepos, setSelectedRepos] = useState<string[]>([]);
+  // created. Stored as draft refs (not full ProjectResource rows) — they're not
+  // persisted until handleSubmit fires the bundled resource create.
+  const [selectedRepos, setSelectedRepos] = useState<SelectedRepoResource[]>([]);
   const [repoPopoverOpen, setRepoPopoverOpen] = useState(false);
   const [repoSearch, setRepoSearch] = useState("");
   const [customRepoUrl, setCustomRepoUrl] = useState("");
@@ -327,10 +332,16 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
       | Array<{ resource_type: "github_repo" | "local_directory"; resource_ref: Record<string, unknown> }>
       | undefined;
     if (sourceMode === "repos" && selectedRepos.length > 0) {
-      resources = selectedRepos.map((url) => ({
-        resource_type: "github_repo" as const,
-        resource_ref: { url },
-      }));
+      resources = selectedRepos.map((repo) => {
+        const trimmedRef = repo.ref.trim();
+        return {
+          resource_type: "github_repo" as const,
+          resource_ref: {
+            url: repo.url,
+            ...(trimmedRef ? { ref: trimmedRef } : {}),
+          },
+        };
+      });
     } else if (
       sourceMode === "local" &&
       selectedLocalPath &&
@@ -380,14 +391,24 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
 
   const toggleRepo = (url: string) => {
     setSelectedRepos((prev) =>
-      prev.includes(url) ? prev.filter((u) => u !== url) : [...prev, url],
+      prev.some((repo) => repo.url === url)
+        ? prev.filter((repo) => repo.url !== url)
+        : [...prev, { url, ref: "" }],
+    );
+  };
+
+  const updateSelectedRepoRef = (url: string, ref: string) => {
+    setSelectedRepos((prev) =>
+      prev.map((repo) => (repo.url === url ? { ...repo, ref } : repo)),
     );
   };
 
   const addCustomRepo = () => {
     const url = customRepoUrl.trim();
     if (!url) return;
-    setSelectedRepos((prev) => (prev.includes(url) ? prev : [...prev, url]));
+    setSelectedRepos((prev) =>
+      prev.some((repo) => repo.url === url) ? prev : [...prev, { url, ref: "" }],
+    );
     setCustomRepoUrl("");
   };
 
@@ -747,7 +768,7 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
                           </p>
                         )}
                         {filteredWorkspaceRepos.map((repo) => {
-                          const checked = selectedRepos.includes(repo.url);
+                          const checked = selectedRepos.some((selected) => selected.url === repo.url);
                           return (
                             <button
                               type="button"
@@ -805,20 +826,43 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
                       <div className="text-micro font-medium text-muted-foreground uppercase tracking-wider">
                         {t(($) => $.create_project.repos_selected)}
                       </div>
-                      {selectedRepos.map((url) => (
+                      {selectedRepos.map((repo) => (
                         <div
-                          key={url}
-                          className="flex items-center gap-2 text-caption"
+                          key={repo.url}
+                          className="space-y-1 rounded-md border px-2 py-1.5 text-caption"
                         >
-                          <GithubIcon className="size-3 text-muted-foreground" />
-                          <RepoUrlText url={url} />
-                          <button
-                            type="button"
-                            onClick={() => toggleRepo(url)}
-                            className="text-muted-foreground hover:text-foreground"
-                          >
-                            <XIcon className="size-3" />
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <GithubIcon className="size-3 text-muted-foreground" />
+                            <RepoUrlText url={repo.url} />
+                            <button
+                              type="button"
+                              onClick={() => toggleRepo(repo.url)}
+                              className="text-muted-foreground hover:text-foreground"
+                              aria-label={t(($) => $.create_project.repos_remove_aria, {
+                                repo: githubShortLabel(repo.url),
+                              })}
+                            >
+                              <XIcon className="size-3" />
+                            </button>
+                          </div>
+                          <label className="block space-y-0.5">
+                            <span className="text-micro font-medium text-muted-foreground">
+                              {t(($) => $.create_project.repo_ref_label)}
+                            </span>
+                            <input
+                              type="text"
+                              value={repo.ref}
+                              onChange={(e) => updateSelectedRepoRef(repo.url, e.target.value)}
+                              aria-label={t(($) => $.create_project.repo_ref_input_aria, {
+                                repo: githubShortLabel(repo.url),
+                              })}
+                              placeholder={t(($) => $.create_project.repo_ref_placeholder)}
+                              className="h-7 w-full rounded-sm border bg-transparent px-2 text-caption outline-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring"
+                            />
+                          </label>
+                          <p className="text-micro text-muted-foreground">
+                            {t(($) => $.create_project.repo_ref_hint)}
+                          </p>
                         </div>
                       ))}
                     </div>
