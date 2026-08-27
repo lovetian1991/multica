@@ -22,6 +22,11 @@ files:
   # because the first arch writes into dist/ mid-run before the second is
   # packaged.
   - "!dist/**"
+  # Local packaging/debug logs may still be open while electron-builder walks
+  # the app directory. If they are packaged while growing, ASAR records the old
+  # size but writes the later bytes, shifting offsets for subsequent files and
+  # corrupting package.json on launch.
+  - "!*.log"
 # Ship the license and attribution notices inside the packaged app, so the
 # NOTICE obligations travel with the installer rather than only the git repo.
 extraResources:
