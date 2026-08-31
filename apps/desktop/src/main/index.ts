@@ -14,8 +14,15 @@ import { installNavigationGestures } from "./navigation-gestures";
 import { installNavigationGuard } from "./navigation-guard";
 import { createRendererWebPreferences } from "./renderer-web-preferences";
 import { getAppVersion } from "./app-version";
-import { loadRuntimeConfig } from "./runtime-config-loader";
-import type { RuntimeConfigResult } from "../shared/runtime-config";
+import {
+  loadRuntimeConfig,
+  resetRuntimeConfig,
+  saveRuntimeConfig,
+} from "./runtime-config-loader";
+import type {
+  RuntimeConfigResult,
+  RuntimeConfigWriteInput,
+} from "../shared/runtime-config";
 import {
   RENDERER_ROUTE_CONTEXT_CHANNEL,
   sanitizeRendererRouteContext,
@@ -148,6 +155,18 @@ let runtimeConfigResult: RuntimeConfigResult = {
   ok: false,
   error: { message: "Runtime config has not loaded yet" },
 };
+
+function parseRuntimeConfigWriteInput(input: unknown): RuntimeConfigWriteInput {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return { apiUrl: "" };
+  }
+  const obj = input as Record<string, unknown>;
+  return {
+    apiUrl: typeof obj.apiUrl === "string" ? obj.apiUrl : "",
+    appUrl: typeof obj.appUrl === "string" ? obj.appUrl : undefined,
+    wsUrl: typeof obj.wsUrl === "string" ? obj.wsUrl : undefined,
+  };
+}
 
 // --- Deep link helpers ---------------------------------------------------
 
@@ -711,6 +730,24 @@ if (!gotTheLock) {
     // blocking error and must not silently fall back to the cloud defaults.
     ipcMain.on("runtime-config:get", (event) => {
       event.returnValue = runtimeConfigResult;
+    });
+
+    ipcMain.handle("runtime-config:save", async (event, input: unknown) => {
+      if (!BrowserWindow.fromWebContents(event.sender)) {
+        return { ok: false, error: { message: "Runtime config window unavailable" } };
+      }
+      const result = await saveRuntimeConfig(parseRuntimeConfigWriteInput(input));
+      if (result.ok) runtimeConfigResult = result;
+      return result;
+    });
+
+    ipcMain.handle("runtime-config:reset", async (event) => {
+      if (!BrowserWindow.fromWebContents(event.sender)) {
+        return { ok: false, error: { message: "Runtime config window unavailable" } };
+      }
+      const result = await resetRuntimeConfig();
+      if (result.ok) runtimeConfigResult = result;
+      return result;
     });
 
     ipcMain.on(RENDERER_ROUTE_CONTEXT_CHANNEL, (event, context: unknown) => {

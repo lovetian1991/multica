@@ -1,6 +1,7 @@
 import { LoginPage } from "@multica/views/auth";
 import { DragStrip } from "@multica/views/platform";
 import { MulticaIcon } from "@multica/ui/components/common/multica-icon";
+import { ServerEndpointForm } from "../components/server-endpoint-form";
 
 function requireRuntimeAppUrl(): string {
   const runtimeConfig = window.desktopAPI.runtimeConfig;
@@ -25,14 +26,18 @@ export function DesktopLoginPage() {
   return (
     <div className="flex h-screen flex-col">
       <DragStrip />
-      <LoginPage
-        logo={<MulticaIcon bordered size="lg" />}
-        onSuccess={() => {
-          // Auth store update triggers AppContent re-render → shows DesktopShell.
-          // Initial workspace navigation happens in routes.tsx via IndexRedirect.
-        }}
-        onGoogleLogin={handleGoogleLogin}
-      />
+      <div className="flex min-h-0 flex-1 flex-col items-center gap-4 overflow-y-auto px-6 py-8">
+        <ServerEndpointForm />
+        <LoginPage
+          wrapperClassName="flex w-full flex-1 items-center justify-center"
+          logo={<MulticaIcon bordered size="lg" />}
+          onSuccess={() => {
+            // Auth store update triggers AppContent re-render → shows DesktopShell.
+            // Initial workspace navigation happens in routes.tsx via IndexRedirect.
+          }}
+          onGoogleLogin={handleGoogleLogin}
+        />
+      </div>
     </div>
   );
 }

@@ -1132,7 +1132,8 @@
   },
   "desktop": {
     "tabs": {
-      "updates": "Updates"
+      "updates": "Updates",
+      "server": "Server"
     },
     "updates": {
       "title": "Updates",
@@ -1147,6 +1148,27 @@
       "downloading": "v{{version}} is downloading in the background — you'll be notified when it's ready to install.",
       "check_now": "Check now",
       "checking": "Checking…"
+    },
+    "server": {
+      "title": "Server",
+      "page_description": "View the Multica instance this desktop app is connected to. Switching servers signs you out of the current instance.",
+      "heading": "Server",
+      "web_url_label": "Web URL",
+      "web_url_placeholder": "https://multica.example.com",
+      "api_url_prefix": "API: ",
+      "cloud_name": "Multica Cloud",
+      "description_login": "Choose the Multica instance this desktop app should sign in to.",
+      "description_settings": "Changing servers signs you out and restarts this window on the selected instance.",
+      "change": "Change",
+      "cancel": "Cancel",
+      "use_cloud": "Use Multica Cloud",
+      "continue": "Continue",
+      "saving": "Saving",
+      "error_generic": "Could not save this server.",
+      "error_reset": "Could not switch to Multica Cloud.",
+      "switch_dialog_title": "Switch server?",
+      "switch_dialog_description": "Switching servers signs you out, clears the local daemon token, stops the daemon, and reloads this window after the new server is saved.",
+      "switch_dialog_continue": "Continue"
     }
   },
   "members": {

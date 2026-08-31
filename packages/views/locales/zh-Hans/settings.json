@@ -1129,7 +1129,8 @@
   },
   "desktop": {
     "tabs": {
-      "updates": "更新"
+      "updates": "更新",
+      "server": "服务器"
     },
     "updates": {
       "title": "更新",
@@ -1144,6 +1145,27 @@
       "downloading": "v{{version}} 正在后台下载——准备好安装时会通知你。",
       "check_now": "立即检查",
       "checking": "检查中..."
+    },
+    "server": {
+      "title": "服务器",
+      "page_description": "查看桌面端当前连接的 Multica 实例。切换服务器会退出当前实例的登录。",
+      "heading": "服务器",
+      "web_url_label": "Web 地址",
+      "web_url_placeholder": "https://multica.example.com",
+      "api_url_prefix": "API：",
+      "cloud_name": "Multica Cloud",
+      "description_login": "选择桌面端要登录的 Multica 实例。",
+      "description_settings": "切换服务器会退出登录，并在选定的实例上重新加载此窗口。",
+      "change": "更改",
+      "cancel": "取消",
+      "use_cloud": "使用 Multica Cloud",
+      "continue": "继续",
+      "saving": "正在保存",
+      "error_generic": "无法保存该服务器。",
+      "error_reset": "无法切换到 Multica Cloud。",
+      "switch_dialog_title": "切换服务器？",
+      "switch_dialog_description": "切换服务器会退出登录、清除本机守护进程的 token、停止守护进程，并在新服务器保存后重新加载此窗口。",
+      "switch_dialog_continue": "继续"
     }
   },
   "members": {

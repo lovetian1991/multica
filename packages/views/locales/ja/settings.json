@@ -1129,7 +1129,8 @@
   },
   "desktop": {
     "tabs": {
-      "updates": "アップデート"
+      "updates": "アップデート",
+      "server": "サーバー"
     },
     "updates": {
       "title": "アップデート",
@@ -1144,6 +1145,27 @@
       "downloading": "v{{version}} をバックグラウンドでダウンロード中です。インストールの準備が整うとお知らせします。",
       "check_now": "今すぐ確認",
       "checking": "確認中…"
+    },
+    "server": {
+      "title": "サーバー",
+      "page_description": "このデスクトップアプリが接続している Multica インスタンスを確認します。サーバーを切り替えると現在のインスタンスからログアウトされます。",
+      "heading": "サーバー",
+      "web_url_label": "Web URL",
+      "web_url_placeholder": "https://multica.example.com",
+      "api_url_prefix": "API: ",
+      "cloud_name": "Multica Cloud",
+      "description_login": "このデスクトップアプリがサインインする Multica インスタンスを選択してください。",
+      "description_settings": "サーバーを切り替えるとログアウトし、選択したインスタンスでこのウィンドウが再読み込みされます。",
+      "change": "変更",
+      "cancel": "キャンセル",
+      "use_cloud": "Multica Cloud を使う",
+      "continue": "続行",
+      "saving": "保存中",
+      "error_generic": "このサーバーを保存できませんでした。",
+      "error_reset": "Multica Cloud に切り替えられませんでした。",
+      "switch_dialog_title": "サーバーを切り替えますか？",
+      "switch_dialog_description": "サーバーを切り替えるとログアウトし、ローカルのデーモントークンを削除してデーモンを停止し、新しいサーバーの保存後にこのウィンドウが再読み込みされます。",
+      "switch_dialog_continue": "続行"
     }
   },
   "members": {
