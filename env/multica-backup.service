@@ -1,0 +1,16 @@
+[Unit]
+Description=Create a Multica PostgreSQL, uploads, Kubernetes, and etcd backup
+Wants=network-online.target
+After=network-online.target kube-apiserver.service etcd.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+UMask=0077
+Environment=MULTICA_BACKUP_ROOT=/home/multica-backups
+Environment=MULTICA_BACKUP_RETENTION_DAYS=14
+ExecStart=/usr/local/sbin/multica-backup
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
