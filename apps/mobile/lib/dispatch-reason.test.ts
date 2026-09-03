@@ -37,17 +37,19 @@ describe("sendFailureMessage", () => {
     const message = sendFailureMessage(
       apiError({ reason_code: "invocation_not_allowed" }),
     );
-    expect(message).toMatch(/no longer have permission/i);
-    expect(message).not.toMatch(/try again/i);
+    expect(message).toBe("你已没有运行此智能体的权限，因此消息未发送。");
+    expect(message).not.toContain("重试");
   });
 
   it("names the runtime for agent_runtime_required", () => {
     expect(
       sendFailureMessage(apiError({ reason_code: "agent_runtime_required" })),
-    ).toMatch(/runtime/i);
+    ).toBe("发送消息前，请先为此智能体绑定运行时。");
   });
 
   it("falls back to a retryable message for anything else", () => {
-    expect(sendFailureMessage(new Error("timeout"))).toMatch(/try again/i);
+    expect(sendFailureMessage(new Error("timeout"))).toBe(
+      "消息发送失败，请重试。",
+    );
   });
 });

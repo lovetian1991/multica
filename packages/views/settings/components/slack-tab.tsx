@@ -36,14 +36,14 @@ import { api } from "@multica/core/api";
 import type { SlackInstallation } from "@multica/core/types";
 import { ActorAvatar } from "../../common/actor-avatar";
 import { openExternal } from "../../platform";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 
 // SlackTab is the workspace settings panel for Slack bot installations.
 // Listing is member-visible; the disconnect action is admin-only (the backend
 // enforces it; the UI hides the button for non-admins to match).
 //
 // Adding a new installation flows through the Agent detail page: the install
-// path is per-agent (each Multica agent gets exactly one bot — the
+// path is per-agent (each 鸿翼灵工 agent gets exactly one bot — the
 // (workspace_id, agent_id, channel_type) UNIQUE in channel_installation), so
 // asking the user to pick an agent here would re-create that page's picker.
 export function SlackTab() {
@@ -192,6 +192,7 @@ function InstallationRow({
   onDisconnect: () => void;
 }) {
   const { t } = useT("settings");
+  const locale = useLocale();
   const { getAgentName } = useActorName();
   const isActive = installation.status === "active";
   const agentName = getAgentName(installation.agent_id);
@@ -216,7 +217,7 @@ function InstallationRow({
           </p>
           <p className="text-micro text-muted-foreground">
             {t(($) => $.slack.installed_at_label, {
-              when: new Date(installation.installed_at).toLocaleString(),
+              when: new Date(installation.installed_at).toLocaleString(locale),
             })}
           </p>
         </div>
@@ -412,6 +413,8 @@ export function SlackAgentBindButton({
                 data-testid="slack-byo-bot-token"
                 value={botToken}
                 onChange={(e) => setBotToken(e.target.value)}
+                // Slack token prefix: a format hint, not copy.
+                // eslint-disable-next-line no-restricted-syntax
                 placeholder="xoxb-…"
                 autoComplete="off"
                 spellCheck={false}
@@ -428,6 +431,8 @@ export function SlackAgentBindButton({
                 data-testid="slack-byo-app-token"
                 value={appToken}
                 onChange={(e) => setAppToken(e.target.value)}
+                // Slack token prefix: a format hint, not copy.
+                // eslint-disable-next-line no-restricted-syntax
                 placeholder="xapp-…"
                 autoComplete="off"
                 spellCheck={false}

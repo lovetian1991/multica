@@ -4,10 +4,10 @@ import { ChangelogPageClient } from "@/features/landing/components/changelog-pag
 export const metadata: Metadata = {
   title: "Changelog",
   description:
-    "See what's new in Multica — latest features, improvements, and fixes.",
+    "See what's new in 鸿翼灵工 — latest features, improvements, and fixes.",
   openGraph: {
-    title: "Changelog | Multica",
-    description: "Latest updates and releases from Multica.",
+    title: "Changelog | 鸿翼灵工",
+    description: "Latest updates and releases from 鸿翼灵工.",
     url: "/changelog",
   },
   alternates: {

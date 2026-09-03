@@ -449,7 +449,7 @@ export default function SearchModal() {
           <TextInput
             value={query}
             onChangeText={handleChange}
-            placeholder="Search issues and projects"
+            placeholder="搜索任务和项目"
             placeholderTextColor="#a1a1aa"
             autoFocus
             autoCorrect={false}
@@ -475,13 +475,13 @@ export default function SearchModal() {
             ) : trimmedQuery && !hasResults ? (
               <View className="items-center justify-center py-12 px-6">
                 <Text className="text-sm text-muted-foreground text-center">
-                  No results for &ldquo;{trimmedQuery}&rdquo;
+                  没有找到与“{trimmedQuery}”相关的结果
                 </Text>
               </View>
             ) : !trimmedQuery && recentIssues.length === 0 ? (
               <View className="items-center justify-center py-12 px-6">
                 <Text className="text-sm text-muted-foreground text-center">
-                  Type to search issues and projects.
+                  输入关键词搜索任务和项目。
                 </Text>
               </View>
             ) : null

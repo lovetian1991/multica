@@ -1,9 +1,9 @@
 {
   "name": "@multica/desktop",
-  "productName": "Multica",
+  "productName": "鸿翼灵工",
   "version": "0.1.0",
   "private": true,
-  "description": "Multica Desktop — native desktop client for the Multica platform.",
+  "description": "鸿翼灵工 Desktop — native desktop client for the 鸿翼灵工 platform.",
   "homepage": "https://multica.ai",
   "repository": {
     "type": "git",
@@ -11,7 +11,7 @@
     "directory": "apps/desktop"
   },
   "author": {
-    "name": "Multica",
+    "name": "鸿翼灵工",
     "email": "support@multica.ai"
   },
   "license": "SEE LICENSE IN ../../LICENSE",

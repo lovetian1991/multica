@@ -35,13 +35,17 @@
     "idle": "Idle"
   },
   "presence_status_aria": "Status: {{status}}",
+  "avatar_stack": {
+    "overflow_aria_one": "{{count}} more agent",
+    "overflow_aria_other": "{{count}} more agents"
+  },
   "archived": {
     "active_link": "Active agents",
     "title": "Archived agents"
   },
   "empty": {
     "title": "No agents yet",
-    "description": "Create an agent and assign it issues, like any teammate. Local agents run on your machine; cloud agents run on Multica's runtime."
+    "description": "Create an agent and assign it issues, like any teammate. Local agents run on your machine; cloud agents run on 鸿翼灵工's runtime."
   },
   "no_matches": {
     "title": "No matches",
@@ -232,6 +236,7 @@
     "model_discovery_failed_hint": "Type a model ID above to enter one manually.",
     "model_empty": "No models available",
     "model_empty_with_dot": "No models available.",
+    "model_unavailable_heading": "Needs a newer CLI",
     "model_custom_tooltip": "Use \"{{value}}\" as a custom model id",
     "model_custom_use": "Use \"{{value}}\"",
     "model_clear": "Clear (use provider default)",
@@ -241,6 +246,8 @@
     "thinking_clear": "Follow CLI config",
     "thinking_clear_title": "Clear the override and let the local CLI config (claude/codex) decide the reasoning level",
     "service_tier_default": "Runtime default",
+    "service_tier_standard": "Standard",
+    "service_tier_standard_description": "Standard speed and standard usage",
     "service_tier_tooltip": "Speed · {{value}}",
     "service_tier_clear": "Runtime default",
     "service_tier_clear_title": "Clear the speed override and let the local Codex configuration decide"
@@ -444,16 +451,18 @@
       "upload_failed_toast": "Avatar upload failed"
     }
   },
-  "starter_prompts": {
-    "label": "Suggested first actions",
-    "hint": "Add up to three examples that show people how to start with this agent. Selecting one fills the composer without sending it.",
+  "conversation_starters": {
+    "label": "Conversation starters",
+    "hint": "Up to three examples, shown when someone opens a new chat with this agent. Selecting one fills the composer without sending it.",
     "add": "Add suggestion",
     "item_label": "Suggestion {{number}} label",
     "prompt_label": "Suggestion {{number}} prompt",
     "label_placeholder": "Review a pull request",
     "prompt_placeholder": "Review the open pull request, summarize the risks, and recommend next steps.",
     "incomplete": "Complete or remove each suggestion before saving.",
-    "remove": "Remove suggestion {{number}}"
+    "remove": "Remove suggestion {{number}}",
+    "preview_label": "Preview of a new chat",
+    "preview_defaults": "These are the built-in defaults. Add a suggestion above to replace all three."
   },
   "tab_body": {
     "common": {
@@ -465,12 +474,12 @@
       "intro": "Set the system prompt used for every task. Markdown is supported.",
       "system_prompt_label": "System prompt",
       "placeholder": "Define this agent's role, expertise, and working style.\n\n# Example\nYou are a frontend engineer specializing in React and TypeScript.\n\n## Working Style\n- Write small, focused PRs — one commit per logical change\n- Prefer composition over inheritance\n- Always add unit tests for new components\n\n## Constraints\n- Do not modify shared/ types without explicit approval\n- Follow the existing component patterns in features/",
-      "system_layer_label": "Maintained by Multica",
-      "system_layer_hint": "Updates with each Multica release. You can't edit it, and your notes below are never overwritten.",
+      "system_layer_label": "Maintained by 鸿翼灵工",
+      "system_layer_hint": "Updates with each 鸿翼灵工 release. You can't edit it, and your notes below are never overwritten.",
       "system_layer_show": "Show",
       "system_layer_hide": "Hide",
       "workspace_notes_label": "Workspace notes",
-      "workspace_notes_intro": "Add your team's context and preferences below. They apply on top of the instructions Multica maintains for this agent. Markdown is supported.",
+      "workspace_notes_intro": "Add your team's context and preferences below. They apply on top of the instructions 鸿翼灵工 maintains for this agent. Markdown is supported.",
       "workspace_notes_placeholder": "Add context this agent should always have.\n\n# Example\nOur main repository is github.com/acme/platform.\nWrite issues in English even when we chat in Chinese.\nWe do not deploy on Fridays."
     },
     "env": {
@@ -524,12 +533,12 @@
       "save_failed_toast": "Failed to save custom arguments"
     },
     "mcp_config": {
-      "managed_title": "Managed by Multica",
-      "managed_empty": "No MCP servers are managed by Multica yet.",
+      "managed_title": "Managed by 鸿翼灵工",
+      "managed_empty": "No MCP servers are managed by 鸿翼灵工 yet.",
       "add_action": "Add MCP",
       "agent_disabled_badge": "Off for agent",
       "runtime_disabled_badge": "Off in runtime",
-      "runtime_overridden_badge": "Overridden by Multica",
+      "runtime_overridden_badge": "Overridden by 鸿翼灵工",
       "workspace_title": "From the workspace library",
       "workspace_action_failed": "Could not update this agent's MCP servers",
       "workspace_removed_toast": "MCP server removed from this agent",
@@ -585,6 +594,10 @@
       "dialog_headers_label": "HTTP headers",
       "dialog_add_header": "Add header",
       "dialog_remove_header": "Remove header",
+      "dialog_pair_key_placeholder": "Key",
+      "dialog_pair_value_placeholder": "Value",
+      "dialog_pair_key_aria": "{{label}} key {{index}}",
+      "dialog_pair_value_aria": "{{label}} value {{index}}",
       "dialog_native_json_hint": "This historical provider-native entry can be edited in JSON without changing its format.",
       "dialog_json_label": "Server configuration",
       "dialog_json_aria": "MCP server JSON configuration",
@@ -904,8 +917,8 @@
       "api_invalid_request": "Rejected by the model API",
       "skill_bundle_unavailable": "Couldn't download the agent's skills",
       "runtime_cli_timeout": "Local runtime CLI timed out",
+      "environment_prepare_failed": "Couldn't prepare the execution environment",
       "invalid_task_identity": "Task identity mismatch",
-      "issue_window_restricted": "Issue unavailable under workspace limits",
       "agent_error_provider_auth_or_access": "Provider auth failed",
       "agent_error_provider_quota_limit": "Provider quota exhausted",
       "agent_error_provider_capacity_or_rate_limit": "Rate limited by provider",

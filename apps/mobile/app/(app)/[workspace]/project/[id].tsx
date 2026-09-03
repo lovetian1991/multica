@@ -9,13 +9,12 @@
  * Per-record realtime: `useProjectRealtime(id, onDeleted=back)` subscribes
  * to `project:updated` (full replace) and `project:deleted` (pop back).
  *
- * Right-top "…" menu (ActionSheetIOS) → Edit / Delete. Delete asks for
- * confirmation via `Alert.alert` per iOS HIG (destructive actions need
- * a second tap).
+ * Right-top "…" menu uses the shared cross-platform DropdownMenu. Delete
+ * asks for confirmation via `Alert.alert` because destructive actions need
+ * a second tap.
  */
 import { useCallback } from "react";
 import {
-  ActionSheetIOS,
   ActivityIndicator,
   Alert,
   Linking,
@@ -25,10 +24,18 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, router, useLocalSearchParams } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "@react-navigation/native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
-import { IconButton } from "@/components/ui/icon-button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ProjectHeaderCard } from "@/components/project/project-header-card";
 import { ProjectPropertiesSection } from "@/components/project/project-properties-section";
 import { ProjectRelatedIssues } from "@/components/project/project-related-issues";
@@ -84,56 +91,14 @@ export default function ProjectDetail() {
   const createPin = useCreatePin();
   const deletePin = useDeletePin();
 
-  const onPressMore = () => {
-    if (!project) return;
-    const wsUrl = process.env.EXPO_PUBLIC_WEB_URL;
-    const options = [
-      "Cancel",
-      isPinned ? "Unpin" : "Pin",
-      "Edit details",
-      ...(wsUrl ? ["Open on web"] : []),
-      "Delete",
-    ];
-    const destructiveIndex = options.length - 1;
-    ActionSheetIOS.showActionSheetWithOptions(
-      {
-        options,
-        cancelButtonIndex: 0,
-        destructiveButtonIndex: destructiveIndex,
-      },
-      (i) => {
-        const label = options[i];
-        if (label === "Pin") {
-          createPin.mutate({ item_type: "project", item_id: project.id });
-          return;
-        }
-        if (label === "Unpin") {
-          deletePin.mutate({ itemType: "project", itemId: project.id });
-          return;
-        }
-        if (label === "Edit details") {
-          if (wsSlug) router.push(`/${wsSlug}/project/${id}/edit`);
-          return;
-        }
-        if (label === "Open on web" && wsUrl) {
-          Linking.openURL(`${wsUrl}/${wsSlug}/projects/${id}`);
-          return;
-        }
-        if (i === destructiveIndex) {
-          onDelete();
-        }
-      },
-    );
-  };
-
-  const onDelete = () => {
+  const onDelete = useCallback(() => {
     Alert.alert(
-      "Delete project?",
-      "This cannot be undone. Issues in this project will become unassigned from any project.",
+      "删除项目？",
+      "此操作无法撤销。该项目中的任务将不再归属于任何项目。",
       [
-        { text: "Cancel", style: "cancel" },
+        { text: "取消", style: "cancel" },
         {
-          text: "Delete",
+          text: "删除",
           style: "destructive",
           onPress: () => {
             deleteProject.mutate(undefined, {
@@ -143,20 +108,58 @@ export default function ProjectDetail() {
         },
       ],
     );
-  };
+  }, [deleteProject]);
+
+  const webUrl = process.env.EXPO_PUBLIC_WEB_URL;
+  const projectLink =
+    project && wsSlug && webUrl
+      ? `${webUrl}/${wsSlug}/projects/${project.id}`
+      : null;
+
+  const onSelectAction = useCallback(
+    (action: ProjectAction) => {
+      if (!project || !wsSlug) return;
+      switch (action) {
+        case "pin":
+          createPin.mutate({ item_type: "project", item_id: project.id });
+          break;
+        case "unpin":
+          deletePin.mutate({ itemType: "project", itemId: project.id });
+          break;
+        case "edit":
+          router.push(`/${wsSlug}/project/${id}/edit`);
+          break;
+        case "open-web":
+          if (projectLink) void Linking.openURL(projectLink);
+          break;
+        case "delete":
+          onDelete();
+          break;
+      }
+    },
+    [
+      createPin,
+      deletePin,
+      id,
+      onDelete,
+      project,
+      projectLink,
+      wsSlug,
+    ],
+  );
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["bottom"]}>
       <Stack.Screen
         options={{
-          title: project?.title || "Project",
-          headerBackTitle: "Back",
-          headerRight: project
+          title: project?.title || "项目",
+          headerBackTitle: "返回",
+          headerRight: project && project.id
             ? () => (
-                <IconButton
-                  name="ellipsis-horizontal"
-                  onPress={onPressMore}
-                  accessibilityLabel="Project actions"
+                <ProjectActionsMenu
+                  isPinned={isPinned}
+                  hasLink={!!projectLink}
+                  onSelect={onSelectAction}
                 />
               )
             : undefined,
@@ -169,13 +172,13 @@ export default function ProjectDetail() {
       ) : detail.error || projectMissing ? (
         <View className="flex-1 items-center justify-center px-6 gap-3">
           <Text className="text-sm text-destructive text-center">
-            Failed to load project:{" "}
+            项目加载失败：{" "}
             {detail.error instanceof Error
               ? detail.error.message
-              : "not found"}
+              : "未找到项目"}
           </Text>
           <Button variant="outline" onPress={() => detail.refetch()}>
-            <Text>Retry</Text>
+            <Text>重试</Text>
           </Button>
         </View>
       ) : (
@@ -234,5 +237,56 @@ export default function ProjectDetail() {
         </ScrollView>
       )}
     </SafeAreaView>
+  );
+}
+
+type ProjectAction = "pin" | "unpin" | "edit" | "open-web" | "delete";
+
+function ProjectActionsMenu({
+  isPinned,
+  hasLink,
+  onSelect,
+}: {
+  isPinned: boolean;
+  hasLink: boolean;
+  onSelect: (action: ProjectAction) => void;
+}) {
+  const { colors } = useTheme();
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        className="size-10 items-center justify-center rounded-md active:bg-accent"
+        accessibilityLabel="项目操作"
+      >
+        <Ionicons
+          name="ellipsis-horizontal"
+          size={20}
+          color={colors.text}
+        />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuItem
+          onPress={() => onSelect(isPinned ? "unpin" : "pin")}
+        >
+          <Text>{isPinned ? "取消置顶" : "置顶"}</Text>
+        </DropdownMenuItem>
+        <DropdownMenuItem onPress={() => onSelect("edit")}>
+          <Text>编辑详情</Text>
+        </DropdownMenuItem>
+        {hasLink ? (
+          <DropdownMenuItem onPress={() => onSelect("open-web")}>
+            <Text>在网页端打开</Text>
+          </DropdownMenuItem>
+        ) : null}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          variant="destructive"
+          onPress={() => onSelect("delete")}
+        >
+          <Text>删除项目</Text>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

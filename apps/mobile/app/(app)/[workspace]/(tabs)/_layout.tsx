@@ -22,8 +22,9 @@
  */
 import { useRef } from "react";
 import { Tabs } from "expo-router";
-import { Image } from "expo-image";
-import { View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { Platform, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { TriggerRef } from "@rn-primitives/dropdown-menu";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { useColorScheme } from "@/lib/use-color-scheme";
@@ -46,6 +47,7 @@ const BADGE_STYLE = {
 export default function TabsLayout() {
   const { colorScheme } = useColorScheme();
   const t = THEME[colorScheme];
+  const insets = useSafeAreaInsets();
 
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
   const inboxUnread = useInboxUnreadCount(wsId);
@@ -70,21 +72,30 @@ export default function TabsLayout() {
           headerShown: false,
           tabBarActiveTintColor: t.foreground,
           tabBarInactiveTintColor: t.mutedForeground,
-          tabBarStyle: { backgroundColor: t.background },
+          tabBarStyle: {
+            backgroundColor: t.background,
+            ...(Platform.OS === "android"
+              ? {
+                  height: 58 + insets.bottom,
+                  paddingTop: 6,
+                  paddingBottom: Math.max(insets.bottom, 4),
+                }
+              : null),
+          },
           tabBarLabelStyle: { fontSize: 11 },
         }}
       >
         <Tabs.Screen
           name="inbox"
           options={{
-            title: "Inbox",
+            title: "收件箱",
             tabBarBadge: inboxBadge,
             tabBarBadgeStyle: BADGE_STYLE,
             tabBarIcon: ({ color, size, focused }) => (
-              <Image
-                source={focused ? "sf:tray.fill" : "sf:tray"}
-                tintColor={color}
-                style={{ width: size, height: size }}
+              <Ionicons
+                name={focused ? "file-tray" : "file-tray-outline"}
+                color={color}
+                size={size}
               />
             ),
           }}
@@ -92,12 +103,12 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="my-issues"
           options={{
-            title: "My Issues",
+            title: "我的任务",
             tabBarIcon: ({ color, size, focused }) => (
-              <Image
-                source={focused ? "sf:checklist" : "sf:checklist.unchecked"}
-                tintColor={color}
-                style={{ width: size, height: size }}
+              <Ionicons
+                name={focused ? "checkbox" : "checkbox-outline"}
+                color={color}
+                size={size}
               />
             ),
           }}
@@ -105,14 +116,14 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="chat"
           options={{
-            title: "Chat",
+            title: "聊天",
             tabBarBadge: chatBadge,
             tabBarBadgeStyle: BADGE_STYLE,
             tabBarIcon: ({ color, size, focused }) => (
-              <Image
-                source={focused ? "sf:bubble.left.fill" : "sf:bubble.left"}
-                tintColor={color}
-                style={{ width: size, height: size }}
+              <Ionicons
+                name={focused ? "chatbubble" : "chatbubble-outline"}
+                color={color}
+                size={size}
               />
             ),
           }}
@@ -120,13 +131,9 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="more"
           options={{
-            title: "More",
+            title: "更多",
             tabBarIcon: ({ color, size }) => (
-              <Image
-                source="sf:ellipsis"
-                tintColor={color}
-                style={{ width: size, height: size }}
-              />
+              <Ionicons name="ellipsis-horizontal" color={color} size={size} />
             ),
           }}
           listeners={() => ({

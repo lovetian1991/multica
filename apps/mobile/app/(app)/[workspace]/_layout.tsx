@@ -135,21 +135,21 @@ export default function WorkspaceLayout() {
         <Stack.Screen
           name="issue/[id]"
           options={{
-            title: "Issue",
-            headerBackTitle: "Back",
+            title: "任务",
+            headerBackTitle: "返回",
           }}
         />
         <Stack.Screen
           name="project/[id]"
           options={{
-            title: "Project",
-            headerBackTitle: "Back",
+            title: "项目",
+            headerBackTitle: "返回",
           }}
         />
         <Stack.Screen
           name="project/[id]/edit"
           options={{
-            title: "Edit Project",
+            title: "编辑项目",
             presentation: "modal",
             headerLeft: () => <ModalCloseButton />,
           }}
@@ -157,7 +157,7 @@ export default function WorkspaceLayout() {
         <Stack.Screen
           name="issue/[id]/edit"
           options={{
-            title: "Edit Issue",
+            title: "编辑任务",
             presentation: "modal",
             headerLeft: () => <ModalCloseButton />,
           }}
@@ -165,11 +165,12 @@ export default function WorkspaceLayout() {
         <Stack.Screen
           name="project/new"
           options={{
-            title: "New Project",
+            title: "新建项目",
             presentation: "modal",
             headerLeft: () => <ModalCloseButton />,
           }}
         />
+        <Stack.Screen name="inbox/[id]" options={SHEET_OPTIONS} />
         {/* Issue-detail formSheet pickers. All share the same sheet config:
             explicit numeric detents to dodge expo/expo#42904+#42965 (the
             `fitToContents` zero-size / padding bugs on iOS 26 + Expo 55),
@@ -195,7 +196,7 @@ export default function WorkspaceLayout() {
           options={{
             ...SHEET_OPTIONS,
             headerShown: true,
-            title: "Assignee",
+            title: "负责人",
           }}
         />
         <Stack.Screen
@@ -207,7 +208,7 @@ export default function WorkspaceLayout() {
           options={{
             ...SHEET_OPTIONS,
             headerShown: true,
-            title: "Mention",
+            title: "提及",
           }}
         />
         <Stack.Screen
@@ -260,7 +261,7 @@ export default function WorkspaceLayout() {
           options={{
             ...SHEET_OPTIONS,
             headerShown: true,
-            title: "Assignee",
+            title: "负责人",
           }}
         />
         <Stack.Screen
@@ -291,36 +292,36 @@ export default function WorkspaceLayout() {
         <Stack.Screen name="switch-workspace" options={SHEET_OPTIONS} />
         <Stack.Screen
           name="more/issues"
-          options={{ title: "Issues", headerBackTitle: "Back" }}
+          options={{ title: "任务", headerBackTitle: "返回" }}
         />
         <Stack.Screen
           name="more/projects"
-          options={{ title: "Projects", headerBackTitle: "Back" }}
+          options={{ title: "项目", headerBackTitle: "返回" }}
         />
         <Stack.Screen
           name="more/agents"
-          options={{ title: "Agents", headerBackTitle: "Back" }}
+          options={{ title: "智能体", headerBackTitle: "返回" }}
         />
         <Stack.Screen
           name="more/pins"
-          options={{ title: "Pinned", headerBackTitle: "Back" }}
+          options={{ title: "置顶", headerBackTitle: "返回" }}
         />
         <Stack.Screen
           name="more/settings"
-          options={{ title: "Settings", headerBackTitle: "Back" }}
+          options={{ title: "设置", headerBackTitle: "返回" }}
         />
         <Stack.Screen
           name="more/settings/profile"
-          options={{ title: "Profile", headerBackTitle: "Settings" }}
+          options={{ title: "个人资料", headerBackTitle: "设置" }}
         />
         <Stack.Screen
           name="more/settings/notifications"
-          options={{ title: "Notifications", headerBackTitle: "Settings" }}
+          options={{ title: "通知", headerBackTitle: "设置" }}
         />
         <Stack.Screen
           name="new-issue"
           options={{
-            title: "New Issue",
+            title: "新建任务",
             presentation: "modal",
             headerLeft: () => <ModalCloseButton />,
           }}
@@ -328,7 +329,7 @@ export default function WorkspaceLayout() {
         <Stack.Screen
           name="search"
           options={{
-            title: "Search",
+            title: "搜索",
             presentation: "modal",
             headerLeft: () => <ModalCloseButton />,
           }}

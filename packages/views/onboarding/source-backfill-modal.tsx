@@ -67,7 +67,7 @@ const EMPTY_BACKFILL: Pick<
  *      source recorded, never declined, dismiss cap not reached.
  *   2. Workspace-level: agents (or squads) have completed at least
  *      SOURCE_BACKFILL_MIN_AGENT_DONE_ISSUES issues here. Attribution
- *      is a zero-payoff ask for the user, so it waits until Multica
+ *      is a zero-payoff ask for the user, so it waits until 鸿翼灵工
  *      has visibly delivered value. The count query only runs while
  *      gate 1 passes, so settled users never pay for it.
  *
@@ -273,9 +273,13 @@ function SourceBackfillDialogBody({
       onComplete();
     } catch (err) {
       setBusy(false);
-      toast.error(err instanceof Error ? err.message : "Failed to save");
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : t(($) => $.source_backfill.save_failed_toast),
+      );
     }
-  }, [canSubmit, answers.source, answers.source_other, onComplete]);
+  }, [canSubmit, answers.source, answers.source_other, onComplete, t]);
 
   const skip = useCallback(async () => {
     if (busy) return;
@@ -293,9 +297,13 @@ function SourceBackfillDialogBody({
       onComplete();
     } catch (err) {
       setBusy(false);
-      toast.error(err instanceof Error ? err.message : "Failed to save");
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : t(($) => $.source_backfill.save_failed_toast),
+      );
     }
-  }, [busy, onComplete]);
+  }, [busy, onComplete, t]);
 
   return (
     <DialogContent className="sm:max-w-2xl p-0 gap-0 overflow-hidden">

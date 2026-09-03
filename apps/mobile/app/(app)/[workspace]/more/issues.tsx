@@ -59,9 +59,9 @@ import { THEME } from "@/lib/theme";
 // row past the safe width when filter icon shares the row. Per-status
 // counts still appear on the SectionList headers below.
 const SCOPES: { value: IssuesScope; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "members", label: "Members" },
-  { value: "agents", label: "Agents" },
+  { value: "all", label: "全部" },
+  { value: "members", label: "成员" },
+  { value: "agents", label: "智能体" },
 ];
 
 export default function IssuesPage() {
@@ -149,18 +149,17 @@ export default function IssuesPage() {
       ) : error ? (
         <View className="px-4 gap-3 pt-4">
           <Text className="text-sm text-destructive">
-            Failed to load issues:{" "}
-            {error instanceof Error ? error.message : "unknown error"}
+            任务加载失败，请稍后重试。
           </Text>
           <Button variant="outline" onPress={() => refetch()}>
-            <Text>Retry</Text>
+            <Text>重试</Text>
           </Button>
         </View>
       ) : showEmptyState ? (
         <EmptyState
           message={
             hasActiveFilters
-              ? "No issues match the current filters."
+              ? "没有符合当前筛选条件的任务。"
               : emptyMessageForScope(scope)
           }
         />
@@ -214,7 +213,7 @@ function FilterButton({
         variant="outline"
         size="sm"
         onPress={onPress}
-        accessibilityLabel="Filter"
+        accessibilityLabel="筛选"
         className="w-9 px-0"
       >
         <Ionicons
@@ -372,10 +371,10 @@ function EmptyState({ message }: { message: string }) {
 function emptyMessageForScope(scope: IssuesScope): string {
   switch (scope) {
     case "all":
-      return "No issues in this workspace.";
+      return "此工作区暂无任务。";
     case "members":
-      return "No issues assigned to a member.";
+      return "暂无分配给成员的任务。";
     case "agents":
-      return "No issues assigned to agents or squads.";
+      return "暂无分配给智能体或小队的任务。";
   }
 }

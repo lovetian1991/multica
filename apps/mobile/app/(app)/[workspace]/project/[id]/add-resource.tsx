@@ -38,8 +38,8 @@ export default function AddResourceRoute() {
         onSuccess: () => router.back(),
         onError: (err) => {
           Alert.alert(
-            "Failed to attach resource",
-            err instanceof Error ? err.message : "Unknown error",
+            "关联资源失败",
+            err instanceof Error ? err.message : "未知错误",
           );
         },
       },
@@ -50,7 +50,7 @@ export default function AddResourceRoute() {
     <View className="flex-1">
       <View className="flex-row items-center justify-between px-4 pt-4 pb-2">
         <Text className="text-base font-semibold text-foreground">
-          Attach repository
+          关联代码仓库
         </Text>
         <Pressable
           onPress={onSubmit}
@@ -61,13 +61,13 @@ export default function AddResourceRoute() {
           }`}
         >
           <Text className="text-sm font-semibold text-primary">
-            {submitting ? "Attaching…" : "Attach"}
+            {submitting ? "关联中..." : "关联"}
           </Text>
         </Pressable>
       </View>
       <View className="px-4 pt-4 gap-4">
         <View className="gap-1">
-          <Text className="text-xs text-muted-foreground">Repository URL</Text>
+          <Text className="text-xs text-muted-foreground">代码仓库 URL</Text>
           <TextField
             value={url}
             onChangeText={setUrl}
@@ -80,12 +80,12 @@ export default function AddResourceRoute() {
         </View>
         <View className="gap-1">
           <Text className="text-xs text-muted-foreground">
-            Label (optional)
+            标签（可选）
           </Text>
           <TextField
             value={label}
             onChangeText={setLabel}
-            placeholder="e.g. Backend"
+            placeholder="例如：后端"
           />
         </View>
       </View>

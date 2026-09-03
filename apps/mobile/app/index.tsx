@@ -1,5 +1,6 @@
 import { ActivityIndicator, View } from "react-native";
 import { Redirect } from "expo-router";
+import { MulticaLogo } from "@/components/brand/multica-logo";
 import { useAuthStore } from "@/data/auth-store";
 import { useWorkspaceStore } from "@/data/workspace-store";
 
@@ -18,7 +19,8 @@ export default function Index() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-background">
+      <View className="flex-1 items-center justify-center gap-6 bg-background">
+        <MulticaLogo size={112} />
         <ActivityIndicator />
       </View>
     );

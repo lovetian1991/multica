@@ -91,7 +91,7 @@ function ActiveContent({ actors }: { actors: StackActor[] }) {
     <View className="flex-1 flex-row items-center gap-2">
       <AvatarStack actors={actors} max={3} size={24} />
       <PulseDot />
-      <Text className="text-sm font-medium text-foreground">Working</Text>
+      <Text className="text-sm font-medium text-foreground">工作中</Text>
     </View>
   );
 }
@@ -100,7 +100,7 @@ function IdleContent({ count, mutedFg }: { count: number; mutedFg: string }) {
   return (
     <View className="flex-1 flex-row items-center gap-2">
       <Ionicons name="time-outline" size={16} color={mutedFg} />
-      <Text className="text-sm text-foreground">Runs · {count}</Text>
+      <Text className="text-sm text-foreground">执行记录 · {count}</Text>
     </View>
   );
 }

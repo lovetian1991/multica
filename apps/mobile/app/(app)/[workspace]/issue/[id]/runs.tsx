@@ -68,20 +68,20 @@ export default function IssueRunsRoute() {
     <View className="flex-1">
       <View className="px-4 pt-4 pb-3">
         <Text className="text-base font-semibold text-foreground">
-          Agent Runs
+          智能体执行记录
         </Text>
       </View>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View className="px-4 gap-3 pb-4">
           {active.length > 0 ? (
-            <Section title="Active">
+            <Section title="进行中">
               {active.map((task) => (
                 <RunRow key={task.id} task={task} issueId={id} />
               ))}
             </Section>
           ) : null}
           {past.length > 0 ? (
-            <Section title="Past">
+            <Section title="历史记录">
               {past.map((task) => (
                 <RunRow key={task.id} task={task} issueId={id} />
               ))}

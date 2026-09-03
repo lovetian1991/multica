@@ -20,40 +20,40 @@ import { useWorkspaceStore } from "@/data/workspace-store";
 import { notificationPreferenceOptions } from "@/data/queries/notification-preferences";
 import { useUpdateNotificationPreferences } from "@/data/mutations/notification-preferences";
 
-const INBOX_GROUPS: Array<{
+const INBOX_GROUPS: {
   key: Exclude<NotificationGroupKey, "system_notifications">;
   label: string;
   description: string;
-}> = [
+}[] = [
   {
     key: "assignments",
-    label: "Assignments",
-    description: "When you're assigned an issue or removed as assignee.",
+    label: "任务分配",
+    description: "当任务分配给你，或将你从负责人中移除时。",
   },
   {
     key: "status_changes",
-    label: "Status changes",
-    description: "When an issue's status changes.",
+    label: "状态变更",
+    description: "当任务状态发生变化时。",
   },
   {
     key: "comments",
-    label: "Comments",
-    description: "New comments on issues you're subscribed to.",
+    label: "评论",
+    description: "当你订阅的任务出现新评论时。",
   },
   {
     key: "mentions",
-    label: "Mentions",
-    description: "When someone @mentions you, including @all and @squad.",
+    label: "提及",
+    description: "当有人提及你时，包括 @all 和 @squad。",
   },
   {
     key: "updates",
-    label: "Issue updates",
-    description: "Edits to title, description, labels, priority, or due date.",
+    label: "任务更新",
+    description: "任务标题、描述、标签、优先级或截止日期发生变化时。",
   },
   {
     key: "agent_activity",
-    label: "Agent activity",
-    description: "When an agent picks up, runs, or completes a task.",
+    label: "智能体动态",
+    description: "当智能体接取、执行或完成任务时。",
   },
 ];
 
@@ -91,7 +91,7 @@ export default function NotificationsSettingsScreen() {
     return (
       <View className="flex-1 items-center justify-center bg-background px-6">
         <Text className="text-sm text-destructive text-center">
-          Failed to load notification preferences.
+          通知偏好加载失败。
         </Text>
       </View>
     );
@@ -103,8 +103,8 @@ export default function NotificationsSettingsScreen() {
       contentContainerClassName="px-4 py-4 gap-6"
     >
       <Section
-        title="Inbox notifications"
-        description="Which events show up in your inbox."
+        title="收件箱通知"
+        description="选择哪些事件显示在收件箱中。"
       >
         {INBOX_GROUPS.map((group, idx) => {
           const enabled = preferences[group.key] !== "muted";
@@ -132,16 +132,16 @@ export default function NotificationsSettingsScreen() {
       </Section>
 
       <Section
-        title="System"
-        description="Multica-wide announcements and important account events."
+        title="系统"
+        description="鸿翼灵工公告和重要账户事件。"
       >
         <View className="flex-row items-center px-4 py-3 gap-3">
           <View className="flex-1">
             <Text className="text-base font-medium text-foreground">
-              System notifications
+              系统通知
             </Text>
             <Text className="text-xs text-muted-foreground mt-0.5">
-              Account changes, security alerts, product updates.
+              账户变更、安全提醒和产品更新。
             </Text>
           </View>
           <Switch

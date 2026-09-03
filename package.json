@@ -19,6 +19,10 @@
     "ios:mobile:device:staging:release": "pnpm -C apps/mobile ios:device:staging:release",
     "ios:mobile:device:prod": "pnpm -C apps/mobile ios:device:prod",
     "ios:mobile:device:prod:release": "pnpm -C apps/mobile ios:device:prod:release",
+    "android:mobile:build": "pnpm -C apps/mobile android:build",
+    "android:mobile:build:sync": "pnpm -C apps/mobile android:build:sync",
+    "android:mobile:build:clean": "pnpm -C apps/mobile android:build:clean",
+    "android:mobile:build:universal": "pnpm -C apps/mobile android:build:universal",
     "build": "turbo build --filter=!@multica/mobile",
     "typecheck": "turbo typecheck --filter=!@multica/mobile",
     "test": "turbo test --filter=!@multica/mobile",
@@ -49,7 +53,8 @@
       "minimatch@5>brace-expansion": "2.1.4",
       "minimatch@9>brace-expansion": "2.1.4",
       "minimatch@10>brace-expansion": "5.0.9",
-      "builder-util-runtime": "9.7.0"
+      "builder-util-runtime": "9.7.0",
+      "tar": "7.5.22"
     }
   },
   "devDependencies": {

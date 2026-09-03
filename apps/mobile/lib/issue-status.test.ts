@@ -83,7 +83,7 @@ describe("buildIssueStatusCatalog", () => {
     for (const key of ["backlog", "todo", "in_progress", "in_review", "done", "blocked", "cancelled"]) {
       expect(c.categoryOf(key)).toBe(key);
     }
-    expect(c.labelOf("in_review")).toBe("In Review");
+    expect(c.labelOf("in_review")).toBe("审核中");
     expect(c.colorOf("in_review")).toBeNull();
   });
 
@@ -113,7 +113,7 @@ describe("buildIssueStatusCatalog", () => {
       color: "#22c55e",
     });
     const c = buildIssueStatusCatalog([builtIn, entry("qa", "in_review", { name: "QA" })]);
-    expect(c.labelOf("in_review")).toBe("In Review");
+    expect(c.labelOf("in_review")).toBe("审核中");
     expect(c.colorOf("in_review")).toBeNull();
     expect(c.colorOf("qa")).toBe("#123456");
   });
@@ -167,7 +167,7 @@ describe("statusOptions", () => {
 
   // A category's catalog rows REPLACE its built-in fallback, so the built-in
   // must come back through its own is_system row — otherwise turning on custom
-  // statuses would silently remove "In Review" from the picker.
+  // statuses would silently remove the built-in review state from the picker.
   it("keeps the built-in alongside its category's custom statuses", () => {
     const c = buildIssueStatusCatalog([
       entry("in_review", "in_review", { name: "In Review", is_system: true }),
@@ -175,7 +175,7 @@ describe("statusOptions", () => {
     ]);
     const inReview = statusOptions(c).filter((o) => o.category === "in_review");
     expect(inReview.map((o) => o.key)).toEqual(["in_review", "human_review"]);
-    expect(inReview.map((o) => o.label)).toEqual(["In Review", "Human Review"]);
+    expect(inReview.map((o) => o.label)).toEqual(["审核中", "Human Review"]);
     expect(inReview.map((o) => o.color)).toEqual([null, "#123456"]);
   });
 

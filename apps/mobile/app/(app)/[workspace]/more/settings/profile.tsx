@@ -1,10 +1,10 @@
 /**
  * Profile edit subscreen — name + avatar.
  *
- * Avatar tap opens an iOS native ActionSheet (Take Photo / Choose from Library
- * / Remove). Mirrors the avatar upload flow in
+ * Avatar tap opens the shared cross-platform DropdownMenu. It mirrors the
+ * avatar upload flow in
  * packages/views/settings/components/account-tab.tsx but the picker uses
- * native APIs per CLAUDE.md "iOS native > RNR > discuss" waterfall.
+ * native camera and library APIs.
  *
  * Save runs PATCH /api/me then writes the returned user back to the auth
  * store via setUser — same source-of-truth pattern as web (server response
@@ -12,10 +12,8 @@
  */
 import { useEffect, useState } from "react";
 import {
-  ActionSheetIOS,
   Alert,
   ActivityIndicator,
-  Pressable,
   ScrollView,
   View,
 } from "react-native";
@@ -25,6 +23,13 @@ import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/text-field";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuthStore } from "@/data/auth-store";
 import { api } from "@/data/api";
 import type { FileAsset } from "@/data/api";
@@ -58,31 +63,10 @@ export default function ProfileSettingsScreen() {
 
   const dirty = name.trim() !== (user?.name ?? "") && name.trim().length > 0;
 
-  const handleAvatarPick = () => {
-    const options = ["Take Photo", "Choose from Library", "Remove Photo", "Cancel"];
-    const removeIndex = user?.avatar_url ? 2 : -1;
-    const cancelIndex = user?.avatar_url ? 3 : 2;
-    const visibleOptions = user?.avatar_url ? options : options.filter((_, i) => i !== 2);
-
-    ActionSheetIOS.showActionSheetWithOptions(
-      {
-        options: visibleOptions,
-        cancelButtonIndex: cancelIndex,
-        destructiveButtonIndex: removeIndex >= 0 ? removeIndex : undefined,
-      },
-      async (index) => {
-        if (index === cancelIndex) return;
-        if (index === 0) await pickFromCamera();
-        else if (index === 1) await pickFromLibrary();
-        else if (index === removeIndex) await removeAvatar();
-      },
-    );
-  };
-
   const pickFromCamera = async () => {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert("Permission needed", "Camera access is required to take a photo.");
+      Alert.alert("需要相机权限", "请允许访问相机后再拍照。");
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
@@ -106,7 +90,7 @@ export default function ProfileSettingsScreen() {
 
   const uploadAvatar = async (asset: ImagePicker.ImagePickerAsset) => {
     if (asset.fileSize && asset.fileSize > MAX_AVATAR_BYTES) {
-      Alert.alert("Image too large", "Pick an image under 5 MB.");
+      Alert.alert("图片过大", "请选择小于 5 MB 的图片。");
       return;
     }
     const fileAsset: FileAsset = {
@@ -124,8 +108,8 @@ export default function ProfileSettingsScreen() {
       setUser(updated);
     } catch (err) {
       Alert.alert(
-        "Upload failed",
-        err instanceof Error ? err.message : "Could not upload avatar.",
+        "头像上传失败",
+        err instanceof Error ? err.message : "无法上传头像。",
       );
     } finally {
       setUploading(false);
@@ -139,8 +123,8 @@ export default function ProfileSettingsScreen() {
       setUser(updated);
     } catch (err) {
       Alert.alert(
-        "Remove failed",
-        err instanceof Error ? err.message : "Could not remove avatar.",
+        "头像移除失败",
+        err instanceof Error ? err.message : "无法移除头像。",
       );
     } finally {
       setUploading(false);
@@ -155,8 +139,8 @@ export default function ProfileSettingsScreen() {
       setUser(updated);
     } catch (err) {
       Alert.alert(
-        "Save failed",
-        err instanceof Error ? err.message : "Could not update profile.",
+        "保存失败",
+        err instanceof Error ? err.message : "无法更新个人资料。",
       );
     } finally {
       setSaving(false);
@@ -170,23 +154,47 @@ export default function ProfileSettingsScreen() {
       keyboardShouldPersistTaps="handled"
     >
       <View className="items-center gap-3">
-        <Pressable onPress={handleAvatarPick} disabled={uploading}>
-          <Avatar alt={user?.name ?? "Your avatar"} className="size-24">
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            disabled={uploading}
+            accessibilityLabel="更换头像"
+          >
+            <Avatar alt={user?.name ?? "用户头像"} className="size-24">
+              {user?.avatar_url ? (
+                <AvatarImage source={{ uri: user.avatar_url }} />
+              ) : null}
+              <AvatarFallback>
+                <Text className="text-2xl font-semibold text-muted-foreground">
+                  {initialsOf(user?.name)}
+                </Text>
+              </AvatarFallback>
+            </Avatar>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center" className="w-52">
+            <DropdownMenuItem onPress={() => void pickFromCamera()}>
+              <Text>拍照</Text>
+            </DropdownMenuItem>
+            <DropdownMenuItem onPress={() => void pickFromLibrary()}>
+              <Text>从相册选择</Text>
+            </DropdownMenuItem>
             {user?.avatar_url ? (
-              <AvatarImage source={{ uri: user.avatar_url }} />
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  onPress={() => void removeAvatar()}
+                >
+                  <Text>移除头像</Text>
+                </DropdownMenuItem>
+              </>
             ) : null}
-            <AvatarFallback>
-              <Text className="text-2xl font-semibold text-muted-foreground">
-                {initialsOf(user?.name)}
-              </Text>
-            </AvatarFallback>
-          </Avatar>
-        </Pressable>
+          </DropdownMenuContent>
+        </DropdownMenu>
         {uploading ? (
           <ActivityIndicator />
         ) : (
           <Text className="text-xs text-muted-foreground">
-            Tap to change photo
+            点击更换头像
           </Text>
         )}
       </View>
@@ -195,31 +203,31 @@ export default function ProfileSettingsScreen() {
 
       <View className="gap-4">
         <View>
-          <Text className="text-xs text-muted-foreground mb-1.5">Name</Text>
+          <Text className="text-xs text-muted-foreground mb-1.5">姓名</Text>
           <TextField
             value={name}
             onChangeText={setName}
-            placeholder="Your name"
+            placeholder="输入姓名"
             autoCapitalize="words"
             autoCorrect={false}
             returnKeyType="done"
           />
         </View>
         <View>
-          <Text className="text-xs text-muted-foreground mb-1.5">Email</Text>
+          <Text className="text-xs text-muted-foreground mb-1.5">邮箱</Text>
           <View className="rounded-md border border-border bg-muted px-3 py-2.5">
             <Text className="text-base text-muted-foreground">
               {user?.email ?? "—"}
             </Text>
           </View>
           <Text className="text-xs text-muted-foreground mt-1.5">
-            Email is set at sign-up and can&apos;t be changed here.
+            邮箱在注册时设置，暂不支持在此修改。
           </Text>
         </View>
       </View>
 
       <Button onPress={handleSave} disabled={!dirty || saving}>
-        <Text>{saving ? "Saving…" : "Save"}</Text>
+        <Text>{saving ? "保存中..." : "保存"}</Text>
       </Button>
     </ScrollView>
   );

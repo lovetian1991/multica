@@ -69,6 +69,7 @@ const navigationAdapter: NavigationAdapter = {
   back: vi.fn(),
   pathname: "/test",
   searchParams: new URLSearchParams(),
+  hash: "",
   getShareableUrl: (path: string) => `https://test.local${path}`,
 };
 
@@ -141,7 +142,7 @@ describe("WelcomeAfterOnboarding", () => {
 
     expect(screen.getByText(/Setting up your workspace/i)).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByText(/Welcome to Multica/i)).toBeInTheDocument();
+      expect(screen.getByText(/Welcome to 鸿翼灵工/i)).toBeInTheDocument();
     });
 
     expect(mockCreateIssue).toHaveBeenCalledTimes(1);
@@ -192,7 +193,7 @@ describe("WelcomeAfterOnboarding", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: /try again/i }));
 
-    expect(await screen.findByText(/Welcome to Multica/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Welcome to 鸿翼灵工/i)).toBeInTheDocument();
     expect(mockCreateIssue).toHaveBeenCalledTimes(2);
   });
 

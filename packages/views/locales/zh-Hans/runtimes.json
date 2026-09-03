@@ -76,7 +76,7 @@
     "rename": "重命名机器",
     "rename_dialog": {
       "title": "重命名机器",
-      "description": "给这台机器起一个你能认出来的名字。会应用到这台机器上的所有运行时，并在给 agent 选择运行时时显示。",
+      "description": "给这台机器起一个你能认出来的名字。会应用到这台机器上的所有运行时，并在给智能体选择运行时时显示。",
       "placeholder": "例如：我的 MacBook",
       "hint": "留空则使用设备的默认名称。",
       "cancel": "取消",
@@ -100,9 +100,9 @@
       "label": "离线",
       "description": "5 分钟以上没有心跳。请重启守护进程或排查主机。"
     },
-    "about_to_gc": {
-      "label": "即将清理",
-      "description": "离线 6 天以上。如不重连，将在 7 天时自动删除。"
+    "long_offline": {
+      "label": "长期离线",
+      "description": "6 天以上没有心跳。如果这台主机不会恢复，请将关联智能体改绑到其他运行时，或删除此运行时。"
     }
   },
   "detail": {
@@ -190,7 +190,7 @@
   "connect": {
     "title": "添加电脑",
     "description": "在要添加的电脑上运行这两条命令。守护进程一上线，这里就会自动识别。",
-    "step1_label": "安装 Multica CLI",
+    "step1_label": "安装 鸿翼灵工 CLI",
     "step2_label": "启动守护进程",
     "step2_hint": "会打开浏览器登录，然后在后台保持守护进程运行。",
     "live_listening": "等待你的电脑上线",
@@ -253,11 +253,11 @@
     "cli_version_label": "CLI 版本：",
     "version_unknown": "未知",
     "managed_by_desktop": "由桌面端管理",
-    "managed_by_desktop_title": "CLI 二进制由 Multica 桌面端管理——升级桌面端即可升级 CLI。",
+    "managed_by_desktop_title": "CLI 二进制由 鸿翼灵工 桌面端管理——升级桌面端即可升级 CLI。",
     "read_only": "只读",
     "read_only_title": "只有运行时所有者和工作区管理员可以更新 CLI。",
     "local_build": "本地构建",
-    "local_build_title": "该运行时报告的不是发布版本，Multica 无法判断是否有可升级的版本。请在这台机器上自行更新。",
+    "local_build_title": "该运行时报告的不是发布版本，鸿翼灵工 无法判断是否有可升级的版本。请在这台机器上自行更新。",
     "latest": "最新",
     "available": "可用",
     "action": "更新",
@@ -328,7 +328,7 @@
     "builtin_section_aria": "支持的内置协议族",
     "builtin_reference": "参考",
     "empty_title": "创建第一个自定义运行时",
-    "empty_description": "选择一个基础协议族，然后指定 Multica 要运行的命令。",
+    "empty_description": "选择一个基础协议族，然后指定 鸿翼灵工 要运行的命令。",
     "badge_builtin": "内置",
     "badge_custom": "自定义",
     "badge_disabled": "已禁用",

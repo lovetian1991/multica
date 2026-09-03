@@ -17,10 +17,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   return {
     ...config,
     name: isProd
-      ? "Multica"
+      ? "鸿翼灵工"
       : isStaging
-        ? "Multica (Staging)"
-        : "Multica (Dev)",
+        ? "鸿翼灵工 (Staging)"
+        : "鸿翼灵工 (Dev)",
     slug: "multica-mobile",
     version: "0.1.0",
     orientation: "portrait",
@@ -31,7 +31,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     // iOS icon size from this single PNG.
     icon: "./assets/icon.png",
     ios: {
-      supportsTablet: false,
+      // Expo keeps the top-level portrait policy for iPhone while adding all
+      // iPad orientations required for multitasking when tablet support is on.
+      supportsTablet: true,
       // Pins DEVELOPMENT_TEAM on every prebuild. Leaving it unset is the normal
       // path — `expo run:ios` then resolves a signing identity from the Keychain
       // itself, which is right when the Apple ID owns exactly one team. With
@@ -45,7 +47,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       appleTeamId: process.env.EXPO_APPLE_TEAM_ID,
       // Per-variant bundle id overrides exist for one reason: an Apple ID
       // can only sign bundle prefixes it owns, so contributors not on the
-      // Multica Apple Developer team (and external users self-building a
+      // 鸿翼灵工 Apple Developer team (and external users self-building a
       // personal copy against production) need to swap to a reverse-domain
       // they control. Each variant has its own `_<VARIANT>` suffix and is
       // only read inside that variant's branch — a generic
@@ -58,8 +60,28 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           ? "ai.multica.mobile.staging"
           : (process.env.EXPO_BUNDLE_IDENTIFIER_DEV ?? "ai.multica.mobile.dev"),
     },
+    android: {
+      package: isProd
+        ? "ai.multica.mobile"
+        : isStaging
+          ? "ai.multica.mobile.staging"
+          : "ai.multica.mobile.dev",
+    },
     plugins: [
       "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          image: "./assets/brand-mark.png",
+          imageWidth: 180,
+          resizeMode: "contain",
+          backgroundColor: "#ffffff",
+          dark: {
+            image: "./assets/brand-mark.png",
+            backgroundColor: "#09090b",
+          },
+        },
+      ],
       "expo-secure-store",
       "@react-native-community/datetimepicker",
       "react-native-enriched-markdown",
@@ -71,7 +93,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           // iOS 14+. Camera + microphone are disabled — we only ever read
           // from the existing photo library.
           photosPermission:
-            "Allow Multica to access your photos to attach images to issues and comments.",
+            "Allow 鸿翼灵工 to access your photos to attach images to issues and comments.",
           cameraPermission: false,
           microphonePermission: false,
         },
@@ -79,6 +101,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         "expo-build-properties",
         {
+          android: {
+            usesCleartextTraffic: true,
+          },
           ios: {
             buildReactNativeFromSource: true,
           },

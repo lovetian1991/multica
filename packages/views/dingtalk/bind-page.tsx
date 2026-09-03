@@ -17,7 +17,7 @@ type RedeemState =
 
 // DingTalkBindPage is the destination the bot's "link your account" prompt
 // points at. The user lands here logged out OR logged in; we require auth
-// before redeeming because the redeemer's Multica identity is taken from the
+// before redeeming because the redeemer's 鸿翼灵工 identity is taken from the
 // session (the token alone never proves who is binding).
 //
 // The token comes in via `?token=<raw>`. We POST it to

@@ -1,0 +1,11 @@
+[Unit]
+Description=Restore-test the latest Multica backup every week
+
+[Timer]
+OnCalendar=Sun *-*-* 04:15:00 Asia/Shanghai
+Persistent=true
+RandomizedDelaySec=15m
+Unit=multica-backup-verify.service
+
+[Install]
+WantedBy=timers.target

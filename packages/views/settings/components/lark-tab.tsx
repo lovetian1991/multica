@@ -41,7 +41,7 @@ import { larkInstallationsOptions, larkKeys } from "@multica/core/lark";
 import { api, ApiError } from "@multica/core/api";
 import type { LarkInstallation, LarkInstallStatusResponse } from "@multica/core/types";
 import { ActorAvatar } from "../../common/actor-avatar";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 
 // MUL-3083: the Lark (international, open.larksuite.com) "connect a Bot"
 // entry is temporarily hidden while its install → inbound pipeline is
@@ -57,7 +57,7 @@ const LARK_INTL_CONNECT_ENABLED: boolean = false;
 // backend enforces it; the UI hides the button for non-admins to match).
 //
 // Adding a new installation flows through the Agent detail page: the
-// install path is per-agent (each Multica Agent gets exactly one Bot —
+// install path is per-agent (each 鸿翼灵工 Agent gets exactly one Bot —
 // see the (workspace_id, agent_id) UNIQUE in lark_installation), so
 // asking the user to pick an agent here would re-create that page's
 // picker. The "Bind your first agent" copy in the empty state hints
@@ -214,8 +214,9 @@ function InstallationRow({
   onDisconnect: () => void;
 }) {
   const { t } = useT("settings");
-  // The bot is bound 1:1 to a Multica Agent (per the (workspace_id,
-  // agent_id) UNIQUE in lark_installation). Render the Multica agent's
+  // The bot is bound 1:1 to a 鸿翼灵工 Agent (per the (workspace_id,
+  // agent_id) UNIQUE in lark_installation). Render the 鸿翼灵工 agent's
+  const locale = useLocale();
   // identity here rather than the raw Lark app_id / bot_open_id — those
   // mean nothing to product users. getAgentName falls back to
   // "Unknown Agent" when the agent has been deleted; the Disconnect
@@ -249,7 +250,7 @@ function InstallationRow({
           </p>
           <p className="text-micro text-muted-foreground">
             {t(($) => $.lark.installed_at_label, {
-              when: new Date(installation.installed_at).toLocaleString(),
+              when: new Date(installation.installed_at).toLocaleString(locale),
             })}
           </p>
         </div>

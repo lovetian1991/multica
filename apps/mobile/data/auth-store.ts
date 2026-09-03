@@ -11,14 +11,18 @@
  */
 import { create } from "zustand";
 import type { User } from "@multica/core/types";
+import { getCurrentServerUrl } from "@/lib/server-url";
 import { api, ApiError } from "./api";
+import { queryClient } from "./query-client";
 import { clearToken, getToken, setToken } from "./secure-storage";
+import { restoreServerUrl, saveServerUrl } from "./server-config";
 import { useWorkspaceStore } from "./workspace-store";
 
 interface AuthState {
   user: User | null;
   isLoading: boolean;
   initialize: () => Promise<void>;
+  configureServer: (serverUrl: string) => Promise<string>;
   sendCode: (email: string) => Promise<void>;
   verifyCode: (email: string, code: string) => Promise<User>;
   logout: () => Promise<void>;
@@ -32,6 +36,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: true,
 
   initialize: async () => {
+    await restoreServerUrl();
+
     // Restore the persisted workspace slug alongside the auth token so the
     // entry redirect (app/index.tsx) can route directly to the last-used
     // workspace without flashing /select-workspace.
@@ -55,6 +61,19 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
       set({ user: null, isLoading: false });
     }
+  },
+
+  configureServer: async (serverUrl) => {
+    const previousServerUrl = getCurrentServerUrl();
+    const normalized = await saveServerUrl(serverUrl);
+    if (normalized === previousServerUrl) return normalized;
+
+    await clearToken();
+    api.setToken(null);
+    await useWorkspaceStore.getState().clear();
+    queryClient.clear();
+    set({ user: null });
+    return normalized;
   },
 
   sendCode: async (email) => {

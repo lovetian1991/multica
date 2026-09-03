@@ -29,8 +29,8 @@ func TestReasonStringWireValues(t *testing.T) {
 		{ReasonAPIInvalidRequest, "api_invalid_request"},
 		{ReasonSkillBundleUnavailable, "skill_bundle_unavailable"},
 		{ReasonRuntimeCLITimeout, "runtime_cli_timeout"},
+		{ReasonEnvironmentPrepareFailed, "environment_prepare_failed"},
 		{ReasonInvalidTaskIdentity, "invalid_task_identity"},
-		{ReasonIssueWindowRestricted, "issue_window_restricted"},
 		// Agent-side.
 		{ReasonAgentProviderAuthOrAccess, "agent_error.provider_auth_or_access"},
 		{ReasonAgentProviderQuotaLimit, "agent_error.provider_quota_limit"},
@@ -78,8 +78,8 @@ func TestIsAgentError(t *testing.T) {
 		ReasonAPIInvalidRequest,
 		ReasonSkillBundleUnavailable,
 		ReasonRuntimeCLITimeout,
+		ReasonEnvironmentPrepareFailed,
 		ReasonInvalidTaskIdentity,
-		ReasonIssueWindowRestricted,
 	}
 	for _, r := range platformSide {
 		if r.IsAgentError() {
@@ -154,7 +154,8 @@ func TestAllReasonsContents(t *testing.T) {
 		ReasonRuntimeRecovery,
 		ReasonTimeout, ReasonIterationLimit, ReasonAgentBlocked,
 		ReasonAPIInvalidRequest, ReasonSkillBundleUnavailable,
-		ReasonRuntimeCLITimeout, ReasonInvalidTaskIdentity, ReasonIssueWindowRestricted,
+		ReasonRuntimeCLITimeout, ReasonEnvironmentPrepareFailed,
+		ReasonInvalidTaskIdentity,
 		ReasonAgentProviderAuthOrAccess, ReasonAgentProviderQuotaLimit,
 		ReasonAgentProviderCapacityOrRateLimit, ReasonAgentProviderServerError,
 		ReasonAgentProviderNetwork, ReasonAgentProcessFailure,

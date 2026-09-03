@@ -6,18 +6,26 @@
 
 const { getDefaultConfig } = require("expo/metro-config");
 const { withNativeWind } = require("nativewind/metro");
+const fs = require("fs");
 const path = require("path");
 
 const projectRoot = __dirname;
 const monorepoRoot = path.resolve(projectRoot, "../..");
+const virtualStoreRoot = path.resolve(
+  fs.realpathSync(path.resolve(projectRoot, "node_modules/expo-router")),
+  "../../..",
+);
 
 const config = getDefaultConfig(projectRoot);
 
-config.watchFolders = [monorepoRoot];
+config.watchFolders = [...new Set([monorepoRoot, virtualStoreRoot])];
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, "node_modules"),
   path.resolve(monorepoRoot, "node_modules"),
 ];
 config.resolver.unstable_enableSymlinks = true;
 
-module.exports = withNativeWind(config, { input: "./global.css", inlineRem: 16 });
+module.exports = withNativeWind(config, {
+  input: "./global.css",
+  inlineRem: 16,
+});

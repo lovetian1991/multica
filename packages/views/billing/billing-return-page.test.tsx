@@ -44,6 +44,7 @@ vi.mock("../navigation", () => ({
   useNavigation: () => ({
     replace: mockReplace,
     searchParams: searchRef.current,
+    hash: "",
     pathname: "/billing/return",
   }),
 }));
@@ -144,7 +145,7 @@ describe("BillingReturnPage", () => {
     expectNoOutcomeClaim();
     expect(mockReplace).not.toHaveBeenCalled();
 
-    await userEvent.click(screen.getByRole("button", { name: "Go to Multica" }));
+    await userEvent.click(screen.getByRole("button", { name: "Go to 鸿翼灵工" }));
     expect(mockReplace).toHaveBeenCalledWith("/");
   });
 

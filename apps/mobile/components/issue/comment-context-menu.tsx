@@ -79,20 +79,20 @@ export function useCommentLongPress(
       actions.push(action);
     };
 
-    push("Reply", { kind: "reply" });
-    push("React…", { kind: "react" });
+    push("回复", { kind: "reply" });
+    push("添加表情", { kind: "react" });
     if (hasContent) {
-      push("Copy", { kind: "copy" });
-      push("Select Text", { kind: "select" });
+      push("复制", { kind: "copy" });
+      push("选择文本", { kind: "select" });
     }
-    if (canCopyLink) push("Copy Link", { kind: "copyLink" });
+    if (canCopyLink) push("复制链接", { kind: "copyLink" });
     if (isRoot) {
-      push(resolved ? "Unresolve Thread" : "Resolve Thread", {
+      push(resolved ? "取消解决" : "标记为已解决", {
         kind: "resolve",
       });
     }
-    if (isOwn) push("Delete", { kind: "delete" });
-    push("Cancel", { kind: "cancel" });
+    if (isOwn) push("删除", { kind: "delete" });
+    push("取消", { kind: "cancel" });
 
     const cancelButtonIndex = options.length - 1;
     const destructiveButtonIndex = isOwn
@@ -118,13 +118,15 @@ export function useCommentLongPress(
             // Set the reply target — the InlineCommentComposer subscribes
             // to this store, auto-expands, and threads the next submit
             // under entry.id via useCreateComment's `parentId`.
-            const actorName = getName(
-              entry.actor_type as "member" | "agent" | null | undefined,
-              entry.actor_id,
-            );
+            const actorName =
+              entry.actor_name ||
+              getName(
+                entry.actor_type as "member" | "agent" | null | undefined,
+                entry.actor_id,
+              );
             useReplyTargetStore.getState().setTarget({
               commentId: entry.id,
-              actorName: actorName || "comment",
+              actorName: actorName || "评论",
               preview: entry.content ?? "",
             });
             return;
@@ -174,12 +176,12 @@ export function useCommentLongPress(
             return;
           case "delete":
             Alert.alert(
-              "Delete comment?",
-              "This comment will be permanently deleted. Replies in the thread will also be removed. This cannot be undone.",
+              "删除评论？",
+              "此评论将被永久删除，评论下的回复也会一并移除。此操作无法撤销。",
               [
-                { text: "Cancel", style: "cancel" },
+                { text: "取消", style: "cancel" },
                 {
-                  text: "Delete",
+                  text: "删除",
                   style: "destructive",
                   onPress: () => deleteComment.mutate(entry.id),
                 },
@@ -198,6 +200,7 @@ export function useCommentLongPress(
     toggleReaction,
     deleteComment,
     resolveComment,
+    getName,
   ]);
 
   return { onLongPress, isPressed };
@@ -213,7 +216,7 @@ function presentReactSheet(args: {
 }) {
   const { entry, reactions, userId, wsSlug, issueId, toggle } = args;
   const emojis = QUICK_EMOJIS.slice(0, QUICK_ROW_SIZE);
-  const options = [...emojis, "More reactions…", "Cancel"];
+  const options = [...emojis, "更多表情...", "取消"];
   const cancelButtonIndex = options.length - 1;
 
   ActionSheetIOS.showActionSheetWithOptions(

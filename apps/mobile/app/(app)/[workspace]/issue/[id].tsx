@@ -12,19 +12,26 @@
  */
 import { useCallback, useEffect } from "react";
 import {
-  ActionSheetIOS,
   ActivityIndicator,
   Alert,
   Linking,
   View,
 } from "react-native";
 import { Stack, router, useLocalSearchParams } from "expo-router";
+import { useTheme } from "@react-navigation/native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import type { Issue } from "@multica/core/types";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
-import { IconButton } from "@/components/ui/icon-button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { TimelineList } from "@/components/issue/timeline-list";
 import { AgentHeaderBadge } from "@/components/issue/agent-header-badge";
 import { InlineCommentComposer } from "@/components/issue/inline-comment-composer";
@@ -105,60 +112,49 @@ export default function IssueDetail() {
   const createPin = useCreatePin();
   const deletePin = useDeletePin();
 
-  // Three-dot menu: Pin/Unpin / Copy link / Open on web (if web URL set) /
-  // Delete. Mirrors apps/mobile/app/(app)/[workspace]/project/[id].tsx — same
-  // ActionSheetIOS + Alert.alert confirm pattern. Property edits (status,
-  // priority, assignee, due_date) live on the IssueHeaderCard chips inside
-  // the timeline list, not in this menu — one entry per action.
-  const onPressMore = useCallback(() => {
-    if (!issue || !wsSlug) return;
-    const webUrl = process.env.EXPO_PUBLIC_WEB_URL;
-    const issueLink = webUrl
+  const webUrl = process.env.EXPO_PUBLIC_WEB_URL;
+  const issueLink =
+    issue && wsSlug && webUrl
       ? `${webUrl}/${wsSlug}/issue/${issue.identifier}`
       : null;
-    const options: string[] = ["Cancel"];
-    options.push(isPinned ? "Unpin" : "Pin");
-    options.push("Edit details");
-    if (issueLink) options.push("Copy link");
-    if (issueLink) options.push("Open on web");
-    options.push("Delete issue");
-    const destructiveIndex = options.length - 1;
-    ActionSheetIOS.showActionSheetWithOptions(
-      {
-        options,
-        cancelButtonIndex: 0,
-        destructiveButtonIndex: destructiveIndex,
-        title: issue.identifier,
-      },
-      (i) => {
-        const label = options[i];
-        if (label === "Pin") {
+
+  const onSelectAction = useCallback(
+    (action: IssueAction) => {
+      if (!issue || !wsSlug) return;
+      switch (action) {
+        case "pin":
           createPin.mutate({ item_type: "issue", item_id: issue.id });
-        } else if (label === "Unpin") {
+          break;
+        case "unpin":
           deletePin.mutate({ itemType: "issue", itemId: issue.id });
-        } else if (label === "Edit details") {
-          if (wsSlug) router.push(`/${wsSlug}/issue/${issue.id}/edit`);
-        } else if (label === "Copy link" && issueLink) {
-          Clipboard.setStringAsync(issueLink);
-        } else if (label === "Open on web" && issueLink) {
-          Linking.openURL(issueLink);
-        } else if (label === "Delete issue") {
+          break;
+        case "edit":
+          router.push(`/${wsSlug}/issue/${issue.id}/edit`);
+          break;
+        case "copy-link":
+          if (issueLink) Clipboard.setStringAsync(issueLink);
+          break;
+        case "open-web":
+          if (issueLink) Linking.openURL(issueLink);
+          break;
+        case "delete":
           confirmDelete(issue, () =>
             deleteIssue.mutate(issue.id, {
               onSuccess: () => router.back(),
             }),
           );
-        }
-      },
-    );
-  }, [issue, wsSlug, deleteIssue, isPinned, createPin, deletePin]);
+          break;
+      }
+    },
+    [issue, wsSlug, createPin, deletePin, issueLink, deleteIssue],
+  );
 
   return (
     <View className="flex-1 bg-background">
       <Stack.Screen
         options={{
-          title: issue?.identifier ?? "Issue",
-          headerBackTitle: "Back",
+          title: issue?.identifier ?? "任务",
+          headerBackTitle: "返回",
           headerRight: issue
             ? () => (
                 <View className="flex-row items-center gap-2">
@@ -166,10 +162,10 @@ export default function IssueDetail() {
                    *  active tasks, so it doesn't crowd the header in the
                    *  common case. See agent-header-badge.tsx. */}
                   <AgentHeaderBadge issueId={id} />
-                  <IconButton
-                    name="ellipsis-horizontal"
-                    onPress={onPressMore}
-                    accessibilityLabel="Issue actions"
+                  <IssueActionsMenu
+                    isPinned={isPinned}
+                    hasLink={!!issueLink}
+                    onSelect={onSelectAction}
                   />
                 </View>
               )
@@ -183,13 +179,10 @@ export default function IssueDetail() {
       ) : detail.error || !issue ? (
         <View className="flex-1 items-center justify-center px-6 gap-3">
           <Text className="text-sm text-destructive text-center">
-            Failed to load issue:{" "}
-            {detail.error instanceof Error
-              ? detail.error.message
-              : "not found"}
+            任务加载失败，请稍后重试。
           </Text>
           <Button variant="outline" onPress={() => detail.refetch()}>
-            <Text>Retry</Text>
+            <Text>重试</Text>
           </Button>
         </View>
       ) : (
@@ -210,13 +203,75 @@ export default function IssueDetail() {
   );
 }
 
+type IssueAction =
+  | "pin"
+  | "unpin"
+  | "edit"
+  | "copy-link"
+  | "open-web"
+  | "delete";
+
+function IssueActionsMenu({
+  isPinned,
+  hasLink,
+  onSelect,
+}: {
+  isPinned: boolean;
+  hasLink: boolean;
+  onSelect: (action: IssueAction) => void;
+}) {
+  const { colors } = useTheme();
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        className="size-10 items-center justify-center rounded-md active:bg-accent"
+        accessibilityLabel="任务操作"
+      >
+        <Ionicons
+          name="ellipsis-horizontal"
+          size={20}
+          color={colors.text}
+        />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuItem
+          onPress={() => onSelect(isPinned ? "unpin" : "pin")}
+        >
+          <Text>{isPinned ? "取消置顶" : "置顶"}</Text>
+        </DropdownMenuItem>
+        <DropdownMenuItem onPress={() => onSelect("edit")}>
+          <Text>编辑详情</Text>
+        </DropdownMenuItem>
+        {hasLink ? (
+          <>
+            <DropdownMenuItem onPress={() => onSelect("copy-link")}>
+              <Text>复制链接</Text>
+            </DropdownMenuItem>
+            <DropdownMenuItem onPress={() => onSelect("open-web")}>
+              <Text>在网页端打开</Text>
+            </DropdownMenuItem>
+          </>
+        ) : null}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          variant="destructive"
+          onPress={() => onSelect("delete")}
+        >
+          <Text>删除任务</Text>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function confirmDelete(issue: Issue, onConfirm: () => void) {
   Alert.alert(
-    "Delete issue?",
-    `${issue.identifier} and its comments, reactions, and attachments will be permanently deleted. This cannot be undone.`,
+    "删除任务？",
+    `将永久删除 ${issue.identifier} 及其评论、回应和附件。此操作无法撤销。`,
     [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: onConfirm },
+      { text: "取消", style: "cancel" },
+      { text: "删除", style: "destructive", onPress: onConfirm },
     ],
   );
 }

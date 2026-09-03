@@ -23,8 +23,8 @@
  * leaves the real tab button entirely alone.
  *
  * Visual conventions inside the popover (apps/mobile/CLAUDE.md):
- *   - All glyphs are SF Symbols rendered via expo-image (`sf:` source),
- *     so they share the visual language of the bottom tab bar icons.
+ *   - All navigation glyphs use Ionicons so they render consistently on
+ *     Android and iOS.
  *   - All colours route through THEME tokens (foreground /
  *     mutedForeground / secondary), so dark mode is automatic.
  *   - Workspace is collapsed to a single `<WorkspaceCard>` row (icon +
@@ -36,7 +36,7 @@
  */
 import { useMemo } from "react";
 import { Image, Pressable, View } from "react-native";
-import { Image as ExpoImage } from "expo-image";
+import { Ionicons } from "@expo/vector-icons";
 import { router, usePathname } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -67,16 +67,15 @@ const TAB_BAR_HEIGHT = 49;
 
 interface NavItem {
   label: string;
-  /** SF Symbol name, rendered via expo-image `source: "sf:<name>"`. */
-  icon: string;
+  icon: React.ComponentProps<typeof Ionicons>["name"];
   /** Path under /:slug/ — final href is `/${slug}${path}`. */
   path: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Pinned", icon: "pin", path: "/more/pins" },
-  { label: "Issues", icon: "list.bullet", path: "/more/issues" },
-  { label: "Projects", icon: "square.stack", path: "/more/projects" },
+  { label: "置顶", icon: "pin-outline", path: "/more/pins" },
+  { label: "任务", icon: "list-outline", path: "/more/issues" },
+  { label: "项目", icon: "albums-outline", path: "/more/projects" },
 ];
 
 export function MoreTabDropdownAnchor({
@@ -158,11 +157,7 @@ export function MoreTabDropdownAnchor({
                 isActive(item.path) && "bg-secondary",
               )}
             >
-              <ExpoImage
-                source={`sf:${item.icon}`}
-                tintColor={t.foreground}
-                style={{ width: 18, height: 18 }}
-              />
+              <Ionicons name={item.icon} color={t.foreground} size={18} />
               <Text className="text-sm text-foreground">{item.label}</Text>
             </DropdownMenuItem>
           ))}
@@ -192,7 +187,7 @@ function UserCard({
     <DropdownMenuItem
       onPress={onPress}
       className="h-12 gap-3"
-      accessibilityLabel="Account settings"
+      accessibilityLabel="账户设置"
     >
       {user?.avatar_url ? (
         <Image
@@ -222,11 +217,7 @@ function UserCard({
           </Text>
         ) : null}
       </View>
-      <ExpoImage
-        source="sf:chevron.right"
-        tintColor={chevronTint}
-        style={{ width: 12, height: 12 }}
-      />
+      <Ionicons name="chevron-forward" color={chevronTint} size={14} />
     </DropdownMenuItem>
   );
 }
@@ -266,11 +257,11 @@ function WorkspaceCard({
       disabled={!canSwitch}
       className="h-12 gap-3"
       accessibilityLabel={
-        canSwitch ? "Switch workspace" : currentWorkspaceName ?? "Workspace"
+        canSwitch ? "切换工作区" : currentWorkspaceName ?? "工作区"
       }
     >
       <WorkspaceAvatar
-        name={currentWorkspaceName ?? "Workspace"}
+        name={currentWorkspaceName ?? "工作区"}
         avatarUrl={currentWorkspaceAvatarUrl}
         size={32}
       />
@@ -279,15 +270,11 @@ function WorkspaceCard({
           className="text-sm font-medium text-foreground"
           numberOfLines={1}
         >
-          {currentWorkspaceName ?? "Workspace"}
+          {currentWorkspaceName ?? "工作区"}
         </Text>
       </View>
       {canSwitch ? (
-        <ExpoImage
-          source="sf:chevron.right"
-          tintColor={chevronTint}
-          style={{ width: 12, height: 12 }}
-        />
+        <Ionicons name="chevron-forward" color={chevronTint} size={14} />
       ) : null}
     </DropdownMenuItem>
   );
