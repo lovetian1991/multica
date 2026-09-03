@@ -1,93 +1,99 @@
 /**
  * Empty-state surface shown when the active session has no messages.
  *
- * Two modes mirror web (packages/views/chat/components/chat-window.tsx
- * `EmptyState`):
- *
- *   - first-time (the workspace has never started a chat) → educate. Tell
- *     the user what chat is for; don't surface starter prompts yet, they
- *     presume context the user doesn't have.
- *   - returning (at least one prior session exists) → starter prompts.
- *     Three taps, three common workflows; tapping prefills the composer
- *     draft so the user can edit before sending.
- *
- * Copy mirrors the web `chat.json` namespace 1:1. Mobile doesn't have
- * i18n yet so the strings are inlined in English — when mobile adopts
- * i18n the lookup keys (`empty_state.first_time_title` etc.) are already
- * established on the web side, so the migration is a literal
- * key-by-key swap.
+ * A configured agent supplies its own conversation starters. Agents without
+ * configured starters use the built-in defaults. Selecting a starter only
+ * prefills the composer so the user can edit it before sending.
  */
 import { View } from "react-native";
+import type { Agent, AgentConversationStarter } from "@multica/core/types";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 
-const STARTER_PROMPTS: { icon: string; text: string }[] = [
-  { icon: "📋", text: "按优先级列出我的未完成任务" },
-  { icon: "📝", text: "总结我今天完成的工作" },
-  { icon: "💡", text: "帮我规划下一步工作" },
+const FALLBACK_CONVERSATION_STARTERS: AgentConversationStarter[] = [
+  {
+    label: "我能帮你做什么？",
+    prompt: "你最擅长帮助我完成什么？请简要介绍。",
+  },
+  {
+    label: "建议一个待办事项",
+    prompt: "请建议三个我可以交给你的实用任务。",
+  },
+  {
+    label: "推荐下一步行动",
+    prompt: "根据你对我工作区的了解，推荐一个有用的下一步行动。",
+  },
 ];
 
 interface Props {
   hasSessions: boolean;
-  agentName?: string;
+  agent: Agent | null;
   onPickPrompt: (text: string) => void;
 }
 
-export function ChatEmptyState({ hasSessions, agentName, onPickPrompt }: Props) {
-  // First-time experience: educate before suggesting actions. Starter
-  // prompts here would presume the user already knows what chat is for.
-  if (!hasSessions) {
-    return (
-      <View className="flex-1 items-center justify-center px-6 py-8">
-        <View className="max-w-xs items-center gap-3">
-          <Text className="text-base font-semibold text-foreground text-center">
-            与智能体聊天
-          </Text>
-          <Text className="text-sm text-muted-foreground text-center">
-            <Text className="text-sm text-muted-foreground">
-              ✨ 智能体了解工作区中的{" "}
-            </Text>
-            <Text className="text-sm font-medium text-foreground">
-              任务、项目和技能
-            </Text>
-            <Text className="text-sm text-muted-foreground">.</Text>
-          </Text>
-          <Text className="text-sm text-muted-foreground text-center">
-            你可以让智能体总结工作、规划日程或处理一项小任务。
-          </Text>
-        </View>
-      </View>
-    );
-  }
+export function ChatEmptyState({ hasSessions, agent, onPickPrompt }: Props) {
+  const title = agent ? `你好，我是 ${agent.name}` : "与智能体聊天";
+  const configured = (agent?.conversation_starters ?? []).filter(
+    (item) => item.label.trim() && item.prompt.trim(),
+  );
+  const starters =
+    configured.length > 0
+      ? configured
+      : FALLBACK_CONVERSATION_STARTERS;
 
-  // Returning user: starter prompts are the fastest path back to action.
-  const title = agentName ? `你好，我是 ${agentName}` : "欢迎回到鸿翼灵工";
   return (
     <View className="flex-1 items-center justify-center px-6 py-8 gap-5">
       <View className="items-center gap-1">
         <Text className="text-base font-semibold text-foreground text-center">
           {title}
         </Text>
-        <Text className="text-sm text-muted-foreground text-center">
-          试着问问
-        </Text>
-      </View>
-      <View className="w-full max-w-xs gap-2">
-        {STARTER_PROMPTS.map((p) => (
-          <Button
-            key={p.text}
-            variant="outline"
-            onPress={() => onPickPrompt(p.text)}
-            className="h-auto justify-start px-3 py-2.5"
-            accessibilityLabel={p.text}
-          >
-            <Text className="text-sm text-foreground">
-              <Text className="text-sm">{p.icon}  </Text>
-              {p.text}
+        {agent?.description ? (
+          <Text className="text-sm text-muted-foreground text-center">
+            {agent.description}
+          </Text>
+        ) : null}
+        {!agent && !hasSessions ? (
+          <>
+            <Text className="text-sm text-muted-foreground text-center">
+              <Text className="text-sm text-muted-foreground">
+                ✨ 智能体了解工作区中的{" "}
+              </Text>
+              <Text className="text-sm font-medium text-foreground">
+                任务、项目和技能
+              </Text>
+              <Text className="text-sm text-muted-foreground">。</Text>
             </Text>
-          </Button>
-        ))}
+            <Text className="text-sm text-muted-foreground text-center">
+              你可以让智能体总结工作、规划日程或处理一项小任务。
+            </Text>
+          </>
+        ) : null}
+        {!hasSessions && agent ? (
+          <Text className="text-sm text-muted-foreground text-center">
+            选择一个示例开始，然后可以在发送前编辑内容。
+          </Text>
+        ) : null}
+        {hasSessions && agent ? (
+          <Text className="text-sm text-muted-foreground text-center">
+            试着问问
+          </Text>
+        ) : null}
       </View>
+      {agent ? (
+        <View className="w-full max-w-xs gap-2">
+          {starters.map((item, index) => (
+            <Button
+              key={`${item.label}-${index}`}
+              variant="outline"
+              onPress={() => onPickPrompt(item.prompt)}
+              className="h-auto justify-start px-3 py-2.5"
+              accessibilityLabel={item.label}
+            >
+              <Text className="text-sm text-foreground">{item.label}</Text>
+            </Button>
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
