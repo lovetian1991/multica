@@ -896,6 +896,8 @@ const TimelineEntrySchema = z.object({
   actor_type: z.string(),
   actor_id: z.string(),
   created_at: z.string(),
+  actor_name: z.string().optional(),
+  actor_avatar_url: z.string().optional(),
   action: z.string().optional(),
   details: z.record(z.string(), z.unknown()).optional(),
   content: z.string().optional(),
@@ -1206,6 +1208,18 @@ export const IssueSchema = z.object({
   // consumers must fall back to `status` rather than treat "" as a category.
   // (MUL-6243)
   status_category: z.string().optional(),
+  // A CUSTOM status's display name; "" for a built-in, which clients localize
+  // from the key. Optional so a response from a server that predates the field
+  // still validates.
+  //
+  // .catch(undefined) because this is ADDITIVE display data and the failure it
+  // guards against is disproportionate: a parse failure anywhere in IssueSchema
+  // takes the whole response through parseWithFallback to EMPTY_LIST_ISSUES_RESPONSE,
+  // so one malformed name from a mixed-version deploy would blank an entire
+  // issue list. Same treatment as source_context and labels above. Nothing reads
+  // this field to make a decision — useStatusLabel resolves the label from the
+  // catalog — so dropping it costs a fallback to the key. (MUL-6749)
+  status_name: z.string().optional().catch(undefined),
   priority: z.string(),
   assignee_type: z.string().nullable(),
   assignee_id: z.string().nullable(),
@@ -2930,6 +2944,17 @@ const RuntimeModelSchema = z.object({
   thinking: RuntimeModelThinkingSchema.nullable().optional()
     .transform((v) => v ?? undefined),
   service_tiers: z.array(RuntimeModelServiceTierSchema).optional(),
+  supports_explicit_standard_service_tier: z.boolean().optional(),
+}).loose();
+
+// A row the runtime named but will not run (MUL-6961). Parsed from its own
+// top-level list, never from `models`, so nothing here can become a selectable
+// value. `id` is required for the same reason it is on RuntimeModelSchema — a
+// row without one cannot even be keyed in a list.
+const RuntimeUnavailableModelSchema = z.object({
+  id: z.string(),
+  label: z.string().default(""),
+  reason: z.string().optional(),
 }).loose();
 
 export const RuntimeModelListRequestSchema = z.object({
@@ -2937,6 +2962,9 @@ export const RuntimeModelListRequestSchema = z.object({
   runtime_id: z.string().default(""),
   status: z.string(),
   models: z.array(RuntimeModelSchema).optional(),
+  // Absent on any daemon or server older than the field, which simply means
+  // the picker shows no unavailable section.
+  unavailable_models: z.array(RuntimeUnavailableModelSchema).optional(),
   supported: z.boolean().default(true),
   error: z.string().optional(),
   created_at: z.string().default(""),

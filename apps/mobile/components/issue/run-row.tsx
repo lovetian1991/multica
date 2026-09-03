@@ -16,6 +16,7 @@ import { Text } from "@/components/ui/text";
 import { ActorAvatar } from "@/components/ui/actor-avatar";
 import { useCancelTask } from "@/data/mutations/issues";
 import { useActorLookup } from "@/data/use-actor-name";
+import { runFailureBadgeLabel } from "@/lib/run-failure-badge";
 import { timeAgo } from "@/lib/time-ago";
 
 interface Props {
@@ -66,8 +67,8 @@ function StatusBadge({ task }: { task: AgentTask }) {
   const cls = STATUS_CLASS[task.status] ?? "text-muted-foreground";
   // For failed tasks, surface the failure_reason inline so users don't have
   // to drill in. Missing / empty / unrecognised stays as just "Failed".
-  if (task.status === "failed" && task.failure_reason) {
-    const reasonLabel = FAILURE_REASON_LABEL[task.failure_reason];
+  if (task.status === "failed") {
+    const reasonLabel = runFailureBadgeLabel(task.failure_reason);
     if (reasonLabel) {
       return (
         <Text className={`text-xs ${cls}`}>
@@ -149,7 +150,6 @@ const STATUS_CLASS: Record<AgentTask["status"], string> = {
   failed: "text-destructive",
   cancelled: "text-muted-foreground",
 };
-
 // Short badge copy — deliberately terser than lib/failure-reason-label.ts,
 // which backs a full-width chat bubble; this one shares a single line with the
 // status word and a timestamp.

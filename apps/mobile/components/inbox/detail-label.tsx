@@ -46,6 +46,8 @@ const TYPE_LABEL: Record<InboxItemType, string> = {
   quick_create_done: "快速创建完成",
   quick_create_failed: "快速创建失败",
   quick_create_unconfirmed: "快速创建结果待确认",
+  autopilot_paused: "自动化已暂停",
+  autopilot_quota_exceeded: "自动化已达到运行上限",
 };
 
 // due_date is a calendar day — format timezone-safely (no offset day shift).
