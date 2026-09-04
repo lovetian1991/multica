@@ -51,9 +51,10 @@ var routes = map[Operation]upstreamRoute{
 }
 
 var (
-	ErrDisabled         = errors.New("OpenContent is not configured")
-	ErrUnknownOperation = errors.New("unsupported OpenContent operation")
-	ErrCredentialQuery  = errors.New("OpenContent credentials must be sent as a Bearer header")
+	ErrDisabled          = errors.New("OpenContent is not configured")
+	ErrUnknownOperation  = errors.New("unsupported OpenContent operation")
+	ErrCredentialQuery   = errors.New("OpenContent credentials must be sent as a Bearer header")
+	ErrResponseTooLarge  = errors.New("OpenContent response exceeds configured limit")
 )
 
 type Client struct {
@@ -89,11 +90,25 @@ func (c *Client) MaxUploadBytes() int64 {
 	return c.maxUploadBytes
 }
 
+func (c *Client) AllowedExtensions() []string {
+	if c == nil {
+		return nil
+	}
+	return append([]string(nil), c.allowedExtensions...)
+}
+
 func (c *Client) ValidateUpload(body []byte, contentType string) error {
 	if c == nil || c.maxUploadBytes <= 0 {
 		return fmt.Errorf("OpenContent upload is not configured")
 	}
 	return ValidateMultipartUpload(body, contentType, c.maxUploadBytes, c.allowedExtensions)
+}
+
+func (c *Client) ValidateUploadCheck(body []byte) error {
+	if c == nil || c.maxUploadBytes <= 0 {
+		return fmt.Errorf("OpenContent upload is not configured")
+	}
+	return ValidateUploadCheck(body, c.maxUploadBytes, c.allowedExtensions)
 }
 
 func (c *Client) MethodFor(operation Operation) (string, bool) {
@@ -116,10 +131,12 @@ func (c *Client) Do(ctx context.Context, operation Operation, body []byte, query
 	if err != nil {
 		return nil, err
 	}
-	return c.do(ctx, route, body, cleanQuery, headers)
+	// 下载操作不限制响应大小
+	skipResponseLimit := operation == OperationDownload
+	return c.do(ctx, route, body, cleanQuery, headers, skipResponseLimit)
 }
 
-func (c *Client) do(ctx context.Context, route upstreamRoute, body []byte, query url.Values, headers http.Header) (*http.Response, error) {
+func (c *Client) do(ctx context.Context, route upstreamRoute, body []byte, query url.Values, headers http.Header, skipResponseLimit bool) (*http.Response, error) {
 	base, err := url.Parse(c.baseURL)
 	if err != nil || base.Scheme == "" || base.Host == "" {
 		return nil, fmt.Errorf("invalid OpenContent URL")
@@ -151,9 +168,13 @@ func (c *Client) do(ctx context.Context, route upstreamRoute, body []byte, query
 	if err != nil {
 		return nil, err
 	}
+	// 下载操作不限制响应大小
+	if skipResponseLimit {
+		return resp, nil
+	}
 	if resp.ContentLength > c.maxResponseBytes {
 		resp.Body.Close()
-		return nil, fmt.Errorf("OpenContent response exceeds configured limit")
+		return nil, ErrResponseTooLarge
 	}
 	resp.Body = &limitedReadCloser{
 		reader: io.LimitReader(resp.Body, c.maxResponseBytes+1),
@@ -173,11 +194,11 @@ type limitedReadCloser struct {
 
 func (r *limitedReadCloser) Read(p []byte) (int, error) {
 	if r.exceeded {
-		return 0, fmt.Errorf("OpenContent response exceeds configured limit")
+		return 0, ErrResponseTooLarge
 	}
 	remaining := r.limit - r.read
 	if remaining < 0 {
-		return 0, fmt.Errorf("OpenContent response exceeds configured limit")
+		return 0, ErrResponseTooLarge
 	}
 	readBuffer := p
 	if int64(len(readBuffer)) > remaining+1 {
@@ -187,7 +208,7 @@ func (r *limitedReadCloser) Read(p []byte) (int, error) {
 	if int64(n) > remaining {
 		r.read = r.limit
 		r.exceeded = true
-		return int(remaining), fmt.Errorf("OpenContent response exceeds configured limit")
+		return int(remaining), ErrResponseTooLarge
 	}
 	r.read += int64(n)
 	return n, err
