@@ -350,6 +350,13 @@ func buildQuickCreatePrompt(task Task) string {
 	} else {
 		b.WriteString("- **project**: omit. The platform will route the issue to the workspace default.\n")
 	}
+	// product is globally scoped and pinned by the modal when selected. The
+	// UUID is authoritative and must be passed through to issue creation.
+	if task.QuickCreateProductID != "" {
+		fmt.Fprintf(&b, "- **product**: required for this run. Pass `--product %q`; the user selected this global product in the quick-create modal. Do not infer or replace it from the prompt text.\n", task.QuickCreateProductID)
+	} else {
+		b.WriteString("- **product**: omit. The issue can be created without a product.\n")
+	}
 	// parent — pinned by the modal when the user opened it from "Add sub
 	// issue" on an existing issue. Pass the UUID (never the identifier) so
 	// the create lands the sub-issue under the right parent even when the

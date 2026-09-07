@@ -474,6 +474,7 @@ type AgentTaskResponse struct {
 	QuickCreatePrompt        string                 `json:"quick_create_prompt,omitempty"`         // user's natural-language input for quick-create tasks
 	QuickCreatePriority      string                 `json:"quick_create_priority,omitempty"`       // explicit priority selected in quick-create
 	QuickCreateDueDate       string                 `json:"quick_create_due_date,omitempty"`       // explicit calendar due date selected in quick-create
+	QuickCreateProductID     string                 `json:"quick_create_product_id,omitempty"`     // globally scoped product selected in quick-create
 	QuickCreateAttachmentIDs []string               `json:"quick_create_attachment_ids,omitempty"` // attachment ids uploaded in the quick-create prompt and bound on issue create
 	QuickCreateSourceContext json.RawMessage        `json:"quick_create_source_context,omitempty"` // immutable historical context for source-context quick-create
 	HandoffNote              string                 `json:"handoff_note,omitempty"`                // assignment handoff instruction; rendered into the run's opening prompt + issue_context.md (omitempty so old daemons ignore it)

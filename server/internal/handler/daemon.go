@@ -2895,6 +2895,7 @@ func (h *Handler) buildClaimedTaskResponse(r *http.Request, task *db.AgentTaskQu
 			resp.QuickCreatePrompt = qc.Prompt
 			resp.QuickCreatePriority = qc.Priority
 			resp.QuickCreateDueDate = qc.DueDate
+			resp.QuickCreateProductID = qc.ProductID
 			resp.QuickCreateAttachmentIDs = append([]string(nil), qc.AttachmentIDs...)
 			resp.ThreadName = qc.Prompt
 			resp.WorkspaceID = qc.WorkspaceID
@@ -2954,6 +2955,41 @@ func (h *Handler) buildClaimedTaskResponse(r *http.Request, task *db.AgentTaskQu
 				}
 			}
 			projectCtx.applyTo(&resp)
+
+			// Products are global resources. Unlike the legacy project context,
+			// an explicitly selected product must never be silently discarded:
+			// validate it against the global catalog and carry its UUID to the
+			// daemon so the quick-create prompt can pass it to issue create.
+			if qc.ProductID != "" {
+				productID, productErr := util.ParseUUID(qc.ProductID)
+				if productErr != nil {
+					return resp, deliveredCommentIDs, agentSkillCount, builtinSkillCount, h.failClaimedTaskBeforeLaunch(
+						r.Context(), task,
+						"The selected product is invalid. Start quick-create again and choose a valid product.",
+						taskfailure.ReasonAgentUnknown,
+						"error_product_invalid", http.StatusBadRequest, "quick-create product id is invalid",
+					)
+				}
+				if _, productErr := h.Queries.GetProduct(r.Context(), productID); productErr != nil {
+					if errors.Is(productErr, pgx.ErrNoRows) {
+						return resp, deliveredCommentIDs, agentSkillCount, builtinSkillCount, h.failClaimedTaskBeforeLaunch(
+							r.Context(), task,
+							"The selected product no longer exists. Start quick-create again and choose another product.",
+							taskfailure.ReasonAgentUnknown,
+							"error_product_not_found", http.StatusBadRequest, "quick-create product not found",
+						)
+					}
+					slog.Error("quick-create claim: load product failed; preserving task for redelivery",
+						"task_id", uuidToString(task.ID),
+						"product_id", qc.ProductID,
+						"error", productErr)
+					return resp, deliveredCommentIDs, agentSkillCount, builtinSkillCount, &claimBuildFailure{
+						outcome: "error_product_load",
+						status:  http.StatusInternalServerError,
+						message: "failed to load product context",
+					}
+				}
+			}
 
 			// Parent-issue resolution for quick-create tasks opened from
 			// "Add sub issue". The handler already verified workspace
