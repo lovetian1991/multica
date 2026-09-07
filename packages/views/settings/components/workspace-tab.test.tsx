@@ -7,6 +7,7 @@ import enCommon from "../../locales/en/common.json";
 import enSettings from "../../locales/en/settings.json";
 
 const mockUpdateWorkspace = vi.hoisted(() => vi.fn());
+const mockSetQueryData = vi.hoisted(() => vi.fn());
 const mockInvalidateQueries = vi.hoisted(() => vi.fn());
 const mockToastSuccess = vi.hoisted(() => vi.fn());
 const workspaceRef = vi.hoisted(() => ({
@@ -18,6 +19,7 @@ const workspaceRef = vi.hoisted(() => ({
     context: "",
     issue_prefix: "TES",
     repos: [] as { url: string }[],
+    oc_key_configured: false,
   },
 }));
 const membersRef = vi.hoisted(() => ({
@@ -27,7 +29,7 @@ const membersRef = vi.hoisted(() => ({
 vi.mock("@tanstack/react-query", () => ({
   useQuery: () => ({ data: membersRef.current, isFetched: true }),
   useQueryClient: () => ({
-    setQueryData: vi.fn(),
+    setQueryData: mockSetQueryData,
     getQueryData: vi.fn(() => []),
     invalidateQueries: mockInvalidateQueries,
   }),
@@ -112,6 +114,7 @@ describe("WorkspaceTab — automatic updates", () => {
       context: "",
       issue_prefix: "TES",
       repos: [],
+      oc_key_configured: false,
     };
     membersRef.current = [{ user_id: "user-1", role: "owner" }];
     mockUpdateWorkspace.mockImplementation(
@@ -244,5 +247,54 @@ describe("WorkspaceTab — automatic updates", () => {
 
     expect(screen.getByPlaceholderText("TES")).toBeDisabled();
     expect(screen.getByDisplayValue("Test Workspace")).toBeDisabled();
+  });
+
+  it("saves the OC key without leaving it in the input", async () => {
+    const user = setupUser();
+    render(<WorkspaceTab />, { wrapper: I18nWrapper });
+    const input = screen.getByLabelText("OC key");
+
+    await user.type(input, "key-a");
+    await user.click(screen.getByRole("button", { name: "Save key" }));
+
+    await waitFor(() => {
+      expect(mockUpdateWorkspace).toHaveBeenCalledWith("workspace-1", {
+        oc_key: "key-a",
+      });
+    });
+    expect(input).toHaveValue("");
+    expect(mockSetQueryData).toHaveBeenCalled();
+  });
+
+  it("shows only the configured state and supports clearing the OC key", async () => {
+    const user = setupUser();
+    workspaceRef.current.oc_key_configured = true;
+    render(<WorkspaceTab />, { wrapper: I18nWrapper });
+
+    const input = screen.getByLabelText("OC key");
+    expect(input).toHaveAttribute("type", "password");
+    expect(input).toHaveValue("");
+    expect(screen.getByText("Configured. Enter a new value to replace it.")).toBeTruthy();
+    expect(screen.queryByDisplayValue("key-a")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Clear key" }));
+    await screen.findByText("Clear the OC key for this workspace?");
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
+
+    await waitFor(() => {
+      expect(mockUpdateWorkspace).toHaveBeenCalledWith("workspace-1", {
+        clear_oc_key: true,
+      });
+    });
+  });
+
+  it("keeps OC key controls unavailable to regular members", () => {
+    membersRef.current = [{ user_id: "user-1", role: "member" }];
+    workspaceRef.current.oc_key_configured = true;
+    render(<WorkspaceTab />, { wrapper: I18nWrapper });
+
+    expect(screen.getByLabelText("OC key")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save key" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Clear key" })).toBeDisabled();
   });
 });

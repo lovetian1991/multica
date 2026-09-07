@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -95,18 +96,21 @@ func normalizeIssuePrefix(raw string) (string, bool) {
 const issuePrefixFormatError = "issue prefix must be 1-10 uppercase letters or digits"
 
 type WorkspaceResponse struct {
-	ID          string  `json:"id"`
-	Name        string  `json:"name"`
-	Slug        string  `json:"slug"`
-	Description *string `json:"description"`
-	Context     *string `json:"context"`
-	Settings    any     `json:"settings"`
-	Repos       any     `json:"repos"`
-	IssuePrefix string  `json:"issue_prefix"`
-	AvatarURL   *string `json:"avatar_url"`
-	CreatedAt   string  `json:"created_at"`
-	UpdatedAt   string  `json:"updated_at"`
+	ID              string  `json:"id"`
+	Name            string  `json:"name"`
+	Slug            string  `json:"slug"`
+	Description     *string `json:"description"`
+	Context         *string `json:"context"`
+	Settings        any     `json:"settings"`
+	Repos           any     `json:"repos"`
+	IssuePrefix     string  `json:"issue_prefix"`
+	AvatarURL       *string `json:"avatar_url"`
+	OCKeyConfigured bool    `json:"oc_key_configured"`
+	CreatedAt       string  `json:"created_at"`
+	UpdatedAt       string  `json:"updated_at"`
 }
+
+const workspaceOCKeySettingsField = "oc_key_encrypted"
 
 func (h *Handler) workspaceToResponse(w db.Workspace) WorkspaceResponse {
 	var settings any
@@ -116,6 +120,13 @@ func (h *Handler) workspaceToResponse(w db.Workspace) WorkspaceResponse {
 	if settings == nil {
 		settings = map[string]any{}
 	}
+	ocKeyConfigured := false
+	if settingsMap, ok := settings.(map[string]any); ok {
+		if encrypted, ok := settingsMap[workspaceOCKeySettingsField].(string); ok {
+			ocKeyConfigured = strings.TrimSpace(encrypted) != ""
+		}
+		delete(settingsMap, workspaceOCKeySettingsField)
+	}
 	var repos any
 	if w.Repos != nil {
 		json.Unmarshal(w.Repos, &repos)
@@ -124,18 +135,54 @@ func (h *Handler) workspaceToResponse(w db.Workspace) WorkspaceResponse {
 		repos = []any{}
 	}
 	return WorkspaceResponse{
-		ID:          uuidToString(w.ID),
-		Name:        w.Name,
-		Slug:        w.Slug,
-		Description: textToPtr(w.Description),
-		Context:     textToPtr(w.Context),
-		Settings:    settings,
-		Repos:       repos,
-		IssuePrefix: w.IssuePrefix,
-		AvatarURL:   h.resolveAvatarURLPtr(textToPtr(w.AvatarUrl)),
-		CreatedAt:   timestampToString(w.CreatedAt),
-		UpdatedAt:   timestampToString(w.UpdatedAt),
+		ID:              uuidToString(w.ID),
+		Name:            w.Name,
+		Slug:            w.Slug,
+		Description:     textToPtr(w.Description),
+		Context:         textToPtr(w.Context),
+		Settings:        settings,
+		Repos:           repos,
+		IssuePrefix:     w.IssuePrefix,
+		AvatarURL:       h.resolveAvatarURLPtr(textToPtr(w.AvatarUrl)),
+		OCKeyConfigured: ocKeyConfigured,
+		CreatedAt:       timestampToString(w.CreatedAt),
+		UpdatedAt:       timestampToString(w.UpdatedAt),
 	}
+}
+
+func workspaceSettingsMap(raw []byte) (map[string]any, error) {
+	settings := make(map[string]any)
+	trimmed := strings.TrimSpace(string(raw))
+	if trimmed == "" || trimmed == "null" {
+		return settings, nil
+	}
+	if err := json.Unmarshal(raw, &settings); err != nil {
+		return nil, fmt.Errorf("workspace settings must be a JSON object: %w", err)
+	}
+	return settings, nil
+}
+
+func (h *Handler) workspaceOCKey(w db.Workspace) (string, error) {
+	settings, err := workspaceSettingsMap(w.Settings)
+	if err != nil {
+		return "", err
+	}
+	encoded, ok := settings[workspaceOCKeySettingsField].(string)
+	if !ok || strings.TrimSpace(encoded) == "" {
+		return "", nil
+	}
+	if h.SystemSettingsSecretBox == nil {
+		return "", errors.New("workspace OC key encryption is not configured")
+	}
+	sealed, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return "", fmt.Errorf("decode workspace OC key: %w", err)
+	}
+	plaintext, err := h.SystemSettingsSecretBox.Open(sealed)
+	if err != nil {
+		return "", fmt.Errorf("decrypt workspace OC key: %w", err)
+	}
+	return string(plaintext), nil
 }
 
 type MemberResponse struct {
@@ -327,6 +374,8 @@ type UpdateWorkspaceRequest struct {
 	Repos       any     `json:"repos"`
 	IssuePrefix *string `json:"issue_prefix"`
 	AvatarURL   *string `json:"avatar_url"`
+	OCKey       *string `json:"oc_key"`
+	ClearOCKey  bool    `json:"clear_oc_key"`
 }
 
 type workspaceRepoRef struct {
@@ -386,6 +435,26 @@ func (h *Handler) UpdateWorkspace(w http.ResponseWriter, r *http.Request) {
 	params := db.UpdateWorkspaceParams{
 		ID: idUUID,
 	}
+	if req.OCKey != nil && req.ClearOCKey {
+		writeError(w, http.StatusBadRequest, "oc_key and clear_oc_key cannot be used together")
+		return
+	}
+	needsSettings := req.Settings != nil ||
+		(req.OCKey != nil && strings.TrimSpace(*req.OCKey) != "") ||
+		req.ClearOCKey
+	var settingsMap map[string]any
+	if needsSettings {
+		existing, err := h.Queries.GetWorkspace(r.Context(), idUUID)
+		if err != nil {
+			writeError(w, http.StatusNotFound, "workspace not found")
+			return
+		}
+		settingsMap, err = workspaceSettingsMap(existing.Settings)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to read workspace settings")
+			return
+		}
+	}
 	if req.Name != nil {
 		name := strings.TrimSpace(*req.Name)
 		if name == "" {
@@ -401,8 +470,38 @@ func (h *Handler) UpdateWorkspace(w http.ResponseWriter, r *http.Request) {
 		params.Context = pgtype.Text{String: *req.Context, Valid: true}
 	}
 	if req.Settings != nil {
-		s, _ := json.Marshal(req.Settings)
-		params.Settings = s
+		raw, err := json.Marshal(req.Settings)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "settings must be a JSON object")
+			return
+		}
+		incoming, err := workspaceSettingsMap(raw)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "settings must be a JSON object")
+			return
+		}
+		delete(incoming, workspaceOCKeySettingsField)
+		for key, value := range incoming {
+			settingsMap[key] = value
+		}
+	}
+	if req.OCKey != nil && strings.TrimSpace(*req.OCKey) != "" {
+		if h.SystemSettingsSecretBox == nil {
+			writeError(w, http.StatusServiceUnavailable, "workspace OC key encryption is not configured")
+			return
+		}
+		sealed, err := h.SystemSettingsSecretBox.Seal([]byte(strings.TrimSpace(*req.OCKey)))
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to encrypt workspace OC key")
+			return
+		}
+		settingsMap[workspaceOCKeySettingsField] = base64.StdEncoding.EncodeToString(sealed)
+	}
+	if req.ClearOCKey {
+		delete(settingsMap, workspaceOCKeySettingsField)
+	}
+	if needsSettings {
+		params.Settings, _ = json.Marshal(settingsMap)
 	}
 	if req.Repos != nil {
 		reposJSON, err := validateAndNormalizeWorkspaceRepos(req.Repos)

@@ -7932,6 +7932,7 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, slot i
 		agentCustomEnv = task.Agent.CustomEnv
 	}
 	layerCustomEnvAndHermesHome(agentEnv, agentCustomEnv, env.HermesHome, d.logger)
+	injectTaskOCKey(agentEnv, task.OCKey)
 	if provider == "reasonix" {
 		reasonixStateHome, err := prepareReasonixTaskStateHome(d.cfg.Profile, task.RuntimeID, task.AgentID)
 		if err != nil {
@@ -9493,7 +9494,7 @@ func isBlockedEnvKey(key string) bool {
 		return true
 	}
 	switch upper {
-	case "HOME", "PATH", "USER", "SHELL", "TERM", "TMPDIR", "TMP", "TEMP", "CODEX_HOME", "REASONIX_STATE_HOME", "CURSOR_DATA_DIR", execenv.CursorMcpAuthSourceEnv, "OPENCLAW_CONFIG_PATH", "OPENCLAW_INCLUDE_ROOTS":
+	case "HOME", "PATH", "USER", "SHELL", "TERM", "TMPDIR", "TMP", "TEMP", "CODEX_HOME", "REASONIX_STATE_HOME", "CURSOR_DATA_DIR", execenv.CursorMcpAuthSourceEnv, "OPENCLAW_CONFIG_PATH", "OPENCLAW_INCLUDE_ROOTS", "OC_KEY":
 		return true
 	}
 	return false
@@ -9580,6 +9581,15 @@ func layerCustomEnvAndHermesHome(agentEnv, customEnv map[string]string, overlayH
 	}
 	if overlayHome != "" {
 		agentEnv["HERMES_HOME"] = overlayHome
+	}
+}
+
+// injectTaskOCKey adds the workspace key only to the environment map for the
+// task's child process. It deliberately does not touch the daemon process
+// environment, so concurrent tasks from different workspaces stay isolated.
+func injectTaskOCKey(agentEnv map[string]string, ocKey string) {
+	if strings.TrimSpace(ocKey) != "" {
+		agentEnv["OC_KEY"] = ocKey
 	}
 }
 

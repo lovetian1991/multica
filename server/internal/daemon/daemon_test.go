@@ -584,6 +584,55 @@ func TestTaskMulticaEnvironmentIncludesPrivateConfigRoot(t *testing.T) {
 	}
 }
 
+func TestInjectTaskOCKeyIsTaskScoped(t *testing.T) {
+	t.Parallel()
+
+	before, wasSet := os.LookupEnv("OC_KEY")
+
+	envA := map[string]string{}
+	injectTaskOCKey(envA, "workspace-a-secret")
+	if got := envA["OC_KEY"]; got != "workspace-a-secret" {
+		t.Fatalf("workspace A OC_KEY = %q, want %q", got, "workspace-a-secret")
+	}
+
+	envB := map[string]string{}
+	injectTaskOCKey(envB, "workspace-b-secret")
+	if got := envB["OC_KEY"]; got != "workspace-b-secret" {
+		t.Fatalf("workspace B OC_KEY = %q, want %q", got, "workspace-b-secret")
+	}
+	if envA["OC_KEY"] == envB["OC_KEY"] {
+		t.Fatal("different task environments unexpectedly share OC_KEY")
+	}
+
+	envWithoutKey := map[string]string{}
+	injectTaskOCKey(envWithoutKey, "   ")
+	if _, ok := envWithoutKey["OC_KEY"]; ok {
+		t.Fatal("empty workspace OC_KEY should not be injected")
+	}
+
+	after, stillSet := os.LookupEnv("OC_KEY")
+	if stillSet != wasSet || after != before {
+		t.Fatalf("injectTaskOCKey changed daemon process environment: before=%q/%v after=%q/%v", before, wasSet, after, stillSet)
+	}
+}
+
+func TestOCKeyCannotBeOverriddenByAgentCustomEnv(t *testing.T) {
+	t.Parallel()
+
+	env := map[string]string{}
+	layerCustomEnvAndHermesHome(env, map[string]string{
+		"OC_KEY": "agent-secret",
+	}, "", slog.Default())
+	injectTaskOCKey(env, "workspace-secret")
+
+	if got := env["OC_KEY"]; got != "workspace-secret" {
+		t.Fatalf("OC_KEY = %q, want task workspace secret", got)
+	}
+	if !isBlockedEnvKey("OC_KEY") {
+		t.Fatal("OC_KEY is not protected by the daemon environment blocklist")
+	}
+}
+
 // When `brew --prefix` is unavailable but the executable path is under a
 // known Cellar root, triggerRestart must recover the prefix from the
 // known-prefix list and target <prefix>/bin/multica.

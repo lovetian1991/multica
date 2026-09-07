@@ -133,6 +133,9 @@ export function WorkspaceTab() {
   const [issuePrefix, setIssuePrefix] = useState(workspace?.issue_prefix ?? "");
   const [prefixSaveStatus, setPrefixSaveStatus] =
     useState<SettingsSaveStatus>("idle");
+  const [ocKey, setOcKey] = useState("");
+  const [ocKeySaveStatus, setOcKeySaveStatus] =
+    useState<SettingsSaveStatus>("idle");
   const [actionId, setActionId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<{
     title: string;
@@ -162,6 +165,8 @@ export function WorkspaceTab() {
     setDescription(workspace?.description ?? "");
     setContext(workspace?.context ?? "");
     setIssuePrefix(workspace?.issue_prefix ?? "");
+    setOcKey("");
+    setOcKeySaveStatus("idle");
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed on id only; see comment above
   }, [workspace?.id]);
 
@@ -254,6 +259,61 @@ export function WorkspaceTab() {
       }),
       variant: "destructive",
       onConfirm: () => performPrefixSave(nextPrefix),
+    });
+  };
+
+  const handleOCKeySave = async () => {
+    if (!workspace || !canManageWorkspace || !ocKey.trim()) return;
+    setOcKeySaveStatus("saving");
+    try {
+      const updated = await api.updateWorkspace(workspace.id, {
+        oc_key: ocKey.trim(),
+      });
+      qc.setQueryData(workspaceKeys.list(), (old: Workspace[] | undefined) =>
+        old?.map((ws) => (ws.id === updated.id ? updated : ws)),
+      );
+      setOcKey("");
+      setOcKeySaveStatus("saved");
+      toast.success(t(($) => $.workspace.oc_key_saved));
+    } catch (error) {
+      setOcKeySaveStatus("error");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t(($) => $.workspace.oc_key_save_failed),
+      );
+    }
+  };
+
+  const handleOCKeyClear = () => {
+    if (!workspace || !canManageWorkspace || workspace.oc_key_configured !== true) {
+      return;
+    }
+    setConfirmAction({
+      title: t(($) => $.workspace.oc_key_clear),
+      description: t(($) => $.workspace.oc_key_clear_confirm),
+      variant: "destructive",
+      onConfirm: async () => {
+        setOcKeySaveStatus("saving");
+        try {
+          const updated = await api.updateWorkspace(workspace.id, {
+            clear_oc_key: true,
+          });
+          qc.setQueryData(workspaceKeys.list(), (old: Workspace[] | undefined) =>
+            old?.map((ws) => (ws.id === updated.id ? updated : ws)),
+          );
+          setOcKey("");
+          setOcKeySaveStatus("saved");
+          toast.success(t(($) => $.workspace.oc_key_cleared));
+        } catch (error) {
+          setOcKeySaveStatus("error");
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : t(($) => $.workspace.oc_key_save_failed),
+          );
+        }
+      },
     });
   };
 
@@ -461,6 +521,81 @@ export function WorkspaceTab() {
                 {t(($) => $.workspace.manage_hint)}
               </div>
             )}
+        </SettingsCard>
+      </SettingsSection>
+
+      <SettingsSection
+        title={t(($) => $.workspace.oc_key_section)}
+        action={
+          <SettingsSaveState
+            status={ocKeySaveStatus}
+            savingLabel={t(($) => $.auto_save.saving)}
+            savedLabel={t(($) => $.workspace.oc_key_saved)}
+            errorLabel={t(($) => $.workspace.oc_key_save_failed)}
+          />
+        }
+      >
+        <SettingsCard>
+          <SettingsRow
+            label={t(($) => $.workspace.oc_key_label)}
+            description={t(($) => $.workspace.oc_key_description)}
+            size="text"
+            align="start"
+          >
+            <div className="space-y-2">
+              <Input
+                type="password"
+                name="workspace-oc-key"
+                autoComplete="off"
+                spellCheck={false}
+                aria-label={t(($) => $.workspace.oc_key_label)}
+                placeholder={t(($) => $.workspace.oc_key_placeholder)}
+                value={ocKey}
+                onChange={(event) => {
+                  setOcKeySaveStatus("idle");
+                  setOcKey(event.target.value);
+                }}
+                disabled={!canManageWorkspace || ocKeySaveStatus === "saving"}
+              />
+              {workspace.oc_key_configured === true ? (
+                <p className="text-caption text-muted-foreground">
+                  {t(($) => $.workspace.oc_key_configured)}
+                </p>
+              ) : null}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleOCKeySave}
+                  disabled={
+                    !canManageWorkspace ||
+                    !ocKey.trim() ||
+                    ocKeySaveStatus === "saving"
+                  }
+                >
+                  {t(($) => $.workspace.oc_key_save)}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleOCKeyClear}
+                  disabled={
+                    !canManageWorkspace ||
+                    workspace.oc_key_configured !== true ||
+                    ocKeySaveStatus === "saving"
+                  }
+                >
+                  {t(($) => $.workspace.oc_key_clear)}
+                </Button>
+              </div>
+            </div>
+          </SettingsRow>
+          {!canManageWorkspace && (
+            <div className="px-4 py-3 text-caption text-muted-foreground">
+              {t(($) => $.workspace.manage_hint)}
+            </div>
+          )}
         </SettingsCard>
       </SettingsSection>
 

@@ -3123,12 +3123,35 @@ func (h *Handler) buildClaimedTaskResponse(r *http.Request, task *db.AgentTaskQu
 		if ws.Context.Valid {
 			resp.WorkspaceContext = ws.Context.String
 		}
+		if ocKey, keyErr := h.workspaceOCKey(ws); keyErr != nil {
+			slog.Error("task claim: failed to load workspace OC key; refusing dispatch",
+				"task_id", uuidToString(task.ID),
+				"workspace_id", resp.WorkspaceID,
+				"error", keyErr,
+			)
+			return resp, deliveredCommentIDs, agentSkillCount, builtinSkillCount, h.failClaimedTaskBeforeLaunch(
+				r.Context(),
+				task,
+				"Workspace OC key could not be loaded. Fix the workspace settings and retry the task.",
+				taskfailure.ReasonAgentMissingConfig,
+				"error_workspace_oc_key",
+				http.StatusInternalServerError,
+				"failed to load workspace OC key",
+			)
+		} else {
+			resp.OCKey = ocKey
+		}
 	} else {
-		slog.Warn("task claim: failed to load workspace for context injection",
+		slog.Error("task claim: failed to load workspace for context and OC key injection; refusing dispatch",
 			"task_id", uuidToString(task.ID),
 			"workspace_id", resp.WorkspaceID,
 			"error", err,
 		)
+		return resp, deliveredCommentIDs, agentSkillCount, builtinSkillCount, &claimBuildFailure{
+			outcome: "error_workspace_load",
+			status:  http.StatusInternalServerError,
+			message: "failed to load task workspace",
+		}
 	}
 
 	// Workspace status catalog (MUL-6460): active CUSTOM statuses only, so the
