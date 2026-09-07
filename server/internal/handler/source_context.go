@@ -665,6 +665,17 @@ func (h *Handler) createManualCommentSubIssue(w http.ResponseWriter, r *http.Req
 		}
 		projectID = parsed
 	}
+	var productID pgtype.UUID
+	if input.ProductID != nil {
+		parsed, err := util.ParseUUID(strings.TrimSpace(*input.ProductID))
+		if err != nil {
+			return sourceContextBadRequest("invalid product_id")
+		}
+		if _, err := h.Queries.GetProduct(r.Context(), parsed); err != nil {
+			return service.ErrProductNotFound
+		}
+		productID = parsed
+	}
 	attachmentIDs, ok := parseUUIDSliceOrBadRequest(w, input.AttachmentIDs, "attachment_ids")
 	if !ok {
 		return errSourceContextResponseWritten
@@ -702,7 +713,7 @@ func (h *Handler) createManualCommentSubIssue(w http.ResponseWriter, r *http.Req
 	result, err := h.IssueService.Create(r.Context(), service.IssueCreateParams{
 		WorkspaceID: workspaceID, Title: title, Description: ptrToText(input.Description), Status: status, Priority: priority,
 		AssigneeType: assigneeType, AssigneeID: assigneeID, CreatorType: "member", CreatorID: userID,
-		ParentIssueID: capture.SourceIssueID, ProjectID: projectID, StartDate: startDate, DueDate: dueDate,
+		ParentIssueID: capture.SourceIssueID, ProjectID: projectID, ProductID: productID, StartDate: startDate, DueDate: dueDate,
 		AttachmentIDs: attachmentIDs, LabelIDs: labelIDs, Stage: stage,
 		AllowDuplicate: input.AllowDuplicate, SourceContext: &capture,
 	}, service.IssueCreateOpts{
@@ -730,6 +741,7 @@ type preparedAgentCommentSubIssue struct {
 	agentID, squadID, runtimeID pgtype.UUID
 	prompt, priority, dueDate   string
 	projectID                   pgtype.UUID
+	productID                   pgtype.UUID
 	attachmentIDs               []pgtype.UUID
 }
 
@@ -820,10 +832,24 @@ func (h *Handler) prepareAgentCommentSubIssue(w http.ResponseWriter, r *http.Req
 		}
 		projectID = parsed
 	}
+	var productID pgtype.UUID
+	if strings.TrimSpace(input.ProductID) != "" {
+		parsed, err := util.ParseUUID(strings.TrimSpace(input.ProductID))
+		if err != nil {
+			return nil, sourceContextBadRequest("invalid product_id")
+		}
+		if _, err := h.Queries.GetProduct(r.Context(), parsed); err != nil {
+			if !isNotFound(err) {
+				return nil, err
+			}
+			return nil, sourceContextBadRequest("product not found")
+		}
+		productID = parsed
+	}
 	return &preparedAgentCommentSubIssue{
 		agentID: agentID, squadID: squadID, runtimeID: agent.RuntimeID,
 		prompt: prompt, priority: priority, dueDate: dueDate,
-		projectID: projectID, attachmentIDs: attachmentIDs,
+		projectID: projectID, productID: productID, attachmentIDs: attachmentIDs,
 	}, nil
 }
 
@@ -835,7 +861,7 @@ func (h *Handler) createAgentCommentSubIssue(w http.ResponseWriter, r *http.Requ
 		writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"code": "source_context_quick_create_unsupported", "error": "selected agent runtime must be updated before using captured context"})
 		return errSourceContextResponseWritten
 	}
-	task, err := h.TaskService.EnqueueQuickCreateTaskWithSourceContext(r.Context(), workspaceID, userID, prepared.agentID, prepared.squadID, prepared.prompt, prepared.priority, prepared.dueDate, prepared.projectID, capture.SourceIssueID, prepared.attachmentIDs, capture)
+	task, err := h.TaskService.EnqueueQuickCreateTaskWithSourceContext(r.Context(), workspaceID, userID, prepared.agentID, prepared.squadID, prepared.prompt, prepared.priority, prepared.dueDate, prepared.projectID, prepared.productID, capture.SourceIssueID, prepared.attachmentIDs, capture)
 	if err != nil {
 		return err
 	}
@@ -873,7 +899,7 @@ func (h *Handler) writeSourceContextError(w http.ResponseWriter, err error, limi
 	case errors.Is(err, service.ErrActiveDuplicate):
 		status, code = http.StatusConflict, "active_duplicate_issue"
 		message = err.Error()
-	case errors.Is(err, service.ErrParentIssueNotFound), errors.Is(err, service.ErrProjectNotFound):
+	case errors.Is(err, service.ErrParentIssueNotFound), errors.Is(err, service.ErrProjectNotFound), errors.Is(err, service.ErrProductNotFound):
 		status = http.StatusBadRequest
 		message = err.Error()
 	case errors.Is(err, errSourceContextBadRequest):

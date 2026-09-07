@@ -13,6 +13,7 @@ export interface CreateIssueRequest {
   assignee_id?: string;
   parent_issue_id?: string;
   project_id?: string;
+  product_id?: string;
   /** Ordered stage (>= 1) grouping this sub-issue under its parent. */
   stage?: number;
   start_date?: string;
@@ -39,6 +40,7 @@ export interface CreateCommentSubIssueAgentRequest {
     priority?: IssuePriority;
     due_date?: string;
     project_id?: string | null;
+    product_id?: string | null;
     attachment_ids?: string[];
   };
 }
@@ -67,6 +69,7 @@ export interface UpdateIssueRequest {
   due_date?: string | null;
   parent_issue_id?: string | null;
   project_id?: string | null;
+  product_id?: string | null;
   /** Ordered stage (>= 1); null clears it (unstaged). */
   stage?: number | null;
   /** Attachment IDs to bind to this issue alongside the description update.

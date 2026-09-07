@@ -1535,6 +1535,7 @@ type QuickCreateContext struct {
 	Priority      string   `json:"priority,omitempty"`
 	DueDate       string   `json:"due_date,omitempty"`
 	ProjectID     string   `json:"project_id,omitempty"`
+	ProductID     string   `json:"product_id,omitempty"`
 	SquadID       string   `json:"squad_id,omitempty"`
 	AttachmentIDs []string `json:"attachment_ids,omitempty"`
 	// ParentIssueID is the optional UUID of the parent issue the new issue
@@ -1571,15 +1572,15 @@ const QuickCreateContextType = "quick_create"
 // parentIssueID is optional (zero-valued pgtype.UUID when the user didn't
 // open the modal from "Add sub issue"). The handler is responsible for
 // validating it belongs to the same workspace before passing it in.
-func (s *TaskService) EnqueueQuickCreateTask(ctx context.Context, workspaceID, requesterID pgtype.UUID, agentID, squadID pgtype.UUID, prompt, priority, dueDate string, projectID, parentIssueID pgtype.UUID, attachmentIDs []pgtype.UUID) (db.AgentTaskQueue, error) {
-	return s.enqueueQuickCreateTask(ctx, workspaceID, requesterID, agentID, squadID, prompt, priority, dueDate, projectID, parentIssueID, attachmentIDs, nil)
+func (s *TaskService) EnqueueQuickCreateTask(ctx context.Context, workspaceID, requesterID pgtype.UUID, agentID, squadID pgtype.UUID, prompt, priority, dueDate string, projectID, productID, parentIssueID pgtype.UUID, attachmentIDs []pgtype.UUID) (db.AgentTaskQueue, error) {
+	return s.enqueueQuickCreateTask(ctx, workspaceID, requesterID, agentID, squadID, prompt, priority, dueDate, projectID, productID, parentIssueID, attachmentIDs, nil)
 }
 
-func (s *TaskService) EnqueueQuickCreateTaskWithSourceContext(ctx context.Context, workspaceID, requesterID pgtype.UUID, agentID, squadID pgtype.UUID, prompt, priority, dueDate string, projectID, parentIssueID pgtype.UUID, attachmentIDs []pgtype.UUID, capture SourceContextCapture) (db.AgentTaskQueue, error) {
-	return s.enqueueQuickCreateTask(ctx, workspaceID, requesterID, agentID, squadID, prompt, priority, dueDate, projectID, parentIssueID, attachmentIDs, &capture)
+func (s *TaskService) EnqueueQuickCreateTaskWithSourceContext(ctx context.Context, workspaceID, requesterID pgtype.UUID, agentID, squadID pgtype.UUID, prompt, priority, dueDate string, projectID, productID, parentIssueID pgtype.UUID, attachmentIDs []pgtype.UUID, capture SourceContextCapture) (db.AgentTaskQueue, error) {
+	return s.enqueueQuickCreateTask(ctx, workspaceID, requesterID, agentID, squadID, prompt, priority, dueDate, projectID, productID, parentIssueID, attachmentIDs, &capture)
 }
 
-func (s *TaskService) enqueueQuickCreateTask(ctx context.Context, workspaceID, requesterID pgtype.UUID, agentID, squadID pgtype.UUID, prompt, priority, dueDate string, projectID, parentIssueID pgtype.UUID, attachmentIDs []pgtype.UUID, capture *SourceContextCapture) (db.AgentTaskQueue, error) {
+func (s *TaskService) enqueueQuickCreateTask(ctx context.Context, workspaceID, requesterID pgtype.UUID, agentID, squadID pgtype.UUID, prompt, priority, dueDate string, projectID, productID, parentIssueID pgtype.UUID, attachmentIDs []pgtype.UUID, capture *SourceContextCapture) (db.AgentTaskQueue, error) {
 	if err := CheckIssueCreateCapacity(ctx, s.Queries, s.Entitlements, workspaceID); err != nil {
 		return db.AgentTaskQueue{}, fmt.Errorf("preflight quick-create issue capacity: %w", err)
 	}
@@ -1604,6 +1605,9 @@ func (s *TaskService) enqueueQuickCreateTask(ctx context.Context, workspaceID, r
 	}
 	if projectID.Valid {
 		payload.ProjectID = util.UUIDToString(projectID)
+	}
+	if productID.Valid {
+		payload.ProductID = util.UUIDToString(productID)
 	}
 	if squadID.Valid {
 		payload.SquadID = util.UUIDToString(squadID)

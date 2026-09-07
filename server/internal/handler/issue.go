@@ -69,6 +69,7 @@ type IssueResponse struct {
 	CreatorID     string  `json:"creator_id"`
 	ParentIssueID *string `json:"parent_issue_id"`
 	ProjectID     *string `json:"project_id"`
+	ProductID     *string `json:"product_id"`
 	Position      float64 `json:"position"`
 	// Stage groups sub-issues under the same parent into ordered barrier
 	// groups (null = unstaged). See issue_child_done.go for how a closed
@@ -316,6 +317,7 @@ func issueToResponse(i db.Issue, issuePrefix string) IssueResponse {
 		CreatorID:      uuidToString(i.CreatorID),
 		ParentIssueID:  uuidToPtr(i.ParentIssueID),
 		ProjectID:      uuidToPtr(i.ProjectID),
+		ProductID:      uuidToPtr(i.ProductID),
 		Position:       i.Position,
 		Stage:          int4ToPtr(i.Stage),
 		StartDate:      dateToPtr(i.StartDate),
@@ -353,6 +355,7 @@ func issueListRowToResponse(i db.ListIssuesRow, issuePrefix string) IssueRespons
 		CreatorID:      uuidToString(i.CreatorID),
 		ParentIssueID:  uuidToPtr(i.ParentIssueID),
 		ProjectID:      uuidToPtr(i.ProjectID),
+		ProductID:      uuidToPtr(i.ProductID),
 		Position:       i.Position,
 		Stage:          int4ToPtr(i.Stage),
 		StartDate:      dateToPtr(i.StartDate),
@@ -422,6 +425,7 @@ func openIssueRowToResponse(i db.ListOpenIssuesRow, issuePrefix string) IssueRes
 		CreatorID:      uuidToString(i.CreatorID),
 		ParentIssueID:  uuidToPtr(i.ParentIssueID),
 		ProjectID:      uuidToPtr(i.ProjectID),
+		ProductID:      uuidToPtr(i.ProductID),
 		Position:       i.Position,
 		Stage:          int4ToPtr(i.Stage),
 		StartDate:      dateToPtr(i.StartDate),
@@ -859,7 +863,7 @@ func buildSearchQuery(phrase string, terms []string, queryNum int, hasNum bool, 
 	query := fmt.Sprintf(`SELECT i.id, i.workspace_id, i.title, i.description, i.status, i.priority,
 		i.assignee_type, i.assignee_id, i.creator_type, i.creator_id,
 		i.parent_issue_id, i.acceptance_criteria, i.context_refs, i.position,
-		i.start_date, i.due_date, i.created_at, i.updated_at, i.last_activity_at, i.number, i.project_id,
+		i.start_date, i.due_date, i.created_at, i.updated_at, i.last_activity_at, i.number, i.project_id, i.product_id,
 		i.revision,
 		COUNT(*) OVER() AS total_count,
 		%s AS match_source,
@@ -959,6 +963,7 @@ func (h *Handler) SearchIssues(w http.ResponseWriter, r *http.Request) {
 				&sr.issue.LastActivityAt,
 				&sr.issue.Number,
 				&sr.issue.ProjectID,
+				&sr.issue.ProductID,
 				&sr.issue.Revision,
 				&sr.totalCount,
 				&sr.matchSource,
@@ -1501,7 +1506,7 @@ func (h *Handler) ListIssues(w http.ResponseWriter, r *http.Request) {
 
 	query := fmt.Sprintf(`SELECT i.id, i.workspace_id, i.title, i.description, i.status, i.priority,
        i.assignee_type, i.assignee_id, i.creator_type, i.creator_id,
-       i.parent_issue_id, i.position, i.start_date, i.due_date, i.created_at, i.updated_at, i.last_activity_at, i.number, i.project_id, i.metadata, i.stage, i.properties,
+       i.parent_issue_id, i.position, i.start_date, i.due_date, i.created_at, i.updated_at, i.last_activity_at, i.number, i.project_id, i.product_id, i.metadata, i.stage, i.properties,
 	   i.revision
 FROM issue i
 WHERE %s
@@ -1539,6 +1544,7 @@ LIMIT %s OFFSET %s`, whereSql, orderBy, limitRef, offsetRef)
 			&row.LastActivityAt,
 			&row.Number,
 			&row.ProjectID,
+			&row.ProductID,
 			&row.Metadata,
 			&row.Stage,
 			&row.Properties,
@@ -2093,7 +2099,7 @@ WITH ranked AS (
 		i.id, i.workspace_id, i.title, i.description, i.status, i.priority,
 		i.assignee_type, i.assignee_id, i.creator_type, i.creator_id,
 		i.parent_issue_id, i.position, i.start_date, i.due_date, i.created_at, i.updated_at, i.last_activity_at,
-		i.number, i.project_id, i.metadata, i.stage, i.properties, i.revision,
+		i.number, i.project_id, i.product_id, i.metadata, i.stage, i.properties, i.revision,
 		COUNT(*) OVER (PARTITION BY i.assignee_type, i.assignee_id) AS group_total,
 		ROW_NUMBER() OVER (
 			PARTITION BY i.assignee_type, i.assignee_id
@@ -2106,7 +2112,7 @@ SELECT
 	id, workspace_id, title, description, status, priority,
 	assignee_type, assignee_id, creator_type, creator_id,
 	parent_issue_id, position, start_date, due_date, created_at, updated_at, last_activity_at,
-	number, project_id, metadata, stage, properties, revision, group_total
+	number, project_id, product_id, metadata, stage, properties, revision, group_total
 FROM ranked
 WHERE rn > %s AND rn <= %s + %s
 ORDER BY
@@ -2151,6 +2157,7 @@ ORDER BY
 			&row.LastActivityAt,
 			&row.Number,
 			&row.ProjectID,
+			&row.ProductID,
 			&row.Metadata,
 			&row.Stage,
 			&row.Properties,
@@ -2453,6 +2460,7 @@ type QuickCreateIssueRequest struct {
 	Priority      string   `json:"priority,omitempty"`
 	DueDate       string   `json:"due_date,omitempty"`
 	ProjectID     string   `json:"project_id,omitempty"`
+	ProductID     string   `json:"product_id,omitempty"`
 	ParentIssueID string   `json:"parent_issue_id,omitempty"`
 	AttachmentIDs []string `json:"attachment_ids,omitempty"`
 }
@@ -2631,6 +2639,24 @@ func (h *Handler) QuickCreateIssue(w http.ResponseWriter, r *http.Request) {
 		}
 		projectUUID = pid
 	}
+	var productUUID pgtype.UUID
+	if strings.TrimSpace(req.ProductID) != "" {
+		pid, ok := parseUUIDOrBadRequest(w, req.ProductID, "product_id")
+		if !ok {
+			return
+		}
+		if _, err := h.Queries.GetProduct(r.Context(), pid); err != nil {
+			if !isNotFound(err) {
+				slog.Error("quick-create: validate product",
+					append(logger.RequestAttrs(r), "product_id", uuidToString(pid), "error", err)...)
+				writeError(w, http.StatusInternalServerError, "failed to validate product")
+				return
+			}
+			writeError(w, http.StatusBadRequest, "product not found")
+			return
+		}
+		productUUID = pid
+	}
 
 	// Optional parent_issue_id — validate same-workspace membership just like
 	// the regular CreateIssue path. Frontend seeds this from the "Add sub
@@ -2653,7 +2679,7 @@ func (h *Handler) QuickCreateIssue(w http.ResponseWriter, r *http.Request) {
 		parentIssueUUID = pid
 	}
 
-	task, err := h.TaskService.EnqueueQuickCreateTask(r.Context(), wsUUID, requesterUUID, agentUUID, squadUUID, prompt, priority, dueDate, projectUUID, parentIssueUUID, attachmentIDs)
+	task, err := h.TaskService.EnqueueQuickCreateTask(r.Context(), wsUUID, requesterUUID, agentUUID, squadUUID, prompt, priority, dueDate, projectUUID, productUUID, parentIssueUUID, attachmentIDs)
 	if err != nil {
 		if writeIssueLimitReached(w, err) {
 			return
@@ -2772,6 +2798,7 @@ type CreateIssueRequest struct {
 	AssigneeID    *string  `json:"assignee_id"`
 	ParentIssueID *string  `json:"parent_issue_id"`
 	ProjectID     *string  `json:"project_id"`
+	ProductID     *string  `json:"product_id"`
 	Stage         *int32   `json:"stage,omitempty"`
 	StartDate     *string  `json:"start_date"`
 	DueDate       *string  `json:"due_date"`
@@ -2854,6 +2881,7 @@ func (h *Handler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 
 	var parentIssueID pgtype.UUID
 	var projectID pgtype.UUID
+	var productID pgtype.UUID
 	if req.ParentIssueID != nil {
 		id, ok := parseUUIDOrBadRequest(w, *req.ParentIssueID, "parent_issue_id")
 		if !ok {
@@ -2888,6 +2916,23 @@ func (h *Handler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		projectID = id
+	}
+	if req.ProductID != nil {
+		id, ok := parseUUIDOrBadRequest(w, *req.ProductID, "product_id")
+		if !ok {
+			return
+		}
+		if _, err := h.Queries.GetProduct(r.Context(), id); err != nil {
+			if !isNotFound(err) {
+				slog.Error("create issue: validate product",
+					append(logger.RequestAttrs(r), "product_id", uuidToString(id), "error", err)...)
+				writeError(w, http.StatusInternalServerError, "failed to validate product")
+				return
+			}
+			writeError(w, http.StatusBadRequest, "product not found")
+			return
+		}
+		productID = id
 	}
 	// Project existence and the final parent boundary check are enforced inside
 	// IssueService.Create atomically with the create. The handler preloads a
@@ -3022,6 +3067,7 @@ func (h *Handler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 		CreatorID:      parseUUID(actualCreatorID),
 		ParentIssueID:  parentIssueID,
 		ProjectID:      projectID,
+		ProductID:      productID,
 		StartDate:      startDate,
 		DueDate:        dueDate,
 		OriginType:     originType,
@@ -3070,6 +3116,10 @@ func (h *Handler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 	}
 	if errors.Is(err, service.ErrProjectNotFound) {
 		writeError(w, http.StatusBadRequest, "project not found in this workspace")
+		return
+	}
+	if errors.Is(err, service.ErrProductNotFound) {
+		writeError(w, http.StatusBadRequest, "product not found")
 		return
 	}
 	if errors.Is(err, service.ErrIssueLabelNotFound) {
@@ -3126,6 +3176,7 @@ type UpdateIssueRequest struct {
 	DueDate         *string  `json:"due_date"`
 	ParentIssueID   *string  `json:"parent_issue_id"`
 	ProjectID       *string  `json:"project_id"`
+	ProductID       *string  `json:"product_id"`
 	Stage           *int32   `json:"stage"`
 	// AttachmentIDs lets the description editor bind newly uploaded files to
 	// this issue so they surface in `GET /api/issues/:id/attachments` and the
@@ -3216,6 +3267,9 @@ func refreshUntouchedNullableIssueParams(params *db.UpdateIssueParams, current d
 	}
 	if _, touched := rawFields["project_id"]; !touched {
 		params.ProjectID = current.ProjectID
+	}
+	if _, touched := rawFields["product_id"]; !touched {
+		params.ProductID = current.ProductID
 	}
 	if _, touched := rawFields["stage"]; !touched {
 		params.Stage = current.Stage
@@ -3364,6 +3418,7 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 		DueDate:       prevIssue.DueDate,
 		ParentIssueID: prevIssue.ParentIssueID,
 		ProjectID:     prevIssue.ProjectID,
+		ProductID:     prevIssue.ProductID,
 		Stage:         prevIssue.Stage,
 	}
 	if req.ExpectedRevision != nil {
@@ -3512,6 +3567,27 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 			params.ProjectID = pgtype.UUID{Valid: false}
 		}
 	}
+	if _, ok := rawFields["product_id"]; ok {
+		if req.ProductID != nil {
+			productUUID, ok := parseUUIDOrBadRequest(w, *req.ProductID, "product_id")
+			if !ok {
+				return
+			}
+			if _, err := h.Queries.GetProduct(r.Context(), productUUID); err != nil {
+				if !isNotFound(err) {
+					slog.Error("update issue: validate product",
+						append(logger.RequestAttrs(r), "product_id", uuidToString(productUUID), "error", err)...)
+					writeError(w, http.StatusInternalServerError, "failed to validate product")
+					return
+				}
+				writeError(w, http.StatusBadRequest, "product not found")
+				return
+			}
+			params.ProductID = productUUID
+		} else {
+			params.ProductID = pgtype.UUID{Valid: false}
+		}
+	}
 	if _, ok := rawFields["stage"]; ok {
 		if req.Stage != nil {
 			if *req.Stage < 1 {
@@ -3601,6 +3677,7 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 	// project_id against its own cache, which breaks once an optimistic local
 	// move has overwritten the cached value (MUL-3669 / #4548).
 	projectChanged := req.ProjectID != nil && uuidToString(prevIssue.ProjectID) != uuidToString(issue.ProjectID)
+	productChanged := rawFields["product_id"] != nil && uuidToString(prevIssue.ProductID) != uuidToString(issue.ProductID)
 	descriptionChanged := req.Description != nil && textToPtr(prevIssue.Description) != resp.Description
 	titleChanged := req.Title != nil && prevIssue.Title != issue.Title
 	prevStartDate := dateToPtr(prevIssue.StartDate)
@@ -3616,6 +3693,7 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 		"status_changed":      statusChanged,
 		"priority_changed":    priorityChanged,
 		"project_changed":     projectChanged,
+		"product_changed":     productChanged,
 		"start_date_changed":  startDateChanged,
 		"due_date_changed":    dueDateChanged,
 		"description_changed": descriptionChanged,
@@ -4068,7 +4146,7 @@ func (h *Handler) BatchUpdateIssues(w http.ResponseWriter, r *http.Request) {
 		req.Updates.Priority != nil ||
 		req.Updates.Position != nil
 	if !hasMutation {
-		for _, k := range []string{"assignee_type", "assignee_id", "start_date", "due_date", "parent_issue_id", "project_id", "stage"} {
+		for _, k := range []string{"assignee_type", "assignee_id", "start_date", "due_date", "parent_issue_id", "project_id", "product_id", "stage"} {
 			if _, ok := rawUpdates[k]; ok {
 				hasMutation = true
 				break
@@ -4125,6 +4203,24 @@ func (h *Handler) BatchUpdateIssues(w http.ResponseWriter, r *http.Request) {
 		}
 		batchProjectID = projectUUID
 	}
+	batchProductID := pgtype.UUID{Valid: false}
+	if _, ok := rawUpdates["product_id"]; ok && req.Updates.ProductID != nil {
+		productUUID, ok := parseUUIDOrBadRequest(w, *req.Updates.ProductID, "product_id")
+		if !ok {
+			return
+		}
+		if _, err := h.Queries.GetProduct(r.Context(), productUUID); err != nil {
+			if !isNotFound(err) {
+				slog.Error("batch update issues: validate product",
+					append(logger.RequestAttrs(r), "product_id", uuidToString(productUUID), "error", err)...)
+				writeError(w, http.StatusInternalServerError, "failed to validate product")
+				return
+			}
+			writeError(w, http.StatusBadRequest, "product not found")
+			return
+		}
+		batchProductID = productUUID
+	}
 
 	updated := 0
 	// One Resolver for the whole batch — a per-issue filler would query the
@@ -4155,6 +4251,7 @@ func (h *Handler) BatchUpdateIssues(w http.ResponseWriter, r *http.Request) {
 			DueDate:       prevIssue.DueDate,
 			ParentIssueID: prevIssue.ParentIssueID,
 			ProjectID:     prevIssue.ProjectID,
+			ProductID:     prevIssue.ProductID,
 			Stage:         prevIssue.Stage,
 		}
 
@@ -4257,6 +4354,10 @@ func (h *Handler) BatchUpdateIssues(w http.ResponseWriter, r *http.Request) {
 			// Resolved before the loop; an explicit null stays invalid and clears.
 			params.ProjectID = batchProjectID
 		}
+		if _, ok := rawUpdates["product_id"]; ok {
+			// Resolved before the loop; an explicit null stays invalid and clears.
+			params.ProductID = batchProductID
+		}
 		if _, ok := rawUpdates["stage"]; ok {
 			if req.Updates.Stage != nil {
 				if *req.Updates.Stage < 1 {
@@ -4325,6 +4426,7 @@ func (h *Handler) BatchUpdateIssues(w http.ResponseWriter, r *http.Request) {
 		statusChanged := req.Updates.Status != nil && prevIssue.Status != issue.Status
 		priorityChanged := req.Updates.Priority != nil && prevIssue.Priority != issue.Priority
 		projectChanged := req.Updates.ProjectID != nil && uuidToString(prevIssue.ProjectID) != uuidToString(issue.ProjectID)
+		productChanged := rawUpdates["product_id"] != nil && uuidToString(prevIssue.ProductID) != uuidToString(issue.ProductID)
 
 		h.publish(protocol.EventIssueUpdated, workspaceID, actorType, actorID, map[string]any{
 			"issue":            resp,
@@ -4332,6 +4434,7 @@ func (h *Handler) BatchUpdateIssues(w http.ResponseWriter, r *http.Request) {
 			"status_changed":   statusChanged,
 			"priority_changed": priorityChanged,
 			"project_changed":  projectChanged,
+			"product_changed":  productChanged,
 		})
 
 		// Reassignment does not cancel existing tasks (#4963 / MUL-4113) —

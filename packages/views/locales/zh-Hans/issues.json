@@ -316,6 +316,7 @@
     "ordered_by": "按{{field}}排序"
   },
   "detail": {
+    "prop_product": "产品",
     "not_found": "这个任务不存在或已在该工作区被删除。",
     "breadcrumb_project_unknown": "未知项目",
     "back": "返回",
@@ -694,6 +695,12 @@
     "delete_issue": "删除任务"
   },
   "pickers": {
+    "product": {
+      "search_placeholder": "搜索产品...",
+      "no_product": "无产品",
+      "empty": "暂无产品",
+      "clear_aria": "清除产品"
+    },
     "custom_property": {
       "empty": "空",
       "true_label": "是",

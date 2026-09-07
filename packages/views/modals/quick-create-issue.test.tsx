@@ -132,6 +132,7 @@ const mockSquadsData = vi.hoisted(
 let mockUploadIdSeq = 0;
 
 vi.mock("@tanstack/react-query", () => ({
+  queryOptions: <T,>(options: T) => options,
   useQuery: ({ queryKey }: { queryKey: string[] }) => {
     // Workspace-scoped query keys carry the wsId as `queryKey[1]`; the
     // discriminator is at `queryKey[2]` (e.g. ["workspaces", wsId, "squads"]).

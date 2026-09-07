@@ -117,6 +117,12 @@ import type {
   CreateLabelRequest,
   UpdateLabelRequest,
   ListLabelsResponse,
+  Product,
+  CreateProductRequest,
+  UpdateProductRequest,
+  ListProductsResponse,
+  SystemSettings,
+  UpdateSystemSettingsRequest,
   ListIssueStatusesResponse,
   IssueStatusCategory,
   IssueStatusEntry,
@@ -401,6 +407,12 @@ import {
   ResourceLabelsResponseSchema,
   EMPTY_LABEL,
   EMPTY_LIST_LABELS_RESPONSE,
+  ProductSchema,
+  ListProductsResponseSchema,
+  EMPTY_PRODUCT,
+  EMPTY_LIST_PRODUCTS_RESPONSE,
+  SystemSettingsSchema,
+  EMPTY_SYSTEM_SETTINGS,
   EMPTY_LIST_ISSUE_STATUSES_RESPONSE,
   EMPTY_ISSUE_STATUS_ENTRY,
   EMPTY_RESOURCE_LABELS_RESPONSE,
@@ -439,6 +451,7 @@ import {
   PluginPreviewSchema,
   WorkspaceMcpServerListSchema,
   WorkspaceMcpServerSchema,
+  SystemWorkspaceListSchema,
   ShareLinkSchema,
   ShareLinkListResponseSchema,
   ShareLinkInfoSchema,
@@ -1108,6 +1121,7 @@ export class ApiClient {
     priority?: IssuePriority;
     due_date?: string;
     project_id?: string | null;
+    product_id?: string | null;
     parent_issue_id?: string | null;
     attachment_ids?: string[];
   }): Promise<{ task_id: string }> {
@@ -1198,10 +1212,15 @@ export class ApiClient {
   }
 
   async updateIssue(id: string, data: UpdateIssueRequest): Promise<Issue> {
-    return this.fetch(`/api/issues/${id}`, {
+    const raw = await this.fetch<unknown>(`/api/issues/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
     });
+    const issue = parseWithFallback<Issue | null>(raw, IssueSchema, null, {
+      endpoint: "PUT /api/issues/:id",
+    });
+    if (!issue) throw new Error("PUT /api/issues/:id returned a malformed issue");
+    return issue;
   }
 
   async moveIssue(id: string, data: MoveIssueRequest): Promise<Issue> {
@@ -2538,6 +2557,13 @@ export class ApiClient {
     return this.fetch("/api/workspaces");
   }
 
+  async listSystemWorkspaces(): Promise<Workspace[]> {
+    const raw = await this.fetch<unknown>("/api/system/workspaces");
+    return parseWithFallback(raw, SystemWorkspaceListSchema, [], {
+      endpoint: "GET /api/system/workspaces",
+    });
+  }
+
   async getWorkspace(id: string): Promise<Workspace> {
     return this.fetch(`/api/workspaces/${id}`);
   }
@@ -2549,7 +2575,7 @@ export class ApiClient {
     });
   }
 
-  async updateWorkspace(id: string, data: { name?: string; description?: string; context?: string; settings?: Record<string, unknown>; repos?: WorkspaceRepo[]; issue_prefix?: string; avatar_url?: string }): Promise<Workspace> {
+  async updateWorkspace(id: string, data: { name?: string; description?: string; context?: string; settings?: Record<string, unknown>; repos?: WorkspaceRepo[]; issue_prefix?: string; avatar_url?: string; oc_key?: string; clear_oc_key?: boolean }): Promise<Workspace> {
     return this.fetch(`/api/workspaces/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -3643,6 +3669,87 @@ export class ApiClient {
 
   async deleteLabel(id: string): Promise<void> {
     await this.fetch(`/api/labels/${id}`, { method: "DELETE" });
+  }
+
+  // Products are deployment-scoped catalog data. Reads are available to any
+  // authenticated workspace so task forms can offer the same catalog.
+  async listProducts(): Promise<ListProductsResponse> {
+    const raw = await this.fetch<unknown>("/api/products");
+    return parseWithFallback(raw, ListProductsResponseSchema, EMPTY_LIST_PRODUCTS_RESPONSE, {
+      endpoint: "GET /api/products",
+    });
+  }
+
+  async getProduct(id: string): Promise<Product> {
+    const raw = await this.fetch<unknown>(`/api/products/${id}`);
+    return parseWithFallback(raw, ProductSchema, { ...EMPTY_PRODUCT, id }, {
+      endpoint: "GET /api/products/{id}",
+    });
+  }
+
+  async listSystemProducts(): Promise<ListProductsResponse> {
+    const raw = await this.fetch<unknown>("/api/system/products");
+    return parseWithFallback(
+      raw,
+      ListProductsResponseSchema,
+      EMPTY_LIST_PRODUCTS_RESPONSE,
+      { endpoint: "GET /api/system/products" },
+    );
+  }
+
+  async getSystemProduct(id: string): Promise<Product> {
+    const raw = await this.fetch<unknown>(`/api/system/products/${id}`);
+    return parseWithFallback(raw, ProductSchema, { ...EMPTY_PRODUCT, id }, {
+      endpoint: "GET /api/system/products/{id}",
+    });
+  }
+
+  async createSystemProduct(data: CreateProductRequest): Promise<Product> {
+    const raw = await this.fetch<unknown>("/api/system/products", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    return parseWithFallback(raw, ProductSchema, EMPTY_PRODUCT, {
+      endpoint: "POST /api/system/products",
+    });
+  }
+
+  async updateSystemProduct(
+    id: string,
+    data: UpdateProductRequest,
+  ): Promise<Product> {
+    const raw = await this.fetch<unknown>(`/api/system/products/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+    return parseWithFallback(raw, ProductSchema, { ...EMPTY_PRODUCT, id }, {
+      endpoint: "PUT /api/system/products/{id}",
+    });
+  }
+
+  async deleteSystemProduct(id: string): Promise<void> {
+    await this.fetch(`/api/system/products/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  async getSystemSettings(): Promise<SystemSettings> {
+    const raw = await this.fetch<unknown>("/api/system/settings");
+    return parseWithFallback(raw, SystemSettingsSchema, EMPTY_SYSTEM_SETTINGS, {
+      endpoint: "GET /api/system/settings",
+    });
+  }
+
+  async updateSystemSettings(
+    data: UpdateSystemSettingsRequest,
+  ): Promise<SystemSettings> {
+    const raw = await this.fetch<unknown>("/api/system/settings", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+    return parseWithFallback(raw, SystemSettingsSchema, EMPTY_SYSTEM_SETTINGS, {
+      endpoint: "PUT /api/system/settings",
+    });
   }
 
   // Issue status catalog (MUL-6243). Reads are open to any workspace member;

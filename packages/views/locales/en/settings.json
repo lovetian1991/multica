@@ -330,7 +330,86 @@
       "quick_actions": "Quick Actions",
       "plugins": "Plugins",
       "mcp": "MCP",
-      "billing": "Billing"
+      "billing": "Billing",
+      "products": "Products"
+    }
+  },
+  "products": {
+    "system_description": "Manage products across workspaces from the system administration area.",
+    "system_admin_required": "System administrator access is required.",
+    "load_failed": "Couldn't load products.",
+    "title": "Products",
+    "description": "Manage the shared product catalog available to every workspace.",
+    "search_placeholder": "Search products",
+    "new_product": "New product",
+    "columns": {
+      "name": "Name",
+      "directory": "Directory",
+      "remark": "Remark"
+    },
+    "loading": "Loading products...",
+    "empty": "No products yet",
+    "no_results": "No matching products",
+    "not_set": "Not set",
+    "save_failed": "Couldn't save product",
+    "actions": {
+      "open": "Actions for {{name}}",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "editor": {
+      "create_title": "New product",
+      "edit_title": "Edit product",
+      "description": "Define a product name, folder directory, and optional remark.",
+      "name": "Product name",
+      "name_placeholder": "Enter a product name",
+      "directory": "Folder directory",
+      "directory_placeholder": "Enter a folder directory",
+      "remark": "Remark",
+      "remark_placeholder": "Add a remark",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving..."
+    },
+    "delete_dialog": {
+      "title": "Delete product?",
+      "description": "\"{{name}}\" will be permanently deleted.",
+      "cancel": "Cancel",
+      "confirm": "Delete",
+      "deleting": "Deleting...",
+      "failed": "Couldn't delete product"
+    }
+  },
+  "system_management": {
+    "title": "System management",
+    "catalog": "Catalog management",
+    "configuration": "System configuration",
+    "products": "Products",
+    "workspaces": "Workspaces",
+    "users": "Users & permissions",
+    "settings": "System settings",
+    "coming_soon": "Coming soon"
+  },
+  "system_settings": {
+    "title": "System settings",
+    "description": "Configure deployment-wide integrations shared by every workspace.",
+    "system_admin_required": "System administrator access is required.",
+    "loading": "Loading system settings...",
+    "load_failed": "Couldn't load system settings.",
+    "save": "Save settings",
+    "saving": "Saving...",
+    "saved": "System settings saved.",
+    "save_failed": "Couldn't save system settings.",
+    "kb": {
+      "title": "KB resource file management platform",
+      "environment_url": "Environment address",
+      "environment_url_placeholder": "https://kb.example.com",
+      "environment_url_hint": "Use the address of the KB resource file management platform.",
+      "integration_key": "Integration key",
+      "integration_key_placeholder": "Enter an integration key",
+      "integration_key_configured": "Configured. Enter a new key to replace it.",
+      "integration_key_hint": "The key is encrypted before it is stored.",
+      "integration_key_saved_hint": "An integration key is configured. It is never displayed."
     }
   },
   "plugins": {
@@ -668,6 +747,17 @@
     "manage_hint": "Only admins and owners can update workspace settings.",
     "toast_saved": "Workspace settings saved",
     "toast_save_failed": "Failed to save workspace settings",
+    "oc_key_section": "OC integration",
+    "oc_key_label": "OC key",
+    "oc_key_description": "Passed to skills as OC_KEY for tasks running in this workspace.",
+    "oc_key_placeholder": "Enter a new OC key",
+    "oc_key_configured": "Configured. Enter a new value to replace it.",
+    "oc_key_save": "Save key",
+    "oc_key_clear": "Clear key",
+    "oc_key_clear_confirm": "Clear the OC key for this workspace?",
+    "oc_key_saved": "OC key saved",
+    "oc_key_cleared": "OC key cleared",
+    "oc_key_save_failed": "Failed to save OC key",
     "danger_zone": "Danger Zone",
     "leave_title": "Leave workspace",
     "leave_sole_owner": "You're the only owner. Promote another member to owner first, or delete the workspace.",

@@ -86,6 +86,11 @@ import type {
   User,
   WebhookDelivery,
   WorkspaceMcpServer,
+  Workspace,
+  WorkspaceRepo,
+  Product,
+  ListProductsResponse,
+  SystemSettings,
 } from "../types";
 import type { CloudRuntimeNode } from "../runtimes/cloud-runtime";
 import type { CreateFeedbackResponse } from "../feedback/types";
@@ -470,6 +475,79 @@ export const EMPTY_LIST_LABELS_RESPONSE: ListLabelsResponse = {
   labels: [],
   total: 0,
 };
+
+export const ProductSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  directory: z.string().optional().default(""),
+  remark: z.string().optional().default(""),
+  created_at: z.string(),
+  updated_at: z.string(),
+}).loose();
+
+export const EMPTY_PRODUCT: Product = {
+  id: "",
+  name: "",
+  directory: "",
+  remark: "",
+  created_at: "",
+  updated_at: "",
+};
+
+export const ListProductsResponseSchema = z.object({
+  products: z.array(ProductSchema).default([]),
+  total: z.number().default(0),
+}).loose();
+
+export const EMPTY_LIST_PRODUCTS_RESPONSE: ListProductsResponse = {
+  products: [],
+  total: 0,
+};
+
+export const SystemSettingsSchema = z.object({
+  kb_environment_url: z.string().default(""),
+  kb_integration_key_configured: z.boolean().default(false),
+});
+
+export const EMPTY_SYSTEM_SETTINGS: SystemSettings = {
+  kb_environment_url: "",
+  kb_integration_key_configured: false,
+};
+
+const WorkspaceRepoSchema = z.object({
+  url: z.string().default(""),
+  description: z.string().optional(),
+}).loose();
+
+export const SystemWorkspaceSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  slug: z.string(),
+  description: z.string().nullable().default(null),
+  context: z.string().nullable().default(null),
+  settings: z.record(z.string(), z.unknown()).default({}),
+  repos: z.array(WorkspaceRepoSchema).default([]),
+  issue_prefix: z.string().default(""),
+  avatar_url: z.string().nullable().default(null),
+  oc_key_configured: z.boolean().default(false),
+  created_at: z.string().default(""),
+  updated_at: z.string().default(""),
+}).loose().transform((value): Workspace => ({
+  id: value.id,
+  name: value.name,
+  slug: value.slug,
+  description: value.description,
+  context: value.context,
+  settings: value.settings,
+  repos: value.repos as WorkspaceRepo[],
+  issue_prefix: value.issue_prefix,
+  avatar_url: value.avatar_url,
+  oc_key_configured: value.oc_key_configured,
+  created_at: value.created_at,
+  updated_at: value.updated_at,
+}));
+
+export const SystemWorkspaceListSchema = z.array(SystemWorkspaceSchema);
 
 // Issue status catalog (MUL-6243). `category` is parsed as a plain string
 // rather than an enum: a newer server could in principle report a category this
@@ -1227,6 +1305,9 @@ export const IssueSchema = z.object({
   creator_id: z.string(),
   parent_issue_id: z.string().nullable(),
   project_id: z.string().nullable(),
+  // Global products are optional issue metadata and are not workspace-scoped.
+  // Older backends omit this field, so normalize that response to null.
+  product_id: z.string().nullable().default(null).catch(null),
   position: z.number(),
   // Older backends predate `stage`; default to null so a missing field parses
   // cleanly into the non-optional Issue.stage (number | null).

@@ -1,0 +1,2 @@
+ALTER TABLE product
+ADD COLUMN IF NOT EXISTS workspace_id UUID;

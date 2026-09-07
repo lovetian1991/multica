@@ -64,6 +64,13 @@ import {
   PluginPreviewSchema,
   EMPTY_PLUGIN_INSTALLATION_LIST,
   EMPTY_PLUGIN_PREVIEW,
+  ProductSchema,
+  ListProductsResponseSchema,
+  EMPTY_PRODUCT,
+  EMPTY_LIST_PRODUCTS_RESPONSE,
+  SystemSettingsSchema,
+  EMPTY_SYSTEM_SETTINGS,
+  SystemWorkspaceListSchema,
 } from "./schemas";
 import { IssueViewSchema, IssueViewListSchema } from "./schemas";
 import {
@@ -171,6 +178,36 @@ describe("IssueSchema (via ListIssuesResponseSchema)", () => {
   // `in_review_2` — so the display name travels with it. The field has to
   // survive a server that predates it, since an issue that fails validation
   // degrades to a stub rather than losing one field. (MUL-6749)
+  it("defaults product_id for older servers and accepts an explicit null", () => {
+    const { product_id: _omitted, ...withoutProduct } = {
+      ...baseIssue,
+      product_id: "product-1",
+    };
+    expect(ListIssuesResponseSchema.parse({
+      issues: [withoutProduct],
+      total: 1,
+    }).issues[0]?.product_id).toBeNull();
+    expect(ListIssuesResponseSchema.parse({
+      issues: [{ ...baseIssue, product_id: null }],
+      total: 1,
+    }).issues[0]?.product_id).toBeNull();
+  });
+  it("drops a malformed product_id without hiding the issue list", () => {
+    const parsed = ListIssuesResponseSchema.parse({
+      issues: [{ ...baseIssue, product_id: 42 }],
+      total: 1,
+    });
+    expect(parsed.issues).toHaveLength(1);
+    expect(parsed.issues[0]?.id).toBe(baseIssue.id);
+    expect(parsed.issues[0]?.product_id).toBeNull();
+
+    expect(parseWithFallback(
+      { issues: [{ ...baseIssue, product_id: 42 }], total: 1 },
+      ListIssuesResponseSchema,
+      { issues: [], total: 0 },
+      { endpoint: "GET /api/issues" },
+    ).issues).toHaveLength(1);
+  });
   it("carries a custom status's display name", () => {
     const parsed = ListIssuesResponseSchema.parse({
       issues: [{ ...baseIssue, status: "in_review_2", status_name: "客户确认" }],
@@ -463,6 +500,103 @@ describe("IssuePropertySchema (via ListPropertiesResponseSchema)", () => {
     const { icon: _omit, ...withoutIcon } = baseProperty;
     const parsed = ListPropertiesResponseSchema.parse({ properties: [withoutIcon], total: 1 });
     expect(parsed.properties[0]?.icon).toBe("");
+  });
+});
+
+describe("Product schemas", () => {
+  const baseProduct = {
+    id: "33333333-3333-3333-3333-333333333333",
+    name: "Multica",
+    directory: "G:/aicode/multica",
+    remark: "Main product",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  };
+
+  it("parses a complete product and defaults optional fields", () => {
+    const parsed = ProductSchema.parse({
+      ...baseProduct,
+      directory: undefined,
+      remark: undefined,
+    });
+    expect(parsed.name).toBe("Multica");
+    expect(parsed.directory).toBe("");
+    expect(parsed.remark).toBe("");
+  });
+
+  it("parses a valid product list", () => {
+    const parsed = ListProductsResponseSchema.parse({
+      products: [baseProduct],
+      total: 1,
+    });
+    expect(parsed.products).toEqual([baseProduct]);
+    expect(parsed.total).toBe(1);
+  });
+
+  it("falls back safely for malformed product responses", () => {
+    expect(
+      parseWithFallback(
+        { id: 42 },
+        ProductSchema,
+        EMPTY_PRODUCT,
+        { endpoint: "GET /api/products/{id}" },
+      ),
+    ).toEqual(EMPTY_PRODUCT);
+
+    expect(
+      parseWithFallback(
+        { products: [baseProduct, { ...baseProduct, id: 42 }], total: 2 },
+        ListProductsResponseSchema,
+        EMPTY_LIST_PRODUCTS_RESPONSE,
+        { endpoint: "GET /api/products" },
+      ),
+    ).toEqual(EMPTY_LIST_PRODUCTS_RESPONSE);
+
+    expect(
+      parseWithFallback(
+        { products: "not-an-array", total: 1 },
+        ListProductsResponseSchema,
+        EMPTY_LIST_PRODUCTS_RESPONSE,
+        { endpoint: "GET /api/products" },
+      ),
+    ).toEqual(EMPTY_LIST_PRODUCTS_RESPONSE);
+  });
+});
+
+describe("System workspace schemas", () => {
+  const workspace = {
+    id: "11111111-1111-1111-1111-111111111111",
+    name: "Operations",
+    slug: "operations",
+    description: null,
+    context: null,
+    settings: {},
+    repos: [{ url: "G:/aicode/multica", description: "Main checkout" }],
+    issue_prefix: "OPS",
+    avatar_url: null,
+    oc_key_configured: false,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  };
+
+  it("parses the system workspace directory", () => {
+    expect(SystemWorkspaceListSchema.parse([workspace])).toEqual([workspace]);
+  });
+
+  it("falls back safely for a malformed system workspace directory", () => {
+    expect(
+      parseWithFallback(
+        [{ ...workspace, id: 42 }],
+        SystemWorkspaceListSchema,
+        [],
+        { endpoint: "GET /api/system/workspaces" },
+      ),
+    ).toEqual([]);
+  });
+
+  it("defaults oc_key_configured for older backends", () => {
+    const parsed = SystemWorkspaceListSchema.parse([workspace]);
+    expect(parsed[0]?.oc_key_configured).toBe(false);
   });
 });
 
@@ -2102,5 +2236,31 @@ describe("issue status catalog schemas", () => {
       { endpoint: "POST /api/issue-statuses" },
     );
     expect(parsed).toEqual(EMPTY_ISSUE_STATUS_ENTRY);
+  });
+});
+
+describe("system settings schemas", () => {
+  it("parses the safe response shape without accepting a raw integration key", () => {
+    const parsed = SystemSettingsSchema.parse({
+      kb_environment_url: "https://kb.example.com/",
+      kb_integration_key_configured: true,
+      kb_integration_key: "should-not-be-kept",
+    });
+
+    expect(parsed).toEqual({
+      kb_environment_url: "https://kb.example.com/",
+      kb_integration_key_configured: true,
+    });
+  });
+
+  it("falls back to an empty response when the server returns a malformed shape", () => {
+    const parsed = parseWithFallback(
+      { kb_environment_url: 42, kb_integration_key_configured: "yes" },
+      SystemSettingsSchema,
+      EMPTY_SYSTEM_SETTINGS,
+      { endpoint: "GET /api/system/settings" },
+    );
+
+    expect(parsed).toEqual(EMPTY_SYSTEM_SETTINGS);
   });
 });

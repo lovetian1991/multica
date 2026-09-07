@@ -330,8 +330,65 @@
       "quick_actions": "퀵 액션",
       "plugins": "Plugins",
       "mcp": "MCP",
-      "billing": "결제 및 요금제"
+      "billing": "결제 및 요금제",
+      "products": "제품 관리"
     }
+  },
+  "products": {
+    "system_description": "시스템 관리 영역에서 모든 워크스페이스가 함께 사용하는 제품 카탈로그를 관리합니다.",
+    "system_admin_required": "시스템 관리자 권한이 필요합니다.",
+    "load_failed": "제품을 불러오지 못했습니다.",
+    "title": "제품 관리",
+    "description": "모든 워크스페이스에서 사용할 수 있는 공유 제품 카탈로그를 관리합니다.",
+    "search_placeholder": "제품 검색",
+    "new_product": "새 제품",
+    "columns": {
+      "name": "제품 이름",
+      "directory": "폴더 디렉터리",
+      "remark": "비고"
+    },
+    "loading": "제품을 불러오는 중...",
+    "empty": "아직 제품이 없습니다",
+    "no_results": "일치하는 제품이 없습니다",
+    "not_set": "설정되지 않음",
+    "save_failed": "제품을 저장하지 못했습니다",
+    "actions": {
+      "open": "{{name}} 작업",
+      "edit": "편집",
+      "delete": "삭제"
+    },
+    "editor": {
+      "create_title": "새 제품",
+      "edit_title": "제품 편집",
+      "description": "제품 이름, 폴더 디렉터리와 선택 사항인 비고를 설정합니다.",
+      "name": "제품 이름",
+      "name_placeholder": "제품 이름 입력",
+      "directory": "폴더 디렉터리",
+      "directory_placeholder": "폴더 디렉터리 입력",
+      "remark": "비고",
+      "remark_placeholder": "비고 입력",
+      "cancel": "취소",
+      "save": "저장",
+      "saving": "저장 중..."
+    },
+    "delete_dialog": {
+      "title": "제품을 삭제할까요?",
+      "description": "\"{{name}}\" 제품을 영구적으로 삭제합니다.",
+      "cancel": "취소",
+      "confirm": "삭제",
+      "deleting": "삭제 중...",
+      "failed": "제품을 삭제하지 못했습니다"
+    }
+  },
+  "system_management": {
+    "title": "System management",
+    "catalog": "Catalog management",
+    "configuration": "System configuration",
+    "products": "Products",
+    "workspaces": "Workspaces",
+    "users": "Users & permissions",
+    "settings": "System settings",
+    "coming_soon": "Coming soon"
   },
   "plugins": {
     "title": "Plugins",
@@ -682,7 +739,18 @@
     "deleting": "삭제하는 중...",
     "toast_delete_failed": "워크스페이스를 삭제하지 못했습니다",
     "confirm_cancel": "취소",
-    "confirm_action": "확인"
+    "confirm_action": "확인",
+    "oc_key_section": "OC 연동",
+    "oc_key_label": "OC 키",
+    "oc_key_description": "이 워크스페이스에서 실행되는 task의 skill이 OC_KEY로 이 키를 받습니다.",
+    "oc_key_placeholder": "새 OC 키 입력",
+    "oc_key_configured": "설정됨. 새 값을 입력하면 교체됩니다.",
+    "oc_key_save": "키 저장",
+    "oc_key_clear": "키 삭제",
+    "oc_key_clear_confirm": "이 워크스페이스의 OC 키를 삭제할까요?",
+    "oc_key_saved": "OC 키 저장됨",
+    "oc_key_cleared": "OC 키 삭제됨",
+    "oc_key_save_failed": "OC 키 저장 실패"
   },
   "delete_workspace_dialog": {
     "title": "워크스페이스 삭제",

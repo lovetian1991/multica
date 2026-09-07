@@ -77,6 +77,7 @@ import { LabelChip } from "../../labels/label-chip";
 import { IssueAgentActivityIndicator } from "./issue-agent-activity-indicator";
 import { SubIssuesAgentWorkingChip } from "./sub-issues-agent-working-chip";
 import { ProjectPicker } from "../../projects/components/project-picker";
+import { ProductPicker } from "../../products/components/product-picker";
 import { LocalDirectoryHint } from "../../projects/components/local-directory-hint";
 import { CommentCard } from "./comment-card";
 import { SourceContextBadge } from "./source-context-viewer";
@@ -1374,6 +1375,7 @@ export function IssueDetail({ issueId, onDelete, onDone, defaultSidebarOpen = tr
       parent_issue_id: issue.id,
       parent_issue_identifier: issue.identifier,
       ...(issue.project_id ? { project_id: issue.project_id } : {}),
+      ...(issue.product_id ? { product_id: issue.product_id } : {}),
       ...(issue.assignee_type && issue.assignee_id
         ? { assignee_type: issue.assignee_type, assignee_id: issue.assignee_id }
         : {}),
@@ -2333,6 +2335,12 @@ export function IssueDetail({ issueId, onDelete, onDone, defaultSidebarOpen = tr
           <PropRow label={t(($) => $.detail.prop_project)}>
             <ProjectPicker
               projectId={issue.project_id}
+              onUpdate={handleUpdateField}
+            />
+          </PropRow>
+          <PropRow label={t(($) => $.detail.prop_product)}>
+            <ProductPicker
+              productId={issue.product_id ?? null}
               onUpdate={handleUpdateField}
             />
           </PropRow>

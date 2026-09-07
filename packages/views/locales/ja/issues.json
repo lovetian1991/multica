@@ -316,6 +316,7 @@
     "ordered_by": "{{field}} 順に並べたボード"
   },
   "detail": {
+    "prop_product": "製品",
     "not_found": "このタスクはこのワークスペースに存在しないか、削除されています。",
     "breadcrumb_project_unknown": "不明なプロジェクト",
     "back": "戻る",
@@ -694,6 +695,12 @@
     "delete_issue": "タスクを削除"
   },
   "pickers": {
+    "product": {
+      "search_placeholder": "製品を検索...",
+      "no_product": "製品なし",
+      "empty": "製品がありません",
+      "clear_aria": "製品をクリア"
+    },
     "custom_property": {
       "empty": "空",
       "none": "値なし",

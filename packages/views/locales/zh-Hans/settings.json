@@ -330,7 +330,86 @@
       "quick_actions": "快捷操作",
       "plugins": "Plugins",
       "mcp": "MCP",
-      "billing": "账单与套餐"
+      "billing": "账单与套餐",
+      "products": "产品管理"
+    }
+  },
+  "products": {
+    "system_description": "在系统管理区域统一管理所有工作区共享的公共产品目录。",
+    "system_admin_required": "需要系统管理员权限。",
+    "load_failed": "无法加载产品。",
+    "title": "产品管理",
+    "description": "管理所有工作区共享的公共产品目录。",
+    "search_placeholder": "搜索产品",
+    "new_product": "新建产品",
+    "columns": {
+      "name": "产品名称",
+      "directory": "文件夹目录",
+      "remark": "备注"
+    },
+    "loading": "正在加载产品...",
+    "empty": "还没有产品",
+    "no_results": "没有匹配的产品",
+    "not_set": "未设置",
+    "save_failed": "无法保存产品",
+    "actions": {
+      "open": "打开 {{name}} 的操作菜单",
+      "edit": "编辑",
+      "delete": "删除"
+    },
+    "editor": {
+      "create_title": "新建产品",
+      "edit_title": "编辑产品",
+      "description": "设置产品名称、文件夹目录和可选备注。",
+      "name": "产品名称",
+      "name_placeholder": "输入产品名称",
+      "directory": "文件夹目录",
+      "directory_placeholder": "输入文件夹目录",
+      "remark": "备注",
+      "remark_placeholder": "添加备注",
+      "cancel": "取消",
+      "save": "保存",
+      "saving": "正在保存..."
+    },
+    "delete_dialog": {
+      "title": "删除产品？",
+      "description": "“{{name}}”将被永久删除。",
+      "cancel": "取消",
+      "confirm": "删除",
+      "deleting": "正在删除...",
+      "failed": "无法删除产品"
+    }
+  },
+  "system_management": {
+    "title": "系统管理",
+    "catalog": "目录管理",
+    "configuration": "系统配置",
+    "products": "产品管理",
+    "workspaces": "工作区管理",
+    "users": "用户与权限",
+    "settings": "系统设置",
+    "coming_soon": "即将推出"
+  },
+  "system_settings": {
+    "title": "系统设置",
+    "description": "配置所有工作区共享的系统级集成。",
+    "system_admin_required": "需要系统管理员权限。",
+    "loading": "正在加载系统设置...",
+    "load_failed": "无法加载系统设置。",
+    "save": "保存设置",
+    "saving": "正在保存...",
+    "saved": "系统设置已保存。",
+    "save_failed": "无法保存系统设置。",
+    "kb": {
+      "title": "KB 资源文件管理平台",
+      "environment_url": "环境地址",
+      "environment_url_placeholder": "https://kb.example.com",
+      "environment_url_hint": "填写 KB 资源文件管理平台的访问地址。",
+      "integration_key": "集成密钥",
+      "integration_key_placeholder": "输入集成密钥",
+      "integration_key_configured": "已配置。输入新密钥即可替换。",
+      "integration_key_hint": "密钥加密后保存。",
+      "integration_key_saved_hint": "已配置集成密钥，系统不会显示原密钥。"
     }
   },
   "plugins": {
@@ -682,7 +761,18 @@
     "deleting": "删除中...",
     "toast_delete_failed": "删除工作区失败",
     "confirm_cancel": "取消",
-    "confirm_action": "确认"
+    "confirm_action": "确认",
+    "oc_key_section": "OC 集成",
+    "oc_key_label": "OC 密钥",
+    "oc_key_description": "在此工作区运行的任务中，skill 会通过 OC_KEY 获取该密钥。",
+    "oc_key_placeholder": "输入新的 OC 密钥",
+    "oc_key_configured": "已配置。输入新值即可替换。",
+    "oc_key_save": "保存密钥",
+    "oc_key_clear": "清除密钥",
+    "oc_key_clear_confirm": "确定清除这个工作区的 OC 密钥吗？",
+    "oc_key_saved": "OC 密钥已保存",
+    "oc_key_cleared": "OC 密钥已清除",
+    "oc_key_save_failed": "OC 密钥保存失败"
   },
   "delete_workspace_dialog": {
     "title": "删除工作区",

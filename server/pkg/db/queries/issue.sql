@@ -7,7 +7,7 @@
 -- "Assigned to me"), and the two filters must produce disjoint result sets.
 SELECT i.id, i.workspace_id, i.title, i.description, i.status, i.priority,
        i.assignee_type, i.assignee_id, i.creator_type, i.creator_id,
-       i.parent_issue_id, i.position, i.start_date, i.due_date, i.created_at, i.updated_at, i.last_activity_at, i.number, i.project_id, i.metadata, i.stage, i.properties,
+       i.parent_issue_id, i.position, i.start_date, i.due_date, i.created_at, i.updated_at, i.last_activity_at, i.number, i.project_id, i.product_id, i.metadata, i.stage, i.properties,
        i.revision
 FROM issue i
 WHERE i.workspace_id = $1
@@ -145,10 +145,10 @@ RETURNING *;
 INSERT INTO issue (
     workspace_id, title, description, status, priority,
     assignee_type, assignee_id, creator_type, creator_id,
-    parent_issue_id, position, start_date, due_date, number, project_id,
+    parent_issue_id, position, start_date, due_date, number, project_id, product_id,
     stage, last_activity_at, id
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
     sqlc.narg('stage'), now(), COALESCE(sqlc.narg('id')::uuid, gen_random_uuid())
 ) RETURNING *;
 
@@ -198,6 +198,7 @@ WITH candidate AS (
         sqlc.narg('due_date')::date AS next_due_date,
         sqlc.narg('parent_issue_id')::uuid AS next_parent_issue_id,
         sqlc.narg('project_id')::uuid AS next_project_id,
+        sqlc.narg('product_id')::uuid AS next_product_id,
         sqlc.narg('stage')::integer AS next_stage
     FROM issue AS i
     WHERE i.id = $1
@@ -207,19 +208,19 @@ WITH candidate AS (
         candidate.*,
         ROW(
             title, description, status, priority, assignee_type, assignee_id,
-            position, start_date, due_date, parent_issue_id, project_id, stage
+            position, start_date, due_date, parent_issue_id, project_id, product_id, stage
         ) IS DISTINCT FROM ROW(
             next_title, next_description, next_status, next_priority,
             next_assignee_type, next_assignee_id, next_position, next_start_date,
-            next_due_date, next_parent_issue_id, next_project_id, next_stage
+            next_due_date, next_parent_issue_id, next_project_id, next_product_id, next_stage
         ) AS did_change,
         ROW(
             title, description, status, priority, assignee_type, assignee_id,
-            start_date, due_date, parent_issue_id, project_id, stage
+            start_date, due_date, parent_issue_id, project_id, product_id, stage
         ) IS DISTINCT FROM ROW(
             next_title, next_description, next_status, next_priority,
             next_assignee_type, next_assignee_id, next_start_date, next_due_date,
-            next_parent_issue_id, next_project_id, next_stage
+            next_parent_issue_id, next_project_id, next_product_id, next_stage
         ) AS did_activity
     FROM candidate
 )
@@ -235,6 +236,7 @@ UPDATE issue AS i SET
     due_date = changed.next_due_date,
     parent_issue_id = changed.next_parent_issue_id,
     project_id = changed.next_project_id,
+    product_id = changed.next_product_id,
     stage = changed.next_stage,
     revision = i.revision + changed.did_change::integer,
     last_activity_at = CASE WHEN changed.did_activity
@@ -278,10 +280,10 @@ RETURNING *;
 INSERT INTO issue (
     workspace_id, title, description, status, priority,
     assignee_type, assignee_id, creator_type, creator_id,
-    parent_issue_id, position, start_date, due_date, number, project_id,
+    parent_issue_id, position, start_date, due_date, number, project_id, product_id,
     origin_type, origin_id, stage, last_activity_at, id
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
     sqlc.narg('origin_type'), sqlc.narg('origin_id'), sqlc.narg('stage'), now(), COALESCE(sqlc.narg('id')::uuid, gen_random_uuid())
 ) RETURNING *;
 
@@ -349,7 +351,7 @@ DELETE FROM issue WHERE issue.id IN (SELECT target.id FROM target);
 -- filter; member-direct assignment is intentionally excluded).
 SELECT i.id, i.workspace_id, i.title, i.description, i.status, i.priority,
        i.assignee_type, i.assignee_id, i.creator_type, i.creator_id,
-       i.parent_issue_id, i.position, i.start_date, i.due_date, i.created_at, i.updated_at, i.last_activity_at, i.number, i.project_id, i.metadata, i.stage, i.properties,
+       i.parent_issue_id, i.position, i.start_date, i.due_date, i.created_at, i.updated_at, i.last_activity_at, i.number, i.project_id, i.product_id, i.metadata, i.stage, i.properties,
        i.revision
 FROM issue i
 WHERE i.workspace_id = $1

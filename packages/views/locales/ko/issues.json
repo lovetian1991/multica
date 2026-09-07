@@ -316,6 +316,7 @@
     "ordered_by": "{{field}} 기준으로 정렬된 보드"
   },
   "detail": {
+    "prop_product": "제품",
     "not_found": "이 워크스페이스에 해당 태스크가 없거나 삭제되었습니다.",
     "breadcrumb_project_unknown": "알 수 없는 프로젝트",
     "back": "뒤로",
@@ -694,6 +695,12 @@
     "delete_issue": "태스크 삭제"
   },
   "pickers": {
+    "product": {
+      "search_placeholder": "제품 검색...",
+      "no_product": "제품 없음",
+      "empty": "제품이 없습니다",
+      "clear_aria": "제품 지우기"
+    },
     "custom_property": {
       "empty": "비어 있음",
       "none": "값 없음",

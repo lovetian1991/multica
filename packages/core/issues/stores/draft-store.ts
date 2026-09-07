@@ -33,6 +33,7 @@ import { normalizeStoredUploads, type DraftUpload } from "../../drafts/draft-upl
 
 export interface IssueCreateShared {
   projectId?: string;
+  productId?: string;
   priority: IssuePriority;
   dueDate: string | null;
   /** Uploads for the dialog (placeholders + completed), referenced by the
@@ -73,6 +74,7 @@ export interface IssueCreateDraft {
 
 const emptyShared = (): IssueCreateShared => ({
   projectId: undefined,
+  productId: undefined,
   priority: "none",
   dueDate: null,
   attachments: [],
@@ -138,6 +140,7 @@ function migrateDraft(raw: unknown): IssueCreateDraft {
       shared: {
         ...emptyShared(),
         projectId: d.projectId as string | undefined,
+        productId: d.productId as string | undefined,
         priority: (d.priority as IssuePriority) ?? "none",
         dueDate: (d.dueDate as string | null) ?? null,
         // Legacy builds persisted bare Attachment rows; normalize wraps them

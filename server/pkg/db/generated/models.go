@@ -782,6 +782,7 @@ type Issue struct {
 	Properties         []byte             `json:"properties"`
 	Revision           int64              `json:"revision"`
 	LastActivityAt     pgtype.Timestamptz `json:"last_activity_at"`
+	ProductID          pgtype.UUID        `json:"product_id"`
 }
 
 type IssueDependency struct {
@@ -1149,6 +1150,15 @@ type PluginStorage struct {
 	Value          string             `json:"value"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type Product struct {
+	ID        pgtype.UUID        `json:"id"`
+	Name      string             `json:"name"`
+	Directory string             `json:"directory"`
+	Remark    string             `json:"remark"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Project struct {
@@ -1528,6 +1538,14 @@ type Workspace struct {
 	AvatarUrl    pgtype.Text        `json:"avatar_url"`
 	// When TRUE, an agent run that resolves to no precise accountable human (would be owner_fallback) is refused at enqueue instead of degrading to the agent owner (MUL-4302 §3.5). Default FALSE = owner_fallback. Never affects authorization (originator_user_id).
 	AttributionFailClosed bool `json:"attribution_fail_closed"`
+}
+
+type SystemSetting struct {
+	ID                        bool               `json:"id"`
+	KbEnvironmentUrl          string             `json:"kb_environment_url"`
+	KbIntegrationKeyEncrypted string             `json:"kb_integration_key_encrypted"`
+	CreatedAt                 pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                 pgtype.Timestamptz `json:"updated_at"`
 }
 
 type WorkspaceInvitation struct {

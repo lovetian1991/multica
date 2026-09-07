@@ -71,6 +71,7 @@ type IssueCreateParams struct {
 	CreatorID     pgtype.UUID
 	ParentIssueID pgtype.UUID
 	ProjectID     pgtype.UUID
+	ProductID     pgtype.UUID
 	StartDate     pgtype.Date
 	DueDate       pgtype.Date
 	OriginType    pgtype.Text
@@ -152,6 +153,11 @@ var ErrParentIssueNotFound = errors.New("parent issue not found in this workspac
 // MCP / API key callers) enforces the same workspace boundary without
 // having to remember it. Callers translate this into 400.
 var ErrProjectNotFound = errors.New("project not found in this workspace")
+
+// ErrProductNotFound signals that the supplied ProductID does not exist in
+// the deployment-wide product catalog. Products are intentionally global and
+// are not scoped to the issue workspace.
+var ErrProductNotFound = errors.New("product not found")
 
 // ErrIssueLabelNotFound signals that one of the supplied LabelIDs does not
 // exist in the issue's workspace or is not an issue-scoped label. The whole
@@ -296,6 +302,11 @@ func (s *IssueService) Create(ctx context.Context, p IssueCreateParams, opts Iss
 			return IssueCreateResult{}, ErrProjectNotFound
 		}
 	}
+	if p.ProductID.Valid {
+		if _, err := qtx.GetProduct(ctx, p.ProductID); err != nil {
+			return IssueCreateResult{}, ErrProductNotFound
+		}
+	}
 
 	// Validate labels before we increment the issue counter so a stale or
 	// wrong-scope selection fails the create cheaply. The de-duplicated rows
@@ -354,6 +365,7 @@ func (s *IssueService) Create(ctx context.Context, p IssueCreateParams, opts Iss
 			DueDate:       p.DueDate,
 			Number:        issueNumber,
 			ProjectID:     projectID,
+			ProductID:     p.ProductID,
 			OriginType:    p.OriginType,
 			OriginID:      p.OriginID,
 			Stage:         p.Stage,
@@ -376,6 +388,7 @@ func (s *IssueService) Create(ctx context.Context, p IssueCreateParams, opts Iss
 			DueDate:       p.DueDate,
 			Number:        issueNumber,
 			ProjectID:     projectID,
+			ProductID:     p.ProductID,
 			Stage:         p.Stage,
 		})
 	}

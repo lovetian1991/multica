@@ -74,7 +74,7 @@ type slashQueries interface {
 // command needs to hand the invoker's prompt to the agent. *service.TaskService
 // satisfies it; tests supply a fake.
 type quickCreateEnqueuer interface {
-	EnqueueQuickCreateTask(ctx context.Context, workspaceID, requesterID, agentID, squadID pgtype.UUID, prompt, priority, dueDate string, projectID, parentIssueID pgtype.UUID, attachmentIDs []pgtype.UUID) (db.AgentTaskQueue, error)
+	EnqueueQuickCreateTask(ctx context.Context, workspaceID, requesterID, agentID, squadID pgtype.UUID, prompt, priority, dueDate string, projectID, productID, parentIssueID pgtype.UUID, attachmentIDs []pgtype.UUID) (db.AgentTaskQueue, error)
 }
 
 type slashControlStarter interface {
@@ -281,6 +281,7 @@ func (p *SlashCommandProcessor) process(ctx context.Context, cmd slack.SlashComm
 		"",            // no explicit priority
 		"",            // no explicit due date
 		pgtype.UUID{}, // no project
+		pgtype.UUID{}, // no product
 		pgtype.UUID{}, // no parent issue
 		nil,           // no attachments
 	); err != nil {

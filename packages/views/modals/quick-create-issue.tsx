@@ -60,6 +60,8 @@ import {
 import { ActorAvatar } from "../common/actor-avatar";
 import { ClearablePillButton, PillButton } from "../common/pill-button";
 import { ProjectPicker } from "../projects/components/project-picker";
+import { ProductPicker } from "../products/components/product-picker";
+import { productListOptions } from "@multica/core/products/queries";
 import { DueDatePicker, PriorityIcon, PriorityPicker } from "../issues/components";
 import { canAssignAgent } from "../issues/components/pickers/assignee-picker";
 import { isAgentRuntimeBound } from "@multica/core/agents";
@@ -147,6 +149,7 @@ export function AgentCreatePanel({
   const { data: projects = [], isSuccess: projectsLoaded } = useQuery(
     projectListOptions(wsId),
   );
+  const { data: products = [], isSuccess: productsLoaded } = useQuery(productListOptions());
 
   const memberRole = useMemo(
     () => members.find((m) => m.user_id === userId)?.role,
@@ -276,6 +279,10 @@ export function AgentCreatePanel({
     const seed = (data?.project_id as string | undefined) ?? draft.shared.projectId;
     return seed ?? null;
   });
+  const [productId, setProductId] = useState<string | null>(() => {
+    const seed = (data?.product_id as string | undefined) ?? draft.shared.productId;
+    return seed ?? null;
+  });
   const [priority, setPriority] = useState<IssuePriority>(
     (data?.priority as IssuePriority | undefined) ?? draft.shared.priority,
   );
@@ -288,6 +295,10 @@ export function AgentCreatePanel({
   const commitProject = (next: string | null) => {
     setProjectId(next);
     setShared({ projectId: next ?? undefined });
+  };
+  const commitProduct = (next: string | null) => {
+    setProductId(next);
+    setShared({ productId: next ?? undefined });
   };
 
   // Parent-issue context — seeded by `openCreateSubIssue` when the modal is
@@ -314,6 +325,15 @@ export function AgentCreatePanel({
       setShared({ projectId: undefined });
     }
   }, [projectsLoaded, projects, projectId, draft.shared.projectId, setShared]);
+
+  useEffect(() => {
+    if (!productsLoaded || productId === null) return;
+    if (products.some((product) => product.id === productId)) return;
+    setProductId(null);
+    if (draft.shared.productId === productId) {
+      setShared({ productId: undefined });
+    }
+  }, [productsLoaded, products, productId, draft.shared.productId, setShared]);
 
   // Mark the persisted draft's active mode so a later reopen and any reader of
   // the unified draft know which form is being edited.
@@ -431,6 +451,7 @@ export function AgentCreatePanel({
                 : { squad_id: actor.id }),
               prompt: md,
               project_id: projectId ?? undefined,
+              product_id: productId ?? undefined,
               ...(priority !== "none" ? { priority } : {}),
               ...(dueDate ? { due_date: dueDate } : {}),
               ...(activeAttachmentIds.length > 0 ? { attachment_ids: activeAttachmentIds } : {}),
@@ -443,6 +464,7 @@ export function AgentCreatePanel({
               : { squad_id: actor.id }),
             prompt: md,
             project_id: projectId ?? undefined,
+            product_id: productId ?? undefined,
             ...(priority !== "none" ? { priority } : {}),
             ...(dueDate ? { due_date: dueDate } : {}),
             parent_issue_id: parentIssueId,
@@ -571,7 +593,12 @@ export function AgentCreatePanel({
     // Commit the shared fields to the draft so the manual panel reads them from
     // there — local state can hold a value seeded from `data` that was never
     // written through a picker.
-    setShared({ projectId: projectId ?? undefined, priority, dueDate });
+    setShared({
+      projectId: projectId ?? undefined,
+      productId: productId ?? undefined,
+      priority,
+      dueDate,
+    });
     if (!draft.manual.description.trim()) {
       const md = editorRef.current?.getMarkdown() ?? "";
       if (md) setManual({ description: md });
@@ -742,6 +769,17 @@ export function AgentCreatePanel({
               onOpenChange={(open) => setFieldPickerOpen(open ? "project" : null)}
             />
           )}
+          <ProductPicker
+            productId={productId}
+            onUpdate={(u) => commitProduct(u.product_id ?? null)}
+            triggerRender={
+              <ClearablePillButton
+                onClear={productId !== null ? () => commitProduct(null) : undefined}
+                clearLabel={tIssues(($) => $.pickers.product.clear_aria)}
+              />
+            }
+            align="start"
+          />
           {(visibleFields.includes("priority") ||
             priority !== "none" ||
             fieldPickerOpen === "priority") && (

@@ -330,8 +330,65 @@
       "quick_actions": "クイックアクション",
       "plugins": "Plugins",
       "mcp": "MCP",
-      "billing": "請求とプラン"
+      "billing": "請求とプラン",
+      "products": "製品管理"
     }
+  },
+  "products": {
+    "system_description": "システム管理エリアで、すべてのワークスペースから利用できる共有製品カタログを管理します。",
+    "system_admin_required": "システム管理者権限が必要です。",
+    "load_failed": "製品を読み込めませんでした。",
+    "title": "製品管理",
+    "description": "すべてのワークスペースで利用できる共有製品カタログを管理します。",
+    "search_placeholder": "製品を検索",
+    "new_product": "新しい製品",
+    "columns": {
+      "name": "製品名",
+      "directory": "フォルダーパス",
+      "remark": "備考"
+    },
+    "loading": "製品を読み込み中...",
+    "empty": "製品はまだありません",
+    "no_results": "一致する製品がありません",
+    "not_set": "未設定",
+    "save_failed": "製品を保存できませんでした",
+    "actions": {
+      "open": "{{name}} の操作",
+      "edit": "編集",
+      "delete": "削除"
+    },
+    "editor": {
+      "create_title": "新しい製品",
+      "edit_title": "製品を編集",
+      "description": "製品名、フォルダーパス、任意の備考を設定します。",
+      "name": "製品名",
+      "name_placeholder": "製品名を入力",
+      "directory": "フォルダーパス",
+      "directory_placeholder": "フォルダーパスを入力",
+      "remark": "備考",
+      "remark_placeholder": "備考を入力",
+      "cancel": "キャンセル",
+      "save": "保存",
+      "saving": "保存中..."
+    },
+    "delete_dialog": {
+      "title": "製品を削除しますか？",
+      "description": "「{{name}}」を完全に削除します。",
+      "cancel": "キャンセル",
+      "confirm": "削除",
+      "deleting": "削除中...",
+      "failed": "製品を削除できませんでした"
+    }
+  },
+  "system_management": {
+    "title": "System management",
+    "catalog": "Catalog management",
+    "configuration": "System configuration",
+    "products": "Products",
+    "workspaces": "Workspaces",
+    "users": "Users & permissions",
+    "settings": "System settings",
+    "coming_soon": "Coming soon"
   },
   "plugins": {
     "title": "Plugins",
@@ -682,7 +739,18 @@
     "change_logo_aria": "ワークスペースのロゴを変更",
     "click_logo_hint": "ロゴをクリックして新しい画像をアップロード",
     "toast_logo_updated": "ワークスペースのロゴを更新しました",
-    "toast_logo_failed": "ワークスペースのロゴをアップロードできませんでした"
+    "toast_logo_failed": "ワークスペースのロゴをアップロードできませんでした",
+    "oc_key_section": "OC 連携",
+    "oc_key_label": "OC キー",
+    "oc_key_description": "このワークスペースで実行するタスクでは、skill が OC_KEY からこのキーを取得します。",
+    "oc_key_placeholder": "新しい OC キーを入力",
+    "oc_key_configured": "設定済みです。新しい値を入力すると置き換わります。",
+    "oc_key_save": "キーを保存",
+    "oc_key_clear": "キーを削除",
+    "oc_key_clear_confirm": "このワークスペースの OC キーを削除しますか？",
+    "oc_key_saved": "OC キーを保存しました",
+    "oc_key_cleared": "OC キーを削除しました",
+    "oc_key_save_failed": "OC キーの保存に失敗しました"
   },
   "delete_workspace_dialog": {
     "title": "ワークスペースを削除",

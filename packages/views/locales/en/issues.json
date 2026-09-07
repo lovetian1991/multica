@@ -319,6 +319,7 @@
     "ordered_by": "Board ordered by {{field}}"
   },
   "detail": {
+    "prop_product": "Product",
     "not_found": "This issue does not exist or has been deleted in this workspace.",
     "breadcrumb_project_unknown": "Unknown project",
     "back": "Back",
@@ -725,6 +726,12 @@
     "delete_issue": "Delete issue"
   },
   "pickers": {
+    "product": {
+      "search_placeholder": "Search products...",
+      "no_product": "No product",
+      "empty": "No products yet",
+      "clear_aria": "Clear product"
+    },
     "custom_property": {
       "empty": "Empty",
       "none": "No value",
