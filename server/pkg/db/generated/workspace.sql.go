@@ -305,6 +305,48 @@ func (q *Queries) IncrementIssueCounter(ctx context.Context, id pgtype.UUID) (in
 	return issue_counter, err
 }
 
+const listAllWorkspaces = `-- name: ListAllWorkspaces :many
+SELECT id, name, slug, description, settings,
+       created_at, updated_at, context, repos,
+       issue_prefix, issue_counter, avatar_url, attribution_fail_closed
+FROM workspace
+ORDER BY created_at ASC
+`
+
+func (q *Queries) ListAllWorkspaces(ctx context.Context) ([]Workspace, error) {
+	rows, err := q.db.Query(ctx, listAllWorkspaces)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Workspace{}
+	for rows.Next() {
+		var i Workspace
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Slug,
+			&i.Description,
+			&i.Settings,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Context,
+			&i.Repos,
+			&i.IssuePrefix,
+			&i.IssueCounter,
+			&i.AvatarUrl,
+			&i.AttributionFailClosed,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listDaemonWorkspaces = `-- name: ListDaemonWorkspaces :many
 SELECT w.id, w.name
 FROM member m

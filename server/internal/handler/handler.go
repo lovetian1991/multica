@@ -75,6 +75,9 @@ type Config struct {
 	// invitation only. The public /api/config endpoint mirrors this flag so
 	// the UI can hide every "Create workspace" affordance — see #3433.
 	DisableWorkspaceCreation bool
+	// SystemAdminEmails is the deployment-level allowlist for system
+	// management routes. An empty list intentionally denies access.
+	SystemAdminEmails []string
 	// VCSIntegrationEnabled gates the self-hosted Git provider integration
 	// (Forgejo / Gitea / GitLab) at the deployment level, independent of whether
 	// MULTICA_VCS_SECRET_KEY is set. It is the product boundary: the feature is
@@ -375,6 +378,9 @@ type Handler struct {
 	// PluginSurfaceTokens seal short-lived launch claims. Nil disables surface
 	// launches; wired from a domain-separated MULTICA_PLUGIN_SECRET_KEY at boot.
 	PluginSurfaceTokens *secretbox.Box
+	// SystemSettingsSecretBox encrypts deployment-wide system setting secrets at
+	// rest. Nil disables saving the KB integration key.
+	SystemSettingsSecretBox *secretbox.Box
 	// PRRefresh drives the GitHub API snapshot pipeline for PR cards (MUL-5265):
 	// webhook / page-visit / TTL triggers → authenticated GraphQL fetch →
 	// head-SHA-guarded atomic snapshot write. Always non-nil, but inert (every

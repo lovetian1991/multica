@@ -422,6 +422,7 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 		AllowedEmails:            splitAndTrim(os.Getenv("ALLOWED_EMAILS")),
 		AllowedEmailDomains:      splitAndTrim(os.Getenv("ALLOWED_EMAIL_DOMAINS")),
 		DisableWorkspaceCreation: os.Getenv("DISABLE_WORKSPACE_CREATION") == "true",
+		SystemAdminEmails:        splitAndTrim(os.Getenv("MULTICA_SYSTEM_ADMIN_EMAILS")),
 		VCSIntegrationEnabled:    os.Getenv("MULTICA_VCS_INTEGRATION_ENABLED") == "true",
 		PublicURL:                strings.TrimRight(strings.TrimSpace(os.Getenv("MULTICA_PUBLIC_URL")), "/"),
 		AppURL:                   appURLFromEnv(),
@@ -1212,6 +1213,18 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 		slog.Info("Plugin secrets disabled (MULTICA_PLUGIN_SECRET_KEY not set)")
 	}
 
+	if systemSettingsKey, err := secretbox.LoadKey("MULTICA_SYSTEM_SETTINGS_SECRET_KEY"); err == nil {
+		box, boxErr := secretbox.New(systemSettingsKey)
+		if boxErr != nil {
+			slog.Error("system settings: secretbox.New failed; KB integration key settings disabled", "error", boxErr)
+		} else {
+			h.SystemSettingsSecretBox = box
+			slog.Info("system settings secret encryption enabled")
+		}
+	} else {
+		slog.Info("system settings secret encryption disabled (MULTICA_SYSTEM_SETTINGS_SECRET_KEY not set)")
+	}
+
 	// Hook engine. Event-triggered hooks are dispatched off the bus onto a
 	// worker pool: Bus.Publish runs listeners inline on the publishing request's
 	// goroutine, so anything that dials a third-party endpoint from there would
@@ -1540,6 +1553,35 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 		r.Post("/api/upload-file", h.UploadFile)
 		r.Post("/api/feedback", h.CreateFeedback)
 		r.With(handler.RequireHumanActor).Post("/api/client-usage", h.UpsertClientUsage)
+
+		// Products are deployment-scoped catalog data. Any authenticated
+		// workspace can read the catalog for task selection; only system
+		// administrators can mutate it through the routes below.
+		r.Get("/api/products", h.ListProducts)
+		r.Get("/api/products/{id}", h.GetProduct)
+
+		// System management is deployment-scoped rather than workspace-scoped.
+		// Keep it outside the workspace member group so an allowlisted system
+		// administrator can manage products for any workspace.
+		r.Route("/api/system/products", func(r chi.Router) {
+			r.Use(handler.RequireHumanActor)
+			r.Get("/", h.ListSystemProducts)
+			r.Post("/", h.CreateSystemProduct)
+			r.Route("/{id}", func(r chi.Router) {
+				r.Get("/", h.GetSystemProduct)
+				r.Put("/", h.UpdateSystemProduct)
+				r.Delete("/", h.DeleteSystemProduct)
+			})
+		})
+		r.Route("/api/system/settings", func(r chi.Router) {
+			r.Use(handler.RequireHumanActor)
+			r.Get("/", h.GetSystemSettings)
+			r.Put("/", h.UpdateSystemSettings)
+		})
+		r.Route("/api/system/workspaces", func(r chi.Router) {
+			r.Use(handler.RequireHumanActor)
+			r.Get("/", h.ListSystemWorkspaces)
+		})
 
 		// Note (MUL-4309): the generic OpenAI-compatible passthrough endpoints
 		// (POST /api/llm/v1/chat/completions[/stream]) were intentionally
