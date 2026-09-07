@@ -1,6 +1,9 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { electronAPI } from "@electron-toolkit/preload";
-import type { RuntimeConfigResult } from "../shared/runtime-config";
+import type {
+  RuntimeConfigResult,
+  RuntimeConfigWriteInput,
+} from "../shared/runtime-config";
 import type { FreezeBreadcrumb } from "../shared/freeze-breadcrumb";
 import type {
   ManualUpdateCheckResult,
@@ -117,6 +120,11 @@ const desktopAPI = {
   },
   /** Validated runtime endpoint config, or a blocking config error. */
   runtimeConfig,
+  /** Persist a validated packaged runtime config. Takes effect after reload. */
+  saveRuntimeConfig: (input: RuntimeConfigWriteInput) =>
+    ipcRenderer.invoke("runtime-config:save", input),
+  /** Restore the packaged runtime config to the official cloud endpoints. */
+  resetRuntimeConfig: () => ipcRenderer.invoke("runtime-config:reset"),
   /** Identifies whether this renderer owns the main tabbed window or a
    *  dedicated issue window, parsed from validated launch arguments. */
   windowContext,

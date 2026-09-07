@@ -936,7 +936,8 @@
   },
   "desktop": {
     "tabs": {
-      "updates": "업데이트"
+      "updates": "업데이트",
+      "server": "서버"
     },
     "updates": {
       "title": "업데이트",
@@ -951,6 +952,27 @@
       "downloading": "v{{version}}을(를) 백그라운드에서 다운로드 중입니다. 설치 준비가 끝나면 알림을 드립니다.",
       "check_now": "지금 확인",
       "checking": "확인 중..."
+    },
+    "server": {
+      "title": "서버",
+      "page_description": "데스크톱 앱이 연결된 Multica 인스턴스를 확인합니다. 서버를 전환하면 현재 인스턴스에서 로그아웃됩니다.",
+      "heading": "서버",
+      "web_url_label": "웹 URL",
+      "web_url_placeholder": "https://multica.example.com",
+      "api_url_prefix": "API: ",
+      "cloud_name": "Multica Cloud",
+      "description_login": "이 데스크톱 앱이 로그인할 Multica 인스턴스를 선택하세요.",
+      "description_settings": "서버를 전환하면 로그아웃되며, 선택한 인스턴스로 이 창이 다시 로드됩니다.",
+      "change": "변경",
+      "cancel": "취소",
+      "use_cloud": "Multica Cloud 사용",
+      "continue": "계속",
+      "saving": "저장 중",
+      "error_generic": "이 서버를 저장할 수 없습니다.",
+      "error_reset": "Multica Cloud로 전환할 수 없습니다.",
+      "switch_dialog_title": "서버를 전환할까요?",
+      "switch_dialog_description": "서버를 전환하면 로그아웃되고, 로컬 데몬 토큰이 삭제되며, 데몬이 중지된 후 새 서버가 저장되면 이 창이 다시 로드됩니다.",
+      "switch_dialog_continue": "계속"
     },
     "daemon": {
       "title": "데몬",

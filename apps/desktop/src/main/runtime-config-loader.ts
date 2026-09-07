@@ -1,6 +1,6 @@
 import { app } from "electron";
-import { readFile } from "fs/promises";
-import { join } from "path";
+import { mkdir, readFile, writeFile } from "fs/promises";
+import { dirname, join } from "path";
 import {
   DEFAULT_RUNTIME_CONFIG,
   parseRuntimeConfig,
@@ -8,6 +8,7 @@ import {
   type RuntimeConfig,
   type RuntimeConfigEnv,
   type RuntimeConfigResult,
+  type RuntimeConfigWriteInput,
 } from "../shared/runtime-config";
 
 export async function loadRuntimeConfig(options: {
@@ -38,6 +39,38 @@ export async function loadRuntimeConfig(options: {
       },
     };
   }
+}
+
+export async function saveRuntimeConfig(
+  input: RuntimeConfigWriteInput,
+  options: { configPath?: string } = {},
+): Promise<RuntimeConfigResult> {
+  const configPath = options.configPath ?? desktopConfigPath();
+  try {
+    const config = parseRuntimeConfig(
+      JSON.stringify({
+        schemaVersion: 1,
+        apiUrl: input.apiUrl,
+        appUrl: input.appUrl,
+        wsUrl: input.wsUrl,
+      }),
+    );
+    await mkdir(dirname(configPath), { recursive: true });
+    await writeFile(
+      configPath,
+      `${JSON.stringify(config, null, 2)}\n`,
+      "utf-8",
+    );
+    return { ok: true, config };
+  } catch (err) {
+    return { ok: false, error: { message: errorMessage(err) } };
+  }
+}
+
+export async function resetRuntimeConfig(
+  options: { configPath?: string } = {},
+): Promise<RuntimeConfigResult> {
+  return saveRuntimeConfig(DEFAULT_RUNTIME_CONFIG, options);
 }
 
 export function desktopConfigPath(): string {

@@ -9,6 +9,12 @@ export interface RuntimeConfigError {
   message: string;
 }
 
+export interface RuntimeConfigWriteInput {
+  apiUrl: string;
+  appUrl?: string;
+  wsUrl?: string;
+}
+
 export type RuntimeConfigResult =
   | { ok: true; config: RuntimeConfig }
   | { ok: false; error: RuntimeConfigError };

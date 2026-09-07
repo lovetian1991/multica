@@ -1,5 +1,8 @@
 import { ElectronAPI } from "@electron-toolkit/preload";
-import type { RuntimeConfigResult } from "../shared/runtime-config";
+import type {
+  RuntimeConfigResult,
+  RuntimeConfigWriteInput,
+} from "../shared/runtime-config";
 import type { NavigationGesture } from "../shared/navigation-gestures";
 import type { RendererRouteContextInput } from "../shared/renderer-route-context";
 import type { FreezeBreadcrumb } from "../shared/freeze-breadcrumb";
@@ -29,6 +32,12 @@ interface DesktopAPI {
   onSystemLocaleChanged: (callback: (locale: string) => void) => () => void;
   /** Validated runtime endpoint config, or a blocking config error. */
   runtimeConfig: RuntimeConfigResult;
+  /** Persist a validated packaged runtime config. Takes effect after reload. */
+  saveRuntimeConfig: (
+    input: RuntimeConfigWriteInput,
+  ) => Promise<RuntimeConfigResult>;
+  /** Restore the packaged runtime config to the official cloud endpoints. */
+  resetRuntimeConfig: () => Promise<RuntimeConfigResult>;
   /** Main tabbed window or a dedicated issue-only window. */
   windowContext: DesktopWindowContext;
   /** Read any freeze/crash breadcrumb from a previous session, so the renderer

@@ -61,6 +61,11 @@ interface LoginPageProps {
    *  app?" prompt; desktop omits it (a download prompt inside the app
    *  would be absurd). */
   extra?: ReactNode;
+  /** Override the outer wrapper's layout classes. Defaults to a full-height
+   *  centered layout; platform shells that stack extra content above the
+   *  card (e.g. Desktop's server picker) pass a non-centering layout so the
+   *  combined content can scroll instead of being centered off-screen. */
+  wrapperClassName?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -105,6 +110,7 @@ export function LoginPage({
   onTokenObtained,
   onGoogleLogin,
   extra,
+  wrapperClassName = "flex min-h-svh items-center justify-center",
 }: LoginPageProps) {
   const { t } = useT("auth");
   const qc = useQueryClient();
@@ -292,7 +298,7 @@ export function LoginPage({
 
   if (step === "cli_confirm" && existingUser) {
     return (
-      <div className="flex min-h-svh items-center justify-center">
+      <div className={wrapperClassName}>
         <Card className="w-full max-w-sm">
           <CardHeader className="text-center">
             {logo && <div className="mx-auto mb-4">{logo}</div>}
@@ -336,7 +342,7 @@ export function LoginPage({
 
   if (step === "code") {
     return (
-      <div className="flex min-h-svh items-center justify-center">
+      <div className={wrapperClassName}>
         <Card className="w-full max-w-sm">
           <CardHeader className="text-center">
             {logo && <div className="mx-auto mb-4">{logo}</div>}
@@ -407,7 +413,7 @@ export function LoginPage({
   // -------------------------------------------------------------------------
 
   return (
-    <div className="flex min-h-svh items-center justify-center">
+    <div className={wrapperClassName}>
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           {logo && <div className="mx-auto mb-4">{logo}</div>}

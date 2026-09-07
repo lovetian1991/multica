@@ -476,4 +476,11 @@ describe("electron-builder.yml packaging config", () => {
     expect(entries.length).toBeGreaterThan(0);
     expect(entries).toContain("!dist/**");
   });
+
+  it("excludes local log files from the packaged files", () => {
+    expect(configPath, "electron-builder.yml not found").toBeTruthy();
+    const entries = readFilesBlock(readFileSync(configPath, "utf-8"));
+    expect(entries.length).toBeGreaterThan(0);
+    expect(entries).toContain("!*.log");
+  });
 });
