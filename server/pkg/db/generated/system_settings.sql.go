@@ -48,10 +48,7 @@ type UpsertSystemSettingsParams struct {
 }
 
 func (q *Queries) UpsertSystemSettings(ctx context.Context, arg UpsertSystemSettingsParams) (SystemSetting, error) {
-	row := q.db.QueryRow(ctx, upsertSystemSettings,
-		arg.KbEnvironmentUrl,
-		arg.KbIntegrationKeyEncrypted,
-	)
+	row := q.db.QueryRow(ctx, upsertSystemSettings, arg.KbEnvironmentUrl, arg.KbIntegrationKeyEncrypted)
 	var i SystemSetting
 	err := row.Scan(
 		&i.ID,

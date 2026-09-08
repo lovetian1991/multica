@@ -458,7 +458,7 @@ func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.Queries.GetUser(r.Context(), parseUUID(userID))
 	if err != nil {
-		writeError(w, http.StatusNotFound, "user not found")
+		writeError(w, http.StatusUnauthorized, "user not found")
 		return
 	}
 
@@ -667,7 +667,7 @@ func (h *Handler) IssueCliToken(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.Queries.GetUser(r.Context(), parseUUID(userID))
 	if err != nil {
-		writeError(w, http.StatusNotFound, "user not found")
+		writeError(w, http.StatusUnauthorized, "user not found")
 		return
 	}
 
@@ -704,7 +704,7 @@ func (h *Handler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 
 	currentUser, err := h.Queries.GetUser(r.Context(), parseUUID(userID))
 	if err != nil {
-		writeError(w, http.StatusNotFound, "user not found")
+		writeError(w, http.StatusUnauthorized, "user not found")
 		return
 	}
 
