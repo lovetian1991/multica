@@ -1169,6 +1169,7 @@ type ProductVersion struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 	FolderID  string             `json:"folder_id"`
+	Enabled   bool               `json:"enabled"`
 }
 
 type Project struct {
