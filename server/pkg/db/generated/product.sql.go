@@ -12,25 +12,17 @@ import (
 )
 
 const createProduct = `-- name: CreateProduct :one
-INSERT INTO product (name, directory, remark)
-VALUES ($1, $2, $3)
-RETURNING id, name, directory, remark, created_at, updated_at
+INSERT INTO product (name)
+VALUES ($1)
+RETURNING id, name, created_at, updated_at
 `
 
-type CreateProductParams struct {
-	Name      string `json:"name"`
-	Directory string `json:"directory"`
-	Remark    string `json:"remark"`
-}
-
-func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error) {
-	row := q.db.QueryRow(ctx, createProduct, arg.Name, arg.Directory, arg.Remark)
+func (q *Queries) CreateProduct(ctx context.Context, name string) (Product, error) {
+	row := q.db.QueryRow(ctx, createProduct, name)
 	var i Product
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.Directory,
-		&i.Remark,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -51,7 +43,7 @@ func (q *Queries) DeleteProduct(ctx context.Context, id pgtype.UUID) (pgtype.UUI
 }
 
 const getProduct = `-- name: GetProduct :one
-SELECT id, name, directory, remark, created_at, updated_at
+SELECT id, name, created_at, updated_at
 FROM product
 WHERE id = $1
 `
@@ -62,8 +54,6 @@ func (q *Queries) GetProduct(ctx context.Context, id pgtype.UUID) (Product, erro
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.Directory,
-		&i.Remark,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -71,7 +61,7 @@ func (q *Queries) GetProduct(ctx context.Context, id pgtype.UUID) (Product, erro
 }
 
 const listProducts = `-- name: ListProducts :many
-SELECT id, name, directory, remark, created_at, updated_at
+SELECT id, name, created_at, updated_at
 FROM product
 ORDER BY created_at DESC, id DESC
 `
@@ -88,8 +78,6 @@ func (q *Queries) ListProducts(ctx context.Context) ([]Product, error) {
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
-			&i.Directory,
-			&i.Remark,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -106,33 +94,22 @@ func (q *Queries) ListProducts(ctx context.Context) ([]Product, error) {
 const updateProduct = `-- name: UpdateProduct :one
 UPDATE product
 SET name = $2,
-    directory = $3,
-    remark = $4,
     updated_at = now()
 WHERE id = $1
-RETURNING id, name, directory, remark, created_at, updated_at
+RETURNING id, name, created_at, updated_at
 `
 
 type UpdateProductParams struct {
-	ID        pgtype.UUID `json:"id"`
-	Name      string      `json:"name"`
-	Directory string      `json:"directory"`
-	Remark    string      `json:"remark"`
+	ID   pgtype.UUID `json:"id"`
+	Name string      `json:"name"`
 }
 
 func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error) {
-	row := q.db.QueryRow(ctx, updateProduct,
-		arg.ID,
-		arg.Name,
-		arg.Directory,
-		arg.Remark,
-	)
+	row := q.db.QueryRow(ctx, updateProduct, arg.ID, arg.Name)
 	var i Product
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.Directory,
-		&i.Remark,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

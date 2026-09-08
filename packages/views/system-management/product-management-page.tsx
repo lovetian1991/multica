@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Folder,
   MoreHorizontal,
   Package,
   Pencil,
@@ -26,21 +25,16 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@multica/ui/components/ui/dropdown-menu";
 import { Input } from "@multica/ui/components/ui/input";
 import { Label as FieldLabel } from "@multica/ui/components/ui/label";
-import { Textarea } from "@multica/ui/components/ui/textarea";
 import { CollapsedNavTrigger } from "../layout/page-header";
 import { useT } from "../i18n";
 import { SystemManagementLayout } from "./system-management-layout";
 
 interface ProductDraft {
   name: string;
-  directory: string;
-  remark: string;
 }
 
 const EMPTY_DRAFT: ProductDraft = {
   name: "",
-  directory: "",
-  remark: "",
 };
 
 export function ProductManagementPage() {
@@ -64,9 +58,7 @@ export function ProductManagementPage() {
     const normalized = query.trim().toLowerCase();
     if (!normalized) return products;
     return products.filter((product) =>
-      [product.name, product.directory, product.remark].some((value) =>
-        value.toLowerCase().includes(normalized),
-      ),
+      product.name.toLowerCase().includes(normalized),
     );
   }, [products, query]);
 
@@ -144,21 +136,12 @@ export function ProductManagementPage() {
                 {filteredProducts.map((product) => (
                   <div
                     key={product.id}
-                    className="grid gap-2 px-4 py-3 md:grid-cols-[minmax(10rem,1fr)_minmax(12rem,1.2fr)_minmax(10rem,1fr)_2rem] md:items-center md:gap-4"
+                    className="grid gap-2 px-4 py-3 md:grid-cols-[minmax(10rem,1fr)_2rem] md:items-center md:gap-4"
                   >
                     <div className="flex min-w-0 items-center gap-3">
                       <Package className="size-4 shrink-0 text-muted-foreground" />
                       <span className="truncate text-body font-medium">{product.name}</span>
                     </div>
-                    <div className="flex min-w-0 items-center gap-2 text-caption text-muted-foreground md:text-body">
-                      <Folder className="size-3.5 shrink-0" />
-                      <span className="truncate">
-                        {product.directory || t(($) => $.products.not_set)}
-                      </span>
-                    </div>
-                    <p className="min-w-0 truncate text-caption text-muted-foreground md:text-body">
-                      {product.remark || t(($) => $.products.not_set)}
-                    </p>
                     <DropdownMenu>
                       <DropdownMenuTrigger
                         render={
@@ -262,8 +245,6 @@ function ProductEditorDialog({
       product
         ? {
             name: product.name,
-            directory: product.directory,
-            remark: product.remark,
           }
         : EMPTY_DRAFT,
     );
@@ -274,8 +255,6 @@ function ProductEditorDialog({
     if (!name) return;
     const data = {
       name,
-      directory: draft.directory.trim(),
-      remark: draft.remark.trim(),
     };
     const options = {
       onSuccess: () => onOpenChange(false),
@@ -317,31 +296,6 @@ function ProductEditorDialog({
               value={draft.name}
               onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
               placeholder={t(($) => $.products.editor.name_placeholder)}
-            />
-          </div>
-          <div className="space-y-2">
-            <FieldLabel htmlFor="system-product-directory">
-              {t(($) => $.products.editor.directory)}
-            </FieldLabel>
-            <Input
-              id="system-product-directory"
-              maxLength={1024}
-              value={draft.directory}
-              onChange={(event) =>
-                setDraft((current) => ({ ...current, directory: event.target.value }))
-              }
-              placeholder={t(($) => $.products.editor.directory_placeholder)}
-            />
-          </div>
-          <div className="space-y-2">
-            <FieldLabel htmlFor="system-product-remark">{t(($) => $.products.editor.remark)}</FieldLabel>
-            <Textarea
-              id="system-product-remark"
-              rows={3}
-              maxLength={2000}
-              value={draft.remark}
-              onChange={(event) => setDraft((current) => ({ ...current, remark: event.target.value }))}
-              placeholder={t(($) => $.products.editor.remark_placeholder)}
             />
           </div>
         </div>

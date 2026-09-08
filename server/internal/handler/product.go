@@ -24,24 +24,18 @@ const (
 type ProductResponse struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
-	Directory string `json:"directory"`
-	Remark    string `json:"remark"`
 	CreatedAt string `json:"created_at"`
 	UpdatedAt string `json:"updated_at"`
 }
 
 type ProductRequest struct {
-	Name      string `json:"name"`
-	Directory string `json:"directory"`
-	Remark    string `json:"remark"`
+	Name string `json:"name"`
 }
 
 func productToResponse(product db.Product) ProductResponse {
 	return ProductResponse{
 		ID:        uuidToString(product.ID),
 		Name:      product.Name,
-		Directory: product.Directory,
-		Remark:    product.Remark,
 		CreatedAt: timestampToString(product.CreatedAt),
 		UpdatedAt: timestampToString(product.UpdatedAt),
 	}
@@ -129,13 +123,12 @@ func (h *Handler) CreateSystemProduct(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	name, directory, remark, ok := validateProductRequest(w, request)
-	if !ok {
+	name, err := validateProductField("name", request.Name, maxProductNameLength, true)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	product, err := h.Queries.CreateProduct(r.Context(), db.CreateProductParams{
-		Name: name, Directory: directory, Remark: remark,
-	})
+	product, err := h.Queries.CreateProduct(r.Context(), name)
 	if err != nil {
 		slog.Warn("CreateSystemProduct failed", append(logger.RequestAttrs(r), "error", err)...)
 		writeError(w, http.StatusInternalServerError, "failed to create product")
@@ -157,12 +150,13 @@ func (h *Handler) UpdateSystemProduct(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	name, directory, remark, ok := validateProductRequest(w, request)
-	if !ok {
+	name, err := validateProductField("name", request.Name, maxProductNameLength, true)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	product, err := h.Queries.UpdateProduct(r.Context(), db.UpdateProductParams{
-		ID: idUUID, Name: name, Directory: directory, Remark: remark,
+		ID: idUUID, Name: name,
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		writeError(w, http.StatusNotFound, "product not found")
@@ -195,23 +189,4 @@ func (h *Handler) DeleteSystemProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
-}
-
-func validateProductRequest(w http.ResponseWriter, request ProductRequest) (string, string, string, bool) {
-	name, err := validateProductField("name", request.Name, maxProductNameLength, true)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return "", "", "", false
-	}
-	directory, err := validateProductField("directory", request.Directory, maxProductDirectoryLength, false)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return "", "", "", false
-	}
-	remark, err := validateProductField("remark", request.Remark, maxProductRemarkLength, false)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return "", "", "", false
-	}
-	return name, directory, remark, true
 }
