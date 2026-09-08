@@ -343,7 +343,7 @@
     "search_placeholder": "搜索产品",
     "new_product": "新建产品",
     "columns": {
-      "name": "产品名称",
+      "name": "版本名称",
       "directory": "文件夹目录",
       "remark": "备注"
     },
@@ -358,11 +358,11 @@
       "delete": "删除"
     },
     "editor": {
-      "create_title": "新建产品",
-      "edit_title": "编辑产品",
-      "description": "设置产品名称、文件夹目录和可选备注。",
-      "name": "产品名称",
-      "name_placeholder": "输入产品名称",
+      "create_title": "新建版本",
+      "edit_title": "编辑版本",
+      "description": "设置版本名称、文件夹目录和可选备注。",
+      "name": "版本名称",
+      "name_placeholder": "输入版本名称",
       "directory": "文件夹目录",
       "directory_placeholder": "输入文件夹目录",
       "remark": "备注",
