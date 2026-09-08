@@ -1,0 +1,3 @@
+ALTER TABLE product
+    DROP COLUMN IF EXISTS directory,
+    DROP COLUMN IF EXISTS remark;
