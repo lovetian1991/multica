@@ -764,7 +764,7 @@
     "confirm_action": "确认",
     "oc_key_section": "OC 集成",
     "oc_key_label": "OC 密钥",
-    "oc_key_description": "在此工作区运行的任务中，skill 会通过 OC_KEY 获取该密钥。",
+    "oc_key_description": "在此工作区运行的任务中，skill 会通过 OPENCONTENT_APIKEY 获取该密钥。",
     "oc_key_placeholder": "输入新的 OC 密钥",
     "oc_key_configured": "已配置。输入新值即可替换。",
     "oc_key_save": "保存密钥",

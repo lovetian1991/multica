@@ -742,7 +742,7 @@
     "toast_logo_failed": "ワークスペースのロゴをアップロードできませんでした",
     "oc_key_section": "OC 連携",
     "oc_key_label": "OC キー",
-    "oc_key_description": "このワークスペースで実行するタスクでは、skill が OC_KEY からこのキーを取得します。",
+    "oc_key_description": "このワークスペースで実行するタスクでは、skill が OPENCONTENT_APIKEY からこのキーを取得します。",
     "oc_key_placeholder": "新しい OC キーを入力",
     "oc_key_configured": "設定済みです。新しい値を入力すると置き換わります。",
     "oc_key_save": "キーを保存",

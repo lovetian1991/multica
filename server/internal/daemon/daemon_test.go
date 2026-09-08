@@ -587,30 +587,30 @@ func TestTaskMulticaEnvironmentIncludesPrivateConfigRoot(t *testing.T) {
 func TestInjectTaskOCKeyIsTaskScoped(t *testing.T) {
 	t.Parallel()
 
-	before, wasSet := os.LookupEnv("OC_KEY")
+	before, wasSet := os.LookupEnv("OPENCONTENT_APIKEY")
 
 	envA := map[string]string{}
 	injectTaskOCKey(envA, "workspace-a-secret")
-	if got := envA["OC_KEY"]; got != "workspace-a-secret" {
-		t.Fatalf("workspace A OC_KEY = %q, want %q", got, "workspace-a-secret")
+	if got := envA["OPENCONTENT_APIKEY"]; got != "workspace-a-secret" {
+		t.Fatalf("workspace A OPENCONTENT_APIKEY = %q, want %q", got, "workspace-a-secret")
 	}
 
 	envB := map[string]string{}
 	injectTaskOCKey(envB, "workspace-b-secret")
-	if got := envB["OC_KEY"]; got != "workspace-b-secret" {
-		t.Fatalf("workspace B OC_KEY = %q, want %q", got, "workspace-b-secret")
+	if got := envB["OPENCONTENT_APIKEY"]; got != "workspace-b-secret" {
+		t.Fatalf("workspace B OPENCONTENT_APIKEY = %q, want %q", got, "workspace-b-secret")
 	}
-	if envA["OC_KEY"] == envB["OC_KEY"] {
-		t.Fatal("different task environments unexpectedly share OC_KEY")
+	if envA["OPENCONTENT_APIKEY"] == envB["OPENCONTENT_APIKEY"] {
+		t.Fatal("different task environments unexpectedly share OPENCONTENT_APIKEY")
 	}
 
 	envWithoutKey := map[string]string{}
 	injectTaskOCKey(envWithoutKey, "   ")
-	if _, ok := envWithoutKey["OC_KEY"]; ok {
-		t.Fatal("empty workspace OC_KEY should not be injected")
+	if _, ok := envWithoutKey["OPENCONTENT_APIKEY"]; ok {
+		t.Fatal("empty workspace OPENCONTENT_APIKEY should not be injected")
 	}
 
-	after, stillSet := os.LookupEnv("OC_KEY")
+	after, stillSet := os.LookupEnv("OPENCONTENT_APIKEY")
 	if stillSet != wasSet || after != before {
 		t.Fatalf("injectTaskOCKey changed daemon process environment: before=%q/%v after=%q/%v", before, wasSet, after, stillSet)
 	}
@@ -621,15 +621,15 @@ func TestOCKeyCannotBeOverriddenByAgentCustomEnv(t *testing.T) {
 
 	env := map[string]string{}
 	layerCustomEnvAndHermesHome(env, map[string]string{
-		"OC_KEY": "agent-secret",
+		"OPENCONTENT_APIKEY": "agent-secret",
 	}, "", slog.Default())
 	injectTaskOCKey(env, "workspace-secret")
 
-	if got := env["OC_KEY"]; got != "workspace-secret" {
-		t.Fatalf("OC_KEY = %q, want task workspace secret", got)
+	if got := env["OPENCONTENT_APIKEY"]; got != "workspace-secret" {
+		t.Fatalf("OPENCONTENT_APIKEY = %q, want task workspace secret", got)
 	}
-	if !isBlockedEnvKey("OC_KEY") {
-		t.Fatal("OC_KEY is not protected by the daemon environment blocklist")
+	if !isBlockedEnvKey("OPENCONTENT_APIKEY") {
+		t.Fatal("OPENCONTENT_APIKEY is not protected by the daemon environment blocklist")
 	}
 }
 

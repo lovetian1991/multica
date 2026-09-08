@@ -742,7 +742,7 @@
     "confirm_action": "확인",
     "oc_key_section": "OC 연동",
     "oc_key_label": "OC 키",
-    "oc_key_description": "이 워크스페이스에서 실행되는 task의 skill이 OC_KEY로 이 키를 받습니다.",
+    "oc_key_description": "이 워크스페이스에서 실행되는 task의 skill이 OPENCONTENT_APIKEY로 이 키를 받습니다.",
     "oc_key_placeholder": "새 OC 키 입력",
     "oc_key_configured": "설정됨. 새 값을 입력하면 교체됩니다.",
     "oc_key_save": "키 저장",

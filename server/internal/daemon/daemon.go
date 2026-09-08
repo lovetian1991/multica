@@ -9494,7 +9494,7 @@ func isBlockedEnvKey(key string) bool {
 		return true
 	}
 	switch upper {
-	case "HOME", "PATH", "USER", "SHELL", "TERM", "TMPDIR", "TMP", "TEMP", "CODEX_HOME", "REASONIX_STATE_HOME", "CURSOR_DATA_DIR", execenv.CursorMcpAuthSourceEnv, "OPENCLAW_CONFIG_PATH", "OPENCLAW_INCLUDE_ROOTS", "OC_KEY":
+	case "HOME", "PATH", "USER", "SHELL", "TERM", "TMPDIR", "TMP", "TEMP", "CODEX_HOME", "REASONIX_STATE_HOME", "CURSOR_DATA_DIR", execenv.CursorMcpAuthSourceEnv, "OPENCLAW_CONFIG_PATH", "OPENCLAW_INCLUDE_ROOTS", "OPENCONTENT_APIKEY":
 		return true
 	}
 	return false
@@ -9589,7 +9589,7 @@ func layerCustomEnvAndHermesHome(agentEnv, customEnv map[string]string, overlayH
 // environment, so concurrent tasks from different workspaces stay isolated.
 func injectTaskOCKey(agentEnv map[string]string, ocKey string) {
 	if strings.TrimSpace(ocKey) != "" {
-		agentEnv["OC_KEY"] = ocKey
+		agentEnv["OPENCONTENT_APIKEY"] = ocKey
 	}
 }
 
