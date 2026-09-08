@@ -1,0 +1,1 @@
+ALTER TABLE product_version ADD COLUMN IF NOT EXISTS folder_id TEXT NOT NULL DEFAULT '';

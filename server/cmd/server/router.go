@@ -1574,6 +1574,8 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 		// administrators can mutate it through the routes below.
 		r.Get("/api/products", h.ListProducts)
 		r.Get("/api/products/{id}", h.GetProduct)
+		r.Get("/api/products/{id}/versions", h.ListProductVersions)
+		r.Get("/api/products/{id}/versions/{versionId}", h.GetProductVersion)
 
 		// System management is deployment-scoped rather than workspace-scoped.
 		// Keep it outside the workspace member group so an allowlisted system
@@ -1586,12 +1588,25 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 				r.Get("/", h.GetSystemProduct)
 				r.Put("/", h.UpdateSystemProduct)
 				r.Delete("/", h.DeleteSystemProduct)
+
+				// Product version routes
+				r.Get("/versions", h.ListSystemProductVersions)
+				r.Post("/versions", h.CreateSystemProductVersion)
+				r.Route("/versions/{versionId}", func(r chi.Router) {
+					r.Get("/", h.GetSystemProductVersion)
+					r.Put("/", h.UpdateSystemProductVersion)
+					r.Delete("/", h.DeleteSystemProductVersion)
+				})
 			})
 		})
 		r.Route("/api/system/settings", func(r chi.Router) {
 			r.Use(handler.RequireHumanActor)
 			r.Get("/", h.GetSystemSettings)
 			r.Put("/", h.UpdateSystemSettings)
+		})
+		r.Route("/api/system/kb", func(r chi.Router) {
+			r.Use(handler.RequireHumanActor)
+			r.Get("/folders", h.GetKBFolderChildren)
 		})
 		r.Route("/api/system/workspaces", func(r chi.Router) {
 			r.Use(handler.RequireHumanActor)
