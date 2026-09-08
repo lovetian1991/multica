@@ -288,7 +288,7 @@ export function ProductVersionManagementPage() {
                 <div className="overflow-hidden rounded-lg border border-surface-border bg-card">
                   <div className="hidden grid-cols-[minmax(8rem,0.8fr)_minmax(10rem,1fr)_minmax(8rem,0.8fr)_2rem] gap-4 border-b border-surface-border bg-muted/20 px-4 py-2.5 text-caption font-medium text-muted-foreground md:grid">
                     <span>{t(($) => $.products.columns.name)}</span>
-                    <span>{t(($) => $.products.columns.directory)}</span>
+                    <span>存放目录</span>
                     <span>{t(($) => $.products.columns.remark)}</span>
                     <span />
                   </div>
@@ -598,7 +598,8 @@ function ProductVersionEditorDialog({
         remark: version.remark,
         folder_id: version.folder_id || "",
       });
-      setSelectedFolderName(version.folder_id || "");
+      // 回显文件夹名称（存储在directory字段中）
+      setSelectedFolderName(version.directory || "");
     } else {
       setDraft(EMPTY_VERSION_DRAFT);
       setSelectedFolderName("");
@@ -606,7 +607,12 @@ function ProductVersionEditorDialog({
   }, [open, version]);
 
   const handleFolderSelect = (folder: KBFolder) => {
-    setDraft((current) => ({ ...current, folder_id: folder.id }));
+    // 同时更新folder_id和directory（存储文件夹名称）
+    setDraft((current) => ({
+      ...current,
+      folder_id: folder.id,
+      directory: folder.name
+    }));
     setSelectedFolderName(folder.name);
   };
 
@@ -671,25 +677,11 @@ function ProductVersionEditorDialog({
             </div>
             <div className="space-y-2">
               <FieldLabel htmlFor="product-version-directory">
-                {t(($) => $.products.editor.directory)}
-              </FieldLabel>
-              <Input
-                id="product-version-directory"
-                maxLength={1024}
-                value={draft.directory}
-                onChange={(event) =>
-                  setDraft((current) => ({ ...current, directory: event.target.value }))
-                }
-                placeholder={t(($) => $.products.editor.directory_placeholder)}
-              />
-            </div>
-            <div className="space-y-2">
-              <FieldLabel htmlFor="product-version-folder">
-                KB文件夹
+                存放目录
               </FieldLabel>
               <div className="flex gap-2">
                 <Input
-                  id="product-version-folder"
+                  id="product-version-directory"
                   readOnly
                   value={selectedFolderName}
                   placeholder="选择KB文件夹"
