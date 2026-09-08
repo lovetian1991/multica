@@ -89,7 +89,9 @@ import type {
   Workspace,
   WorkspaceRepo,
   Product,
+  ProductVersion,
   ListProductsResponse,
+  ListProductVersionsResponse,
   SystemSettings,
 } from "../types";
 import type { CloudRuntimeNode } from "../runtimes/cloud-runtime";
@@ -479,8 +481,6 @@ export const EMPTY_LIST_LABELS_RESPONSE: ListLabelsResponse = {
 export const ProductSchema = z.object({
   id: z.string(),
   name: z.string(),
-  directory: z.string().optional().default(""),
-  remark: z.string().optional().default(""),
   created_at: z.string(),
   updated_at: z.string(),
 }).loose();
@@ -488,8 +488,6 @@ export const ProductSchema = z.object({
 export const EMPTY_PRODUCT: Product = {
   id: "",
   name: "",
-  directory: "",
-  remark: "",
   created_at: "",
   updated_at: "",
 };
@@ -504,6 +502,36 @@ export const EMPTY_LIST_PRODUCTS_RESPONSE: ListProductsResponse = {
   total: 0,
 };
 
+export const ProductVersionSchema = z.object({
+  id: z.string(),
+  product_id: z.string(),
+  name: z.string(),
+  directory: z.string().optional().default(""),
+  remark: z.string().optional().default(""),
+  created_at: z.string(),
+  updated_at: z.string(),
+}).loose();
+
+export const EMPTY_PRODUCT_VERSION: ProductVersion = {
+  id: "",
+  product_id: "",
+  name: "",
+  directory: "",
+  remark: "",
+  created_at: "",
+  updated_at: "",
+};
+
+export const ListProductVersionsResponseSchema = z.object({
+  versions: z.array(ProductVersionSchema).default([]),
+  total: z.number().default(0),
+}).loose();
+
+export const EMPTY_LIST_PRODUCT_VERSIONS_RESPONSE: ListProductVersionsResponse = {
+  versions: [],
+  total: 0,
+};
+
 export const SystemSettingsSchema = z.object({
   kb_environment_url: z.string().default(""),
   kb_integration_key_configured: z.boolean().default(false),
@@ -512,6 +540,23 @@ export const SystemSettingsSchema = z.object({
 export const EMPTY_SYSTEM_SETTINGS: SystemSettings = {
   kb_environment_url: "",
   kb_integration_key_configured: false,
+};
+
+export const KBFolderSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.string(),
+  parent_id: z.string(),
+});
+
+export const GetKBFoldersResponseSchema = z.object({
+  folders: z.array(KBFolderSchema).default([]),
+  total: z.number().default(0),
+});
+
+export const EMPTY_KB_FOLDERS_RESPONSE: GetKBFoldersResponse = {
+  folders: [],
+  total: 0,
 };
 
 const WorkspaceRepoSchema = z.object({

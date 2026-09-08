@@ -118,9 +118,13 @@ import type {
   UpdateLabelRequest,
   ListLabelsResponse,
   Product,
+  ProductVersion,
   CreateProductRequest,
   UpdateProductRequest,
   ListProductsResponse,
+  CreateProductVersionRequest,
+  UpdateProductVersionRequest,
+  ListProductVersionsResponse,
   SystemSettings,
   UpdateSystemSettingsRequest,
   ListIssueStatusesResponse,
@@ -408,11 +412,18 @@ import {
   EMPTY_LABEL,
   EMPTY_LIST_LABELS_RESPONSE,
   ProductSchema,
+  ProductVersionSchema,
   ListProductsResponseSchema,
+  ListProductVersionsResponseSchema,
   EMPTY_PRODUCT,
+  EMPTY_PRODUCT_VERSION,
   EMPTY_LIST_PRODUCTS_RESPONSE,
+  EMPTY_LIST_PRODUCT_VERSIONS_RESPONSE,
   SystemSettingsSchema,
   EMPTY_SYSTEM_SETTINGS,
+  KBFolderSchema,
+  GetKBFoldersResponseSchema,
+  EMPTY_KB_FOLDERS_RESPONSE,
   EMPTY_LIST_ISSUE_STATUSES_RESPONSE,
   EMPTY_ISSUE_STATUS_ENTRY,
   EMPTY_RESOURCE_LABELS_RESPONSE,
@@ -3733,6 +3744,71 @@ export class ApiClient {
     });
   }
 
+  async listProductVersions(productId: string): Promise<ListProductVersionsResponse> {
+    const raw = await this.fetch<unknown>(`/api/products/${productId}/versions`);
+    return parseWithFallback(
+      raw,
+      ListProductVersionsResponseSchema,
+      EMPTY_LIST_PRODUCT_VERSIONS_RESPONSE,
+      { endpoint: "GET /api/products/{id}/versions" },
+    );
+  }
+
+  async getProductVersion(productId: string, versionId: string): Promise<ProductVersion> {
+    const raw = await this.fetch<unknown>(`/api/products/${productId}/versions/${versionId}`);
+    return parseWithFallback(raw, ProductVersionSchema, { ...EMPTY_PRODUCT_VERSION, id: versionId }, {
+      endpoint: "GET /api/products/{id}/versions/{versionId}",
+    });
+  }
+
+  async listSystemProductVersions(productId: string): Promise<ListProductVersionsResponse> {
+    const raw = await this.fetch<unknown>(`/api/system/products/${productId}/versions`);
+    return parseWithFallback(
+      raw,
+      ListProductVersionsResponseSchema,
+      EMPTY_LIST_PRODUCT_VERSIONS_RESPONSE,
+      { endpoint: "GET /api/system/products/{id}/versions" },
+    );
+  }
+
+  async getSystemProductVersion(productId: string, versionId: string): Promise<ProductVersion> {
+    const raw = await this.fetch<unknown>(`/api/system/products/${productId}/versions/${versionId}`);
+    return parseWithFallback(raw, ProductVersionSchema, { ...EMPTY_PRODUCT_VERSION, id: versionId }, {
+      endpoint: "GET /api/system/products/{id}/versions/{versionId}",
+    });
+  }
+
+  async createSystemProductVersion(productId: string, data: CreateProductVersionRequest): Promise<ProductVersion> {
+    const raw = await this.fetch<unknown>(`/api/system/products/${productId}/versions`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    return parseWithFallback(raw, ProductVersionSchema, EMPTY_PRODUCT_VERSION, {
+      endpoint: "POST /api/system/products/{id}/versions",
+    });
+  }
+
+  async updateSystemProductVersion(
+    productId: string,
+    versionId: string,
+    data: UpdateProductVersionRequest,
+  ): Promise<ProductVersion> {
+    const raw = await this.fetch<unknown>(`/api/system/products/${productId}/versions/${versionId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+    return parseWithFallback(raw, ProductVersionSchema, { ...EMPTY_PRODUCT_VERSION, id: versionId }, {
+      endpoint: "PUT /api/system/products/{id}/versions/{versionId}",
+    });
+  }
+
+  async deleteSystemProductVersion(productId: string, versionId: string): Promise<void> {
+    await this.fetch(`/api/system/products/${productId}/versions/${versionId}`, {
+      method: "DELETE",
+    });
+  }
+
+
   async getSystemSettings(): Promise<SystemSettings> {
     const raw = await this.fetch<unknown>("/api/system/settings");
     return parseWithFallback(raw, SystemSettingsSchema, EMPTY_SYSTEM_SETTINGS, {
@@ -3749,6 +3825,18 @@ export class ApiClient {
     });
     return parseWithFallback(raw, SystemSettingsSchema, EMPTY_SYSTEM_SETTINGS, {
       endpoint: "PUT /api/system/settings",
+    });
+  }
+
+  async getKBFolders(folderId?: string): Promise<GetKBFoldersResponse> {
+    const params = new URLSearchParams();
+    if (folderId) {
+      params.append("folder_id", folderId);
+    }
+    const url = `/api/system/kb/folders${params.toString() ? `?${params.toString()}` : ""}`;
+    const raw = await this.fetch<unknown>(url);
+    return parseWithFallback(raw, GetKBFoldersResponseSchema, EMPTY_KB_FOLDERS_RESPONSE, {
+      endpoint: "GET /api/system/kb/folders",
     });
   }
 
