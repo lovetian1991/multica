@@ -44,7 +44,6 @@ export function ProductPicker({
   const filtered = products.filter(
     (product) =>
       product.name.toLowerCase().includes(query) ||
-      product.directory.toLowerCase().includes(query) ||
       matchesPinyin(product.name, query),
   );
 
