@@ -34,6 +34,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@multica/ui/components/ui/dropdown-menu";
 import { Input } from "@multica/ui/components/ui/input";
 import { Label as FieldLabel } from "@multica/ui/components/ui/label";
+import { Switch } from "@multica/ui/components/ui/switch";
 import { Textarea } from "@multica/ui/components/ui/textarea";
 import { CollapsedNavTrigger } from "../layout/page-header";
 import { useT } from "../i18n";
@@ -49,6 +50,7 @@ interface ProductVersionDraft {
   directory: string;
   remark: string;
   folder_id: string;
+  enabled: boolean;
 }
 
 const EMPTY_PRODUCT_DRAFT: ProductDraft = {
@@ -60,6 +62,7 @@ const EMPTY_VERSION_DRAFT: ProductVersionDraft = {
   directory: "",
   remark: "",
   folder_id: "",
+  enabled: true,
 };
 
 export function ProductVersionManagementPage() {
@@ -286,10 +289,11 @@ export function ProductVersionManagementPage() {
                 </div>
 
                 <div className="overflow-hidden rounded-lg border border-surface-border bg-card">
-                  <div className="hidden grid-cols-[minmax(8rem,0.8fr)_minmax(10rem,1fr)_minmax(8rem,0.8fr)_2rem] gap-4 border-b border-surface-border bg-muted/20 px-4 py-2.5 text-caption font-medium text-muted-foreground md:grid">
+                  <div className="hidden grid-cols-[minmax(8rem,0.8fr)_minmax(10rem,1fr)_minmax(8rem,0.8fr)_5rem_2rem] gap-4 border-b border-surface-border bg-muted/20 px-4 py-2.5 text-caption font-medium text-muted-foreground md:grid">
                     <span>{t(($) => $.products.columns.name)}</span>
                     <span>存放目录</span>
                     <span>{t(($) => $.products.columns.remark)}</span>
+                    <span>状态</span>
                     <span />
                   </div>
 
@@ -317,7 +321,7 @@ export function ProductVersionManagementPage() {
                       {filteredVersions.map((version) => (
                         <div
                           key={version.id}
-                          className="grid gap-2 px-4 py-3 md:grid-cols-[minmax(8rem,0.8fr)_minmax(10rem,1fr)_minmax(8rem,0.8fr)_2rem] md:items-center md:gap-4"
+                          className="grid gap-2 px-4 py-3 md:grid-cols-[minmax(8rem,0.8fr)_minmax(10rem,1fr)_minmax(8rem,0.8fr)_5rem_2rem] md:items-center md:gap-4"
                         >
                           <span className="truncate text-body font-medium">{version.name}</span>
                           <div className="flex min-w-0 items-center gap-2 text-caption text-muted-foreground md:text-body">
@@ -329,6 +333,17 @@ export function ProductVersionManagementPage() {
                           <p className="min-w-0 truncate text-caption text-muted-foreground md:text-body">
                             {version.remark || t(($) => $.products.not_set)}
                           </p>
+                          <div className="flex items-center">
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                                version.enabled
+                                  ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                  : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                              }`}
+                            >
+                              {version.enabled ? "已启用" : "已禁用"}
+                            </span>
+                          </div>
                           <DropdownMenu>
                             <DropdownMenuTrigger
                               render={
@@ -597,6 +612,7 @@ function ProductVersionEditorDialog({
         directory: version.directory,
         remark: version.remark,
         folder_id: version.folder_id || "",
+        enabled: version.enabled,
       });
       // 回显文件夹名称（存储在directory字段中）
       setSelectedFolderName(version.directory || "");
@@ -625,6 +641,7 @@ function ProductVersionEditorDialog({
       directory: draft.directory.trim(),
       remark: draft.remark.trim(),
       folder_id: draft.folder_id.trim(),
+      enabled: draft.enabled,
     };
     const options = {
       onSuccess: () => onOpenChange(false),
@@ -710,6 +727,23 @@ function ProductVersionEditorDialog({
                   setDraft((current) => ({ ...current, remark: event.target.value }))
                 }
                 placeholder={t(($) => $.products.editor.remark_placeholder)}
+              />
+            </div>
+            <div className="flex items-center justify-between space-x-2">
+              <div className="space-y-0.5">
+                <FieldLabel htmlFor="product-version-enabled">
+                  启用状态
+                </FieldLabel>
+                <div className="text-caption text-muted-foreground">
+                  禁用后创建任务时不会显示此版本
+                </div>
+              </div>
+              <Switch
+                id="product-version-enabled"
+                checked={draft.enabled}
+                onCheckedChange={(checked) =>
+                  setDraft((current) => ({ ...current, enabled: checked }))
+                }
               />
             </div>
           </div>
