@@ -337,6 +337,7 @@
   "products": {
     "system_description": "システム管理エリアで、すべてのワークスペースから利用できる共有製品カタログを管理します。",
     "system_admin_required": "システム管理者権限が必要です。",
+    "unauthorized": "認証が必要です。ログインしてください。",
     "load_failed": "製品を読み込めませんでした。",
     "title": "製品管理",
     "description": "すべてのワークスペースで利用できる共有製品カタログを管理します。",
@@ -357,7 +358,7 @@
       "edit": "編集",
       "delete": "削除"
     },
-    "editor": {
+    "product_editor": {
       "create_title": "新しい製品",
       "edit_title": "製品を編集",
       "description": "製品名、フォルダーパス、任意の備考を設定します。",
@@ -370,6 +371,33 @@
       "cancel": "キャンセル",
       "save": "保存",
       "saving": "保存中..."
+    },
+    "version_editor": {
+      "create_title": "新しいバージョン",
+      "edit_title": "バージョンを編集",
+      "description": "バージョン名、フォルダーパス、任意の備考を設定します。",
+      "name": "バージョン名",
+      "name_placeholder": "バージョン名を入力",
+      "remark": "備考",
+      "remark_placeholder": "備考を入力",
+      "cancel": "キャンセル",
+      "save": "保存",
+      "saving": "保存中..."
+    },
+    "versions": {
+      "select_product": "バージョンを管理する製品を選択してください",
+      "search_placeholder": "バージョン名を検索",
+      "new_version": "新しいバージョン",
+      "columns": {
+        "directory": "保存先フォルダー",
+        "status": "ステータス"
+      },
+      "directory": "保存先フォルダー",
+      "directory_placeholder": "KB フォルダーを選択",
+      "enabled_label": "有効状態",
+      "enabled": "有効",
+      "disabled": "無効",
+      "disabled_description": "無効にすると、タスク作成時にこのバージョンは表示されません。"
     },
     "delete_dialog": {
       "title": "製品を削除しますか？",

@@ -337,6 +337,7 @@
   "products": {
     "system_description": "시스템 관리 영역에서 모든 워크스페이스가 함께 사용하는 제품 카탈로그를 관리합니다.",
     "system_admin_required": "시스템 관리자 권한이 필요합니다.",
+    "unauthorized": "인증이 필요합니다. 로그인해 주세요.",
     "load_failed": "제품을 불러오지 못했습니다.",
     "title": "제품 관리",
     "description": "모든 워크스페이스에서 사용할 수 있는 공유 제품 카탈로그를 관리합니다.",
@@ -357,7 +358,7 @@
       "edit": "편집",
       "delete": "삭제"
     },
-    "editor": {
+    "product_editor": {
       "create_title": "새 제품",
       "edit_title": "제품 편집",
       "description": "제품 이름, 폴더 디렉터리와 선택 사항인 비고를 설정합니다.",
@@ -370,6 +371,33 @@
       "cancel": "취소",
       "save": "저장",
       "saving": "저장 중..."
+    },
+    "version_editor": {
+      "create_title": "새 버전",
+      "edit_title": "버전 편집",
+      "description": "버전 이름, 폴더 디렉터리와 선택 사항인 비고를 설정합니다.",
+      "name": "버전 이름",
+      "name_placeholder": "버전 이름 입력",
+      "remark": "비고",
+      "remark_placeholder": "비고 입력",
+      "cancel": "취소",
+      "save": "저장",
+      "saving": "저장 중..."
+    },
+    "versions": {
+      "select_product": "버전을 관리할 제품을 선택하세요",
+      "search_placeholder": "버전 이름 검색",
+      "new_version": "새 버전",
+      "columns": {
+        "directory": "저장 폴더",
+        "status": "상태"
+      },
+      "directory": "저장 폴더",
+      "directory_placeholder": "KB 폴더 선택",
+      "enabled_label": "활성화 상태",
+      "enabled": "활성",
+      "disabled": "비활성",
+      "disabled_description": "비활성화하면 작업을 만들 때 이 버전이 표시되지 않습니다."
     },
     "delete_dialog": {
       "title": "제품을 삭제할까요?",

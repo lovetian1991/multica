@@ -337,13 +337,14 @@
   "products": {
     "system_description": "在系统管理区域统一管理所有工作区共享的公共产品目录。",
     "system_admin_required": "需要系统管理员权限。",
+    "unauthorized": "需要认证，请登录。",
     "load_failed": "无法加载产品。",
     "title": "产品管理",
     "description": "管理所有工作区共享的公共产品目录。",
     "search_placeholder": "搜索产品",
     "new_product": "新建产品",
     "columns": {
-      "name": "版本名称",
+      "name": "产品名称",
       "directory": "文件夹目录",
       "remark": "备注"
     },
@@ -357,12 +358,12 @@
       "edit": "编辑",
       "delete": "删除"
     },
-    "editor": {
-      "create_title": "新建版本",
-      "edit_title": "编辑版本",
-      "description": "设置版本名称、文件夹目录和可选备注。",
-      "name": "版本名称",
-      "name_placeholder": "输入版本名称",
+    "product_editor": {
+      "create_title": "新建产品",
+      "edit_title": "编辑产品",
+      "description": "设置产品名称、文件夹目录和可选备注。",
+      "name": "产品名称",
+      "name_placeholder": "输入产品名称",
       "directory": "文件夹目录",
       "directory_placeholder": "输入文件夹目录",
       "remark": "备注",
@@ -370,6 +371,33 @@
       "cancel": "取消",
       "save": "保存",
       "saving": "正在保存..."
+    },
+    "version_editor": {
+      "create_title": "新建版本",
+      "edit_title": "编辑版本",
+      "description": "设置版本名称、文件夹目录和可选备注。",
+      "name": "版本名称",
+      "name_placeholder": "输入版本名称",
+      "remark": "备注",
+      "remark_placeholder": "添加备注",
+      "cancel": "取消",
+      "save": "保存",
+      "saving": "正在保存..."
+    },
+    "versions": {
+      "select_product": "请选择一个产品来管理其版本",
+      "search_placeholder": "搜索版本名称",
+      "new_version": "新建版本",
+      "columns": {
+        "directory": "存放目录",
+        "status": "状态"
+      },
+      "directory": "存放目录",
+      "directory_placeholder": "选择 KB 文件夹",
+      "enabled_label": "启用状态",
+      "enabled": "已启用",
+      "disabled": "已禁用",
+      "disabled_description": "禁用后创建任务时不会显示此版本"
     },
     "delete_dialog": {
       "title": "删除产品？",
