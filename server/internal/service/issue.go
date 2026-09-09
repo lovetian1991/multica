@@ -72,6 +72,8 @@ type IssueCreateParams struct {
 	ParentIssueID pgtype.UUID
 	ProjectID     pgtype.UUID
 	ProductID     pgtype.UUID
+	ProductVersionID pgtype.UUID
+	KBFolderID    pgtype.Text
 	StartDate     pgtype.Date
 	DueDate       pgtype.Date
 	OriginType    pgtype.Text
@@ -307,6 +309,12 @@ func (s *IssueService) Create(ctx context.Context, p IssueCreateParams, opts Iss
 			return IssueCreateResult{}, ErrProductNotFound
 		}
 	}
+	if p.ProductVersionID.Valid {
+		version, err := qtx.GetProductVersion(ctx, p.ProductVersionID)
+		if err != nil || (p.ProductID.Valid && version.ProductID != p.ProductID) {
+			return IssueCreateResult{}, ErrProductNotFound
+		}
+	}
 
 	// Validate labels before we increment the issue counter so a stale or
 	// wrong-scope selection fails the create cheaply. The de-duplicated rows
@@ -366,6 +374,8 @@ func (s *IssueService) Create(ctx context.Context, p IssueCreateParams, opts Iss
 			Number:        issueNumber,
 			ProjectID:     projectID,
 			ProductID:     p.ProductID,
+			ProductVersionID: p.ProductVersionID,
+			KBFolderID:    p.KBFolderID,
 			OriginType:    p.OriginType,
 			OriginID:      p.OriginID,
 			Stage:         p.Stage,
@@ -389,6 +399,8 @@ func (s *IssueService) Create(ctx context.Context, p IssueCreateParams, opts Iss
 			Number:        issueNumber,
 			ProjectID:     projectID,
 			ProductID:     p.ProductID,
+			ProductVersionID: p.ProductVersionID,
+			KBFolderID:    p.KBFolderID,
 			Stage:         p.Stage,
 		})
 	}

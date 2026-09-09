@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ChevronRight, Folder, FolderOpen, Search, X, Home } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState, type ReactElement } from "react";
+import { ChevronRight, Folder, FolderOpen, Home, Loader2, MoreHorizontal } from "lucide-react";
 import { api } from "@multica/core/api";
 import type { KBFolder } from "@multica/core/types";
 import { Button } from "@multica/ui/components/ui/button";
 import { Checkbox } from "@multica/ui/components/ui/checkbox";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@multica/ui/components/ui/dialog";
-import { Input } from "@multica/ui/components/ui/input";
+import { cn } from "@multica/ui/lib/utils";
+import { useT } from "../i18n";
+
+const ROOT_FOLDER_ID = "1";
 
 interface FolderPickerDialogProps {
   open: boolean;
@@ -17,49 +19,141 @@ interface FolderPickerDialogProps {
   selectedFolderId?: string;
 }
 
+interface TreeNode {
+  folder: KBFolder;
+  children?: TreeNode[];
+  expanded: boolean;
+  childTotalCount: number;
+  childPage: number;
+  loading: boolean;
+}
+
+function createTreeNodes(folders: KBFolder[]): TreeNode[] {
+  return folders.map((folder) => ({
+    folder,
+    expanded: false,
+    childTotalCount: 0,
+    childPage: 0,
+    loading: false,
+  }));
+}
+
+function updateNodeInTree(
+  nodes: TreeNode[],
+  targetId: string,
+  updater: (node: TreeNode) => Partial<TreeNode>,
+): TreeNode[] {
+  return nodes.map((node) => {
+    if (node.folder.id === targetId) return { ...node, ...updater(node) };
+    if (node.children) {
+      return { ...node, children: updateNodeInTree(node.children, targetId, updater) };
+    }
+    return node;
+  });
+}
+
+function appendUniqueNodes(current: TreeNode[], incoming: TreeNode[]): TreeNode[] {
+  const existingIds = new Set(current.map((node) => node.folder.id));
+  return [...current, ...incoming.filter((node) => !existingIds.has(node.folder.id))];
+}
+
 export function FolderPickerDialog({
   open,
   onOpenChange,
   onSelect,
   selectedFolderId,
 }: FolderPickerDialogProps) {
-  const [currentFolderId, setCurrentFolderId] = useState<string | undefined>(undefined);
+  const { t } = useT("settings");
+  const [treeData, setTreeData] = useState<TreeNode[]>([]);
+  const [rootTotalCount, setRootTotalCount] = useState(0);
+  const [rootPage, setRootPage] = useState(0);
   const [selectedFolder, setSelectedFolder] = useState<KBFolder | null>(null);
-  const [folderPath, setFolderPath] = useState<KBFolder[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [loadingMoreRoot, setLoadingMoreRoot] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["kb-folders", currentFolderId],
-    queryFn: () => api.getKBFolders(currentFolderId),
-    enabled: open,
-  });
+  useEffect(() => {
+    if (!open) {
+      setTreeData([]);
+      setRootTotalCount(0);
+      setRootPage(0);
+      setSelectedFolder(null);
+      setLoading(false);
+      setLoadingMoreRoot(false);
+      setError(null);
+      return;
+    }
 
-  const folders = data?.folders || [];
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    void api.getKBFolders(ROOT_FOLDER_ID, 1)
+      .then((response) => {
+        if (cancelled) return;
+        setTreeData(createTreeNodes(response.folders));
+        setRootTotalCount(response.totalCount);
+        setRootPage(1);
+        setSelectedFolder(response.folders.find((folder) => folder.id === selectedFolderId) ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setError(t(($) => $.products.folder_picker.load_failed));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
 
-  const filteredFolders = searchQuery.trim()
-    ? folders.filter((folder) =>
-        folder.name.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
-    : folders;
+    return () => {
+      cancelled = true;
+    };
+  }, [open, selectedFolderId, t]);
 
-  const handleFolderClick = (folder: KBFolder) => {
-    setCurrentFolderId(folder.id);
-    setFolderPath([...folderPath, folder]);
-  };
-
-  const handleBreadcrumbClick = (index: number) => {
-    if (index === -1) {
-      setCurrentFolderId(undefined);
-      setFolderPath([]);
-    } else {
-      const targetFolder = folderPath[index];
-      setCurrentFolderId(targetFolder.id);
-      setFolderPath(folderPath.slice(0, index + 1));
+  const loadChildren = async (node: TreeNode, page: number) => {
+    if (node.loading) return;
+    setError(null);
+    setTreeData((current) => updateNodeInTree(current, node.folder.id, () => ({ loading: true })));
+    try {
+      const response = await api.getKBFolders(node.folder.id, page);
+      const incoming = createTreeNodes(response.folders);
+      setTreeData((current) => updateNodeInTree(current, node.folder.id, (currentNode) => ({
+        children: page === 1 ? incoming : appendUniqueNodes(currentNode.children ?? [], incoming),
+        expanded: true,
+        childTotalCount: response.totalCount,
+        childPage: page,
+        loading: false,
+      })));
+      setSelectedFolder((current) => current ?? response.folders.find((folder) => folder.id === selectedFolderId) ?? null);
+    } catch {
+      setError(t(($) => $.products.folder_picker.load_failed));
+      setTreeData((current) => updateNodeInTree(current, node.folder.id, () => ({ loading: false })));
     }
   };
 
-  const handleSelect = (folder: KBFolder) => {
-    setSelectedFolder(folder);
+  const toggleNode = (node: TreeNode) => {
+    if (node.expanded) {
+      setTreeData((current) => updateNodeInTree(current, node.folder.id, () => ({ expanded: false })));
+    } else if (node.children === undefined) {
+      void loadChildren(node, 1);
+    } else {
+      setTreeData((current) => updateNodeInTree(current, node.folder.id, () => ({ expanded: true })));
+    }
+  };
+
+  const loadMoreRoot = async () => {
+    if (loadingMoreRoot) return;
+    setLoadingMoreRoot(true);
+    setError(null);
+    const nextPage = rootPage + 1;
+    try {
+      const response = await api.getKBFolders(ROOT_FOLDER_ID, nextPage);
+      setTreeData((current) => appendUniqueNodes(current, createTreeNodes(response.folders)));
+      setRootTotalCount(response.totalCount);
+      setRootPage(nextPage);
+      setSelectedFolder((current) => current ?? response.folders.find((folder) => folder.id === selectedFolderId) ?? null);
+    } catch {
+      setError(t(($) => $.products.folder_picker.load_failed));
+    } finally {
+      setLoadingMoreRoot(false);
+    }
   };
 
   const handleConfirm = () => {
@@ -69,158 +163,103 @@ export function FolderPickerDialog({
     }
   };
 
-  useEffect(() => {
-    if (!open) {
-      setCurrentFolderId(undefined);
-      setSelectedFolder(null);
-      setFolderPath([]);
-      setSearchQuery("");
+  const renderLoadMore = (key: string, level: number, busy: boolean, onClick: () => void) => (
+    <button
+      key={key}
+      type="button"
+      disabled={busy}
+      className="flex w-full items-center gap-2 px-4 py-2 text-left text-body text-primary transition-colors hover:bg-muted/50 disabled:opacity-50"
+      style={{ paddingLeft: `${level * 20 + 16}px` }}
+      onClick={onClick}
+    >
+      {busy ? <Loader2 className="size-4 shrink-0 animate-spin" /> : <MoreHorizontal className="size-4 shrink-0" />}
+      <span>{t(($) => $.products.folder_picker.load_more)}</span>
+    </button>
+  );
+
+  const renderTree = (nodes: TreeNode[], level = 0): ReactElement[] => nodes.flatMap((node) => {
+    const isSelected = selectedFolder?.id === node.folder.id;
+    const items: ReactElement[] = [
+      <div
+        key={node.folder.id}
+        className={cn(
+          "flex min-w-max cursor-pointer items-center gap-2 px-4 py-2 text-body transition-colors hover:bg-muted/50",
+          isSelected && "bg-muted font-medium text-foreground hover:bg-muted",
+        )}
+        style={{ paddingLeft: `${level * 20 + 16}px` }}
+        onClick={() => setSelectedFolder(node.folder)}
+      >
+        <button
+          type="button"
+          disabled={node.loading}
+          className="shrink-0 text-muted-foreground disabled:opacity-50"
+          aria-label={t(($) => node.expanded ? $.products.folder_picker.collapse : $.products.folder_picker.expand)}
+          onClick={(event) => {
+            event.stopPropagation();
+            toggleNode(node);
+          }}
+        >
+          {node.loading ? <Loader2 className="size-4 animate-spin" /> : <ChevronRight className={cn("size-4 transition-transform", node.expanded && "rotate-90")} />}
+        </button>
+        <Checkbox
+          checked={isSelected}
+          onCheckedChange={() => setSelectedFolder(node.folder)}
+          onClick={(event) => event.stopPropagation()}
+          className="shrink-0"
+        />
+        {node.expanded ? <FolderOpen className="size-4 shrink-0 text-muted-foreground" /> : <Folder className="size-4 shrink-0 text-muted-foreground" />}
+        <span className="whitespace-nowrap" title={node.folder.name}>{node.folder.name}</span>
+      </div>,
+    ];
+    if (node.expanded && node.children) {
+      items.push(...renderTree(node.children, level + 1));
+      if (node.children.length < node.childTotalCount) {
+        items.push(renderLoadMore(`${node.folder.id}-more`, level + 1, node.loading, () => void loadChildren(node, node.childPage + 1)));
+      }
     }
-  }, [open]);
+    return items;
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[85vh]">
-        <DialogHeader className="border-b border-surface-border pb-4">
-          <DialogTitle className="text-lg">选择文件夹</DialogTitle>
+      <DialogContent className="flex max-h-[85vh] !w-[calc(100vw-2rem)] !max-w-3xl flex-col overflow-hidden">
+        <DialogHeader className="shrink-0 border-b border-surface-border pb-4">
+          <DialogTitle>{t(($) => $.products.folder_picker.title)}</DialogTitle>
         </DialogHeader>
-
-        <div className="flex flex-col gap-4 py-4">
-          {/* 搜索栏 */}
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="搜索文件夹..."
-              className="pl-9 pr-9"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <X className="size-4" />
-              </button>
-            )}
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden py-4">
+          <div className="flex items-center gap-1 px-1 text-body text-muted-foreground">
+            <Home className="size-3.5" />
+            <span>{t(($) => $.products.folder_picker.library_root)}</span>
           </div>
-
-          {/* 面包屑导航 */}
-          <div className="flex items-center gap-1 px-1 text-sm text-muted-foreground overflow-x-auto">
-            <button
-              onClick={() => handleBreadcrumbClick(-1)}
-              className="flex items-center gap-1 hover:text-foreground transition-colors whitespace-nowrap"
-            >
-              <Home className="size-3.5" />
-              <span>企业内容库</span>
-            </button>
-            {folderPath.map((folder, index) => (
-              <div key={folder.id} className="flex items-center gap-1 whitespace-nowrap">
-                <ChevronRight className="size-3.5 shrink-0" />
-                <button
-                  onClick={() => handleBreadcrumbClick(index)}
-                  className="hover:text-foreground transition-colors truncate max-w-[120px]"
-                  title={folder.name}
-                >
-                  {folder.name}
-                </button>
-              </div>
-            ))}
-          </div>
-
-          {/* 文件夹列表 */}
-          <div className="rounded-lg border border-surface-border overflow-hidden">
-            <div className="h-[400px] overflow-y-auto">
-              {isLoading ? (
-                <div className="flex items-center justify-center h-full text-muted-foreground">
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                    <span className="text-sm">加载中...</span>
-                  </div>
+          <div className="min-h-0 flex-1 overflow-hidden rounded-md border border-surface-border">
+            <div className="h-[400px] max-h-[45vh] min-h-[12rem] overflow-auto">
+              {loading ? (
+                <div className="flex h-full items-center justify-center text-muted-foreground">
+                  <div className="flex flex-col items-center gap-2"><Loader2 className="size-8 animate-spin" /><span className="text-body">{t(($) => $.products.folder_picker.loading)}</span></div>
                 </div>
-              ) : error ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center text-destructive">
-                    <p className="text-sm font-medium">加载失败</p>
-                    <p className="text-xs mt-1 text-muted-foreground">请检查网络连接或稍后重试</p>
-                  </div>
-                </div>
-              ) : filteredFolders.length === 0 ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center text-muted-foreground">
-                    <Folder className="mx-auto size-12 mb-3 opacity-40" />
-                    <p className="text-sm font-medium">
-                      {searchQuery ? "没有找到匹配的文件夹" : "此文件夹为空"}
-                    </p>
-                  </div>
-                </div>
+              ) : error && treeData.length === 0 ? (
+                <div className="flex h-full items-center justify-center px-6 text-center text-body text-destructive">{error}</div>
+              ) : treeData.length === 0 ? (
+                <div className="flex h-full items-center justify-center"><div className="text-center text-muted-foreground"><Folder className="mx-auto mb-3 size-12 opacity-40" /><p className="text-body font-medium">{t(($) => $.products.folder_picker.empty)}</p></div></div>
               ) : (
-                <div className="divide-y divide-surface-border">
-                  {filteredFolders.map((folder) => {
-                    const isSelected = selectedFolder?.id === folder.id;
-
-                    return (
-                      <div
-                        key={folder.id}
-                        className={`group flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors cursor-pointer ${
-                          isSelected ? "bg-muted" : ""
-                        }`}
-                        onClick={() => handleSelect(folder)}
-                      >
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() => handleSelect(folder)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="shrink-0"
-                        />
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <Folder className="size-5 shrink-0 text-amber-500" />
-                          <span className="text-sm font-medium truncate">{folder.name}</span>
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleFolderClick(folder);
-                          }}
-                          className="shrink-0 p-1.5 rounded hover:bg-muted transition-colors opacity-0 group-hover:opacity-100"
-                          title="打开文件夹"
-                        >
-                          <ChevronRight className="size-4 text-muted-foreground" />
-                        </button>
-                      </div>
-                    );
-                  })}
+                <div className="min-w-max py-1">
+                  {error && <p className="px-4 py-2 text-caption text-destructive">{error}</p>}
+                  {renderTree(treeData)}
+                  {treeData.length < rootTotalCount && renderLoadMore("root-more", 0, loadingMoreRoot, () => void loadMoreRoot())}
                 </div>
               )}
             </div>
           </div>
-
-          {/* 已选择提示 */}
           {selectedFolder && (
-            <div className="rounded-lg bg-primary/5 border border-primary/20 px-4 py-3">
-              <div className="flex items-start gap-3">
-                <div className="rounded-md bg-primary/10 p-2 shrink-0">
-                  <FolderOpen className="size-4 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-muted-foreground mb-1">已选择:</p>
-                  <p className="text-sm font-medium truncate" title={selectedFolder.name}>
-                    {selectedFolder.name}
-                  </p>
-                </div>
-              </div>
+            <div className="flex min-w-0 shrink-0 items-center gap-3 border-l-2 border-primary px-3 py-2">
+              <FolderOpen className="size-4 shrink-0 text-primary" />
+              <div className="min-w-0 flex-1"><p className="text-caption text-muted-foreground">{t(($) => $.products.folder_picker.selected)}</p><p className="truncate text-body font-medium" title={selectedFolder.name}>{selectedFolder.name}</p></div>
             </div>
           )}
         </div>
-
-        <DialogFooter className="border-t border-surface-border pt-4">
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            取消
-          </Button>
-          <Button onClick={handleConfirm} disabled={!selectedFolder}>
-            确定选择
-          </Button>
+        <DialogFooter className="shrink-0 border-t border-surface-border pt-4">
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>{t(($) => $.products.folder_picker.cancel)}</Button>
+          <Button onClick={handleConfirm} disabled={!selectedFolder}>{t(($) => $.products.folder_picker.confirm)}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

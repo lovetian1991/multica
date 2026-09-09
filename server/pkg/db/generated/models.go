@@ -784,6 +784,7 @@ type Issue struct {
 	LastActivityAt     pgtype.Timestamptz `json:"last_activity_at"`
 	ProductID          pgtype.UUID        `json:"product_id"`
 	ProductVersionID   pgtype.UUID        `json:"product_version_id"`
+	KBFolderID         pgtype.Text        `json:"kb_folder_id"`
 }
 
 type IssueDependency struct {

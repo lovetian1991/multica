@@ -5,6 +5,7 @@ import type {
   IssuePriority,
   IssueAssigneeType,
   IssuePropertyValues,
+  KBFolder,
 } from "../../types";
 import type { CreateMode } from "./create-mode-store";
 import type { QuickCreateActorType } from "./quick-create-store";
@@ -34,6 +35,8 @@ import { normalizeStoredUploads, type DraftUpload } from "../../drafts/draft-upl
 export interface IssueCreateShared {
   projectId?: string;
   productId?: string;
+  productVersionId?: string;
+  productFolder?: KBFolder;
   priority: IssuePriority;
   dueDate: string | null;
   /** Uploads for the dialog (placeholders + completed), referenced by the
@@ -75,6 +78,8 @@ export interface IssueCreateDraft {
 const emptyShared = (): IssueCreateShared => ({
   projectId: undefined,
   productId: undefined,
+  productVersionId: undefined,
+  productFolder: undefined,
   priority: "none",
   dueDate: null,
   attachments: [],

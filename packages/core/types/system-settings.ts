@@ -11,11 +11,12 @@ export interface UpdateSystemSettingsRequest {
 export interface KBFolder {
   id: string;
   name: string;
-  type: string;
-  parent_id: string;
+  folderPath: string;
+  parentId: string;
 }
 
 export interface GetKBFoldersResponse {
   folders: KBFolder[];
-  total: number;
+  totalCount: number;
+  currentFolder: KBFolder | null;
 }

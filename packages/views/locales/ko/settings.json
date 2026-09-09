@@ -371,6 +371,19 @@
       "save": "저장",
       "saving": "저장 중..."
     },
+    "folder_picker": {
+      "title": "폴더 선택",
+      "library_root": "기업 콘텐츠 라이브러리",
+      "loading": "불러오는 중...",
+      "load_failed": "폴더를 불러오지 못했습니다.",
+      "empty": "폴더를 찾을 수 없습니다",
+      "selected": "선택됨",
+      "cancel": "취소",
+      "confirm": "선택",
+      "expand": "폴더 펼치기",
+      "collapse": "폴더 접기",
+      "load_more": "더 불러오기"
+    },
     "delete_dialog": {
       "title": "제품을 삭제할까요?",
       "description": "\"{{name}}\" 제품을 영구적으로 삭제합니다.",

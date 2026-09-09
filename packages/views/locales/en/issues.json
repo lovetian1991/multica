@@ -730,7 +730,16 @@
       "search_placeholder": "Search products...",
       "no_product": "No product",
       "empty": "No products yet",
-      "clear_aria": "Clear product"
+      "clear_aria": "Clear product",
+      "folder_dialog_title": "Select product version and folder",
+      "no_versions": "No versions yet",
+      "choose_version": "Choose a product version",
+      "no_folder": "This version has no root folder",
+      "no_folders": "No child folders",
+      "folder_name": "Folder",
+      "folder_id": "Folder ID",
+      "cancel": "Cancel",
+      "confirm": "Confirm selection"
     },
     "custom_property": {
       "empty": "Empty",

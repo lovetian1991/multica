@@ -190,6 +190,7 @@ export interface Issue {
   project_id: string | null;
   product_id?: string | null;
   product_version_id?: string | null;
+  kb_folder_id?: string | null;
   position: number;
   // Ordered barrier group among sibling sub-issues (null = unstaged). The
   // parent assignee is notified/woken only when every sub-issue in a stage

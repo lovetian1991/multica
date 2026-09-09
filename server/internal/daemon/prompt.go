@@ -357,6 +357,9 @@ func buildQuickCreatePrompt(task Task) string {
 	} else {
 		b.WriteString("- **product**: omit. The issue can be created without a product.\n")
 	}
+	if task.QuickCreateKBFolderID != "" {
+		fmt.Fprintf(&b, "- **knowledge-base-folder**: required for this run. Use folder ID %q when working with the selected knowledge-base folder. This value came from the task selection and must not be replaced by an inferred folder.\n", task.QuickCreateKBFolderID)
+	}
 	// parent — pinned by the modal when the user opened it from "Add sub
 	// issue" on an existing issue. Pass the UUID (never the identifier) so
 	// the create lands the sub-issue under the right parent even when the

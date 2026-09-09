@@ -3,6 +3,13 @@ package opencontent
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
+	"crypto/x509"
+	"encoding/base64"
+	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -18,6 +25,7 @@ const (
 	OperationFileList       Operation = "file-list"
 	OperationFileInfo       Operation = "file-info"
 	OperationFolderInfo     Operation = "folder-info"
+	OperationFolderTree     Operation = "folder-tree"
 	OperationCreateFolder   Operation = "create-folder"
 	OperationUserInfo       Operation = "user-info"
 	OperationPersonalFolder Operation = "personal-folder"
@@ -39,6 +47,7 @@ var routes = map[Operation]upstreamRoute{
 	OperationFileList:       {method: http.MethodPost, path: "/FlatDms/v800/Document/DocList/GetFolderChildren"},
 	OperationFileInfo:       {method: http.MethodGet, path: "/flatsdk/api/services/DocList/GetFileByIdOrGuid"},
 	OperationFolderInfo:     {method: http.MethodPost, path: "/flatsdk/api/services/DocList/GetFolderByGuidOrId"},
+	OperationFolderTree:     {method: http.MethodPost, path: "/FlatDms/v800/Document/FolderTree/GetChildrenFolderTreeNodes"},
 	OperationCreateFolder:   {method: http.MethodPost, path: "/flatsdk/api/services/TemplateCreate/CreateFolder"},
 	OperationUserInfo:       {method: http.MethodPost, path: "/flatsdk/api/services/User/GetUserInfoByToken"},
 	OperationPersonalFolder: {method: http.MethodPost, path: "/flatsdk/api/services/User/GetTopPersonalFolderId"},
@@ -51,10 +60,10 @@ var routes = map[Operation]upstreamRoute{
 }
 
 var (
-	ErrDisabled          = errors.New("OpenContent is not configured")
-	ErrUnknownOperation  = errors.New("unsupported OpenContent operation")
-	ErrCredentialQuery   = errors.New("OpenContent credentials must be sent as a Bearer header")
-	ErrResponseTooLarge  = errors.New("OpenContent response exceeds configured limit")
+	ErrDisabled         = errors.New("OpenContent is not configured")
+	ErrUnknownOperation = errors.New("unsupported OpenContent operation")
+	ErrCredentialQuery  = errors.New("OpenContent credentials must be sent as a Bearer header")
+	ErrResponseTooLarge = errors.New("OpenContent response exceeds configured limit")
 )
 
 type Client struct {
@@ -70,7 +79,18 @@ func NewClient(cfg Config) (*Client, error) {
 		return nil, err
 	}
 	if !cfg.Enabled {
-		return &Client{}, nil
+		timeout := cfg.Timeout
+		if timeout <= 0 {
+			timeout = defaultTimeout
+		}
+		maxResponseBytes := cfg.MaxResponseBytes
+		if maxResponseBytes <= 0 {
+			maxResponseBytes = defaultMaxResponseBytes
+		}
+		return &Client{
+			timeoutClient:    &http.Client{Timeout: timeout},
+			maxResponseBytes: maxResponseBytes,
+		}, nil
 	}
 	return &Client{
 		baseURL:           strings.TrimRight(cfg.BaseURL, "/"),
@@ -133,12 +153,81 @@ func (c *Client) Do(ctx context.Context, operation Operation, body []byte, query
 	}
 	// 下载操作不限制响应大小
 	skipResponseLimit := operation == OperationDownload
-	return c.do(ctx, route, body, cleanQuery, headers, skipResponseLimit)
+	return c.do(ctx, route, body, cleanQuery, headers, skipResponseLimit, c.baseURL)
 }
 
-func (c *Client) do(ctx context.Context, route upstreamRoute, body []byte, query url.Values, headers http.Header, skipResponseLimit bool) (*http.Response, error) {
-	base, err := url.Parse(c.baseURL)
-	if err != nil || base.Scheme == "" || base.Host == "" {
+// DoWithSettings calls the upstream API using a dynamic base URL. OpenContent
+// requires the integration key to be RSA-encrypted with its current public key
+// before it is sent as a Bearer credential.
+func (c *Client) DoWithSettings(ctx context.Context, operation Operation, body []byte, query url.Values, baseURL, integrationKey string) (*http.Response, error) {
+	if c == nil || c.timeoutClient == nil {
+		return nil, ErrDisabled
+	}
+	route, ok := routes[operation]
+	if !ok {
+		return nil, fmt.Errorf("%w: %s", ErrUnknownOperation, operation)
+	}
+	cleanQuery, err := sanitizeQuery(query)
+	if err != nil {
+		return nil, err
+	}
+	authorization, err := c.settingsAuthorization(ctx, baseURL, integrationKey)
+	if err != nil {
+		return nil, err
+	}
+	headers := http.Header{}
+	headers.Set("Authorization", authorization)
+	skipResponseLimit := false
+	return c.do(ctx, route, body, cleanQuery, headers, skipResponseLimit, baseURL)
+}
+
+type authPublicKeyResponse struct {
+	Data struct {
+		PublicKey string `json:"PublicKey"`
+		Algorithm string `json:"Algorithm"`
+		Padding   string `json:"Padding"`
+	} `json:"data"`
+}
+
+func (c *Client) settingsAuthorization(ctx context.Context, baseURL, integrationKey string) (string, error) {
+	publicKeyRoute := routes[OperationAuthPublicKey]
+	resp, err := c.do(ctx, publicKeyRoute, nil, nil, nil, false, baseURL)
+	if err != nil {
+		return "", fmt.Errorf("fetch OpenContent auth public key: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("OpenContent auth public key returned HTTP %d", resp.StatusCode)
+	}
+	var payload authPublicKeyResponse
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return "", fmt.Errorf("decode OpenContent auth public key: %w", err)
+	}
+	if strings.TrimSpace(payload.Data.PublicKey) == "" {
+		return "", errors.New("OpenContent auth public key response is missing data.PublicKey")
+	}
+	block, _ := pem.Decode([]byte(payload.Data.PublicKey))
+	if block == nil {
+		return "", errors.New("OpenContent auth public key is not PEM encoded")
+	}
+	parsed, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return "", fmt.Errorf("parse OpenContent auth public key: %w", err)
+	}
+	publicKey, ok := parsed.(*rsa.PublicKey)
+	if !ok {
+		return "", fmt.Errorf("OpenContent auth public key is %T, want RSA", parsed)
+	}
+	ciphertext, err := rsa.EncryptOAEP(sha256.New(), rand.Reader, publicKey, []byte(integrationKey), nil)
+	if err != nil {
+		return "", fmt.Errorf("encrypt OpenContent API key: %w", err)
+	}
+	return "Bearer " + base64.StdEncoding.EncodeToString(ciphertext), nil
+}
+
+func (c *Client) do(ctx context.Context, route upstreamRoute, body []byte, query url.Values, headers http.Header, skipResponseLimit bool, baseURL string) (*http.Response, error) {
+	base, err := url.Parse(baseURL)
+	if err != nil || base.Host == "" || base.Scheme != "http" && base.Scheme != "https" {
 		return nil, fmt.Errorf("invalid OpenContent URL")
 	}
 	u := *base

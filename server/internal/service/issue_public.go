@@ -36,6 +36,8 @@ func (s *IssueService) UpdateContent(ctx context.Context, issue db.Issue, patch 
 		ParentIssueID: issue.ParentIssueID,
 		ProjectID:     issue.ProjectID,
 		ProductID:     issue.ProductID,
+		ProductVersionID: issue.ProductVersionID,
+		KBFolderID:    issue.KBFolderID,
 		Stage:         issue.Stage,
 	}
 	if patch.ExpectedRevision != nil {

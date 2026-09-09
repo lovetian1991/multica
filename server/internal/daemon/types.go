@@ -151,6 +151,7 @@ type Task struct {
 	QuickCreatePriority           string                 `json:"quick_create_priority,omitempty"`            // explicit priority selected in quick-create
 	QuickCreateDueDate            string                 `json:"quick_create_due_date,omitempty"`            // explicit calendar due date selected in quick-create
 	QuickCreateProductID          string                 `json:"quick_create_product_id,omitempty"`          // globally scoped product selected in quick-create
+	QuickCreateKBFolderID         string                 `json:"quick_create_kb_folder_id,omitempty"`        // KB folder selected in quick-create
 	QuickCreateAttachmentIDs      []string               `json:"quick_create_attachment_ids,omitempty"`      // attachments uploaded in the quick-create prompt and bound by issue create
 	QuickCreateSourceContext      json.RawMessage        `json:"quick_create_source_context,omitempty"`      // immutable historical context, separate from the new instruction
 	HandoffNote                   string                 `json:"handoff_note,omitempty"`                     // assignment handoff instruction; rendered into the opening prompt + issue_context.md

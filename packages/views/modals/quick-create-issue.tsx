@@ -7,6 +7,7 @@ import {
   Check,
   ChevronRight,
   FolderKanban,
+  FolderOpen,
   Maximize2,
   Minimize2,
   MoreHorizontal,
@@ -60,7 +61,7 @@ import {
 import { ActorAvatar } from "../common/actor-avatar";
 import { ClearablePillButton, PillButton } from "../common/pill-button";
 import { ProjectPicker } from "../projects/components/project-picker";
-import { ProductPicker } from "../products/components/product-picker";
+import { TaskProductFolderPicker, type TaskProductFolderSelection } from "../products/components/task-product-folder-picker";
 import { productListOptions } from "@multica/core/products/queries";
 import { DueDatePicker, PriorityIcon, PriorityPicker } from "../issues/components";
 import { canAssignAgent } from "../issues/components/pickers/assignee-picker";
@@ -283,6 +284,8 @@ export function AgentCreatePanel({
     const seed = (data?.product_id as string | undefined) ?? draft.shared.productId;
     return seed ?? null;
   });
+  const [productVersionId, setProductVersionId] = useState<string | null>(() => draft.shared.productVersionId ?? null);
+  const [productFolder, setProductFolder] = useState(() => draft.shared.productFolder ?? null);
   const [priority, setPriority] = useState<IssuePriority>(
     (data?.priority as IssuePriority | undefined) ?? draft.shared.priority,
   );
@@ -298,7 +301,15 @@ export function AgentCreatePanel({
   };
   const commitProduct = (next: string | null) => {
     setProductId(next);
-    setShared({ productId: next ?? undefined });
+    setProductVersionId(null);
+    setProductFolder(null);
+    setShared({ productId: next ?? undefined, productVersionId: undefined, productFolder: undefined });
+  };
+  const commitCatalogSelection = (selection: TaskProductFolderSelection) => {
+    setProductId(selection.product.id);
+    setProductVersionId(selection.version.id);
+    setProductFolder(selection.folder);
+    setShared({ productId: selection.product.id, productVersionId: selection.version.id, productFolder: selection.folder });
   };
 
   // Parent-issue context — seeded by `openCreateSubIssue` when the modal is
@@ -452,6 +463,7 @@ export function AgentCreatePanel({
               prompt: md,
               project_id: projectId ?? undefined,
               product_id: productId ?? undefined,
+              kb_folder_id: productFolder?.id,
               ...(priority !== "none" ? { priority } : {}),
               ...(dueDate ? { due_date: dueDate } : {}),
               ...(activeAttachmentIds.length > 0 ? { attachment_ids: activeAttachmentIds } : {}),
@@ -465,6 +477,7 @@ export function AgentCreatePanel({
             prompt: md,
             project_id: projectId ?? undefined,
             product_id: productId ?? undefined,
+            kb_folder_id: productFolder?.id,
             ...(priority !== "none" ? { priority } : {}),
             ...(dueDate ? { due_date: dueDate } : {}),
             parent_issue_id: parentIssueId,
@@ -596,6 +609,8 @@ export function AgentCreatePanel({
     setShared({
       projectId: projectId ?? undefined,
       productId: productId ?? undefined,
+      productVersionId: productVersionId ?? undefined,
+      productFolder: productFolder ?? undefined,
       priority,
       dueDate,
     });
@@ -769,16 +784,20 @@ export function AgentCreatePanel({
               onOpenChange={(open) => setFieldPickerOpen(open ? "project" : null)}
             />
           )}
-          <ProductPicker
+          <TaskProductFolderPicker
             productId={productId}
-            onUpdate={(u) => commitProduct(u.product_id ?? null)}
+            productVersionId={productVersionId}
+            folderId={productFolder?.id}
+            onConfirm={commitCatalogSelection}
             triggerRender={
               <ClearablePillButton
                 onClear={productId !== null ? () => commitProduct(null) : undefined}
                 clearLabel={tIssues(($) => $.pickers.product.clear_aria)}
-              />
+              >
+                <FolderOpen className="size-3.5 shrink-0 text-muted-foreground" />
+                <span className="truncate">{productFolder?.name ?? productId ?? tIssues(($) => $.pickers.product.no_product)}</span>
+              </ClearablePillButton>
             }
-            align="start"
           />
           {(visibleFields.includes("priority") ||
             priority !== "none" ||

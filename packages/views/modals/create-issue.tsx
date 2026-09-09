@@ -15,6 +15,7 @@ import {
   ChevronRight,
   CircleUser,
   FolderKanban,
+  FolderOpen,
   Maximize2,
   Minimize2,
   MoreHorizontal,
@@ -58,7 +59,7 @@ import { ShortcutKeycaps } from "../common/shortcut-keycaps";
 import { StatusIcon, StatusPicker, PriorityIcon, PriorityPicker, StagePicker, AssigneePicker, StartDatePicker, DueDatePicker, LabelPicker } from "../issues/components";
 import { maxSiblingStage } from "../issues/components/pickers/stage-picker";
 import { ProjectPicker } from "../projects/components/project-picker";
-import { ProductPicker } from "../products/components/product-picker";
+import { TaskProductFolderPicker, type TaskProductFolderSelection } from "../products/components/task-product-folder-picker";
 import { useIssueTriggerPreview } from "../issues/hooks/use-issue-trigger-preview";
 import { useActorName } from "@multica/core/workspace/hooks";
 import { useCurrentWorkspace, useWorkspacePaths } from "@multica/core/paths";
@@ -291,6 +292,8 @@ export function ManualCreatePanel({
     }
     return draft.shared.productId;
   });
+  const [productVersionId, setProductVersionId] = useState<string | undefined>(() => draft.shared.productVersionId);
+  const [productFolder, setProductFolder] = useState(() => draft.shared.productFolder ?? null);
   const [parentIssueId, setParentIssueId] = useState<string | undefined>(
     (data?.parent_issue_id as string) || undefined,
   );
@@ -392,7 +395,18 @@ export function ManualCreatePanel({
     setManual({ assigneeType: type, assigneeId: id });
   };
   const updateProject = (id?: string) => { setProjectId(id); setShared({ projectId: id }); };
-  const updateProduct = (id?: string) => { setProductId(id); setShared({ productId: id }); };
+  const updateProduct = (id?: string) => {
+    setProductId(id);
+    setProductVersionId(undefined);
+    setProductFolder(null);
+    setShared({ productId: id, productVersionId: undefined, productFolder: undefined });
+  };
+  const updateCatalogSelection = (selection: TaskProductFolderSelection) => {
+    setProductId(selection.product.id);
+    setProductVersionId(selection.version.id);
+    setProductFolder(selection.folder);
+    setShared({ productId: selection.product.id, productVersionId: selection.version.id, productFolder: selection.folder });
+  };
   const updateStartDate = (v: string | null) => { setStartDate(v); setManual({ startDate: v }); };
   const updateDueDate = (v: string | null) => { setDueDate(v); setShared({ dueDate: v }); };
   const updateLabelIds = (ids: string[]) => { setLabelIds(ids); setManual({ labelIds: ids }); };
@@ -514,6 +528,8 @@ export function ManualCreatePanel({
               stage: parentIssueId && stage != null ? stage : undefined,
               project_id: projectId,
               product_id: productId,
+              product_version_id: productVersionId,
+              kb_folder_id: productFolder?.id,
             },
           },
         });
@@ -539,6 +555,8 @@ export function ManualCreatePanel({
           stage: parentIssueId && stage != null ? stage : undefined,
           project_id: projectId,
           product_id: productId,
+          product_version_id: productVersionId,
+          kb_folder_id: productFolder?.id,
         });
       }
 
@@ -803,7 +821,7 @@ export function ManualCreatePanel({
     // there. Local state can hold a value seeded from `data` (e.g. an opener's
     // project) that was never written through a picker, so a plain flip would
     // otherwise drop it.
-    setShared({ projectId, productId, priority, dueDate });
+    setShared({ projectId, productId, productVersionId, productFolder: productFolder ?? undefined, priority, dueDate });
     const existingPrompt = draft.agent.prompt;
     if (!existingPrompt.trim()) {
       const desc = descEditorRef.current?.getMarkdown()?.trim() ?? "";
@@ -1059,16 +1077,20 @@ export function ManualCreatePanel({
                   onOpenChange={(open) => setFieldPickerOpen(open ? "project" : null)}
                 />
               )}
-              <ProductPicker
+              <TaskProductFolderPicker
                 productId={productId ?? null}
-                onUpdate={(u) => updateProduct(u.product_id ?? undefined)}
+                productVersionId={productVersionId}
+                folderId={productFolder?.id}
+                onConfirm={updateCatalogSelection}
                 triggerRender={
                   <ClearablePillButton
                     onClear={productId ? () => updateProduct(undefined) : undefined}
                     clearLabel={tIssues(($) => $.pickers.product.clear_aria)}
-                  />
+                  >
+                    <FolderOpen className="size-3.5 shrink-0 text-muted-foreground" />
+                    <span className="truncate">{productFolder?.name ?? productId ?? tIssues(($) => $.pickers.product.no_product)}</span>
+                  </ClearablePillButton>
                 }
-                align="start"
               />
 
               {/* Stage — only relevant when creating a sub-issue under a parent */}

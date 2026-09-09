@@ -196,6 +196,7 @@ type TaskContextForEnv struct {
 	AutopilotTriggerPayload string
 	QuickCreatePrompt       string // non-empty for quick-create tasks
 	QuickCreateProductID    string // globally scoped product selected in quick-create
+	QuickCreateKBFolderID   string // KB folder selected in quick-create
 	HandoffNote             string // assignment handoff instruction; rendered into issue_context.md (MUL-3375)
 	IsSquadLeader           bool   // true when THIS TASK runs the agent in the squad-leader role (may exit silently on no_action); derived from the claim's is_leader_task / squad_id, never sniffed from instructions text (MUL-5811)
 	// WorkspaceContext is the workspace-level system prompt (workspace.context

@@ -126,6 +126,7 @@ import type {
   UpdateProductVersionRequest,
   ListProductVersionsResponse,
   SystemSettings,
+  GetKBFoldersResponse,
   UpdateSystemSettingsRequest,
   ListIssueStatusesResponse,
   IssueStatusCategory,
@@ -421,7 +422,6 @@ import {
   EMPTY_LIST_PRODUCT_VERSIONS_RESPONSE,
   SystemSettingsSchema,
   EMPTY_SYSTEM_SETTINGS,
-  KBFolderSchema,
   GetKBFoldersResponseSchema,
   EMPTY_KB_FOLDERS_RESPONSE,
   EMPTY_LIST_ISSUE_STATUSES_RESPONSE,
@@ -790,7 +790,15 @@ export class ApiClient {
     if (!res.ok) {
       if (res.status === 401) this.handleUnauthorized();
       const { message, body } = await this.parseErrorBody(res, `API error: ${res.status} ${res.statusText}`);
-      const logLevel = res.status === 404 ? "warn" : "error";
+      // A 401 is the expected result of the startup identity probe for a
+      // signed-out browser. Keep the ApiError and unauthorized callback, but
+      // do not send it through console.error: Next.js treats that expected
+      // control-flow response as a development error overlay.
+      const logLevel = res.status === 401
+        ? "info"
+        : res.status >= 400 && res.status < 500
+          ? "warn"
+          : "error";
       this.logger[logLevel](`← ${res.status} ${path}`, { rid, duration: `${Date.now() - start}ms`, error: message });
       throw new ApiError(message, res.status, res.statusText, body);
     }
@@ -1133,6 +1141,7 @@ export class ApiClient {
     due_date?: string;
     project_id?: string | null;
     product_id?: string | null;
+    kb_folder_id?: string | null;
     parent_issue_id?: string | null;
     attachment_ids?: string[];
   }): Promise<{ task_id: string }> {
@@ -3828,10 +3837,13 @@ export class ApiClient {
     });
   }
 
-  async getKBFolders(folderId?: string): Promise<GetKBFoldersResponse> {
+  async getKBFolders(folderId?: string, pageIndex?: number): Promise<GetKBFoldersResponse> {
     const params = new URLSearchParams();
     if (folderId) {
       params.append("folder_id", folderId);
+    }
+    if (pageIndex !== undefined && pageIndex > 0) {
+      params.append("page_index", pageIndex.toString());
     }
     const url = `/api/system/kb/folders${params.toString() ? `?${params.toString()}` : ""}`;
     const raw = await this.fetch<unknown>(url);

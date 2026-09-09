@@ -2590,6 +2590,86 @@ describe("importSkillArchive", () => {
   });
 });
 
+describe("ApiClient KB folder listing", () => {
+  it("serializes the parent folder and page index", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      total_count: 0,
+      folders: [],
+      current_folder: null,
+    }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await new ApiClient("https://api.example.test").getKBFolders("42", 3);
+    expect(result).toEqual({ folders: [], totalCount: 0, currentFolder: null });
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "https://api.example.test/api/system/kb/folders?folder_id=42&page_index=3",
+    );
+  });
+
+  it("falls back when a folder response is malformed", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      folders: [{ id: 42 }],
+    }), { status: 200 })));
+
+    await expect(new ApiClient("https://api.example.test").getKBFolders()).resolves.toEqual({
+      folders: [],
+      totalCount: 0,
+      currentFolder: null,
+    });
+  });
+});
+
+describe("ApiClient response logging", () => {
+  it("does not log the signed-out identity probe as an error", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ error: "missing authorization" }),
+      { status: 401, statusText: "Unauthorized" },
+    )));
+    const logger = {
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+    const onUnauthorized = vi.fn();
+
+    await expect(new ApiClient("", { logger, onUnauthorized }).getMe())
+      .rejects.toMatchObject({ status: 401 });
+
+    expect(onUnauthorized).toHaveBeenCalledOnce();
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.stringContaining("401 /api/me"),
+      expect.any(Object),
+    );
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  it("logs a handled client error as a warning", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ error: "please wait before requesting another code" }),
+      { status: 429, statusText: "Too Many Requests" },
+    )));
+    const logger = {
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+
+    await expect(new ApiClient("", { logger }).sendCode("dev@example.com"))
+      .rejects.toMatchObject({ status: 429 });
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining("429 /auth/send-code"),
+      expect.any(Object),
+    );
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+});
+
 describe("clientErrorMessage", () => {
   it("returns a 4xx message, which handlers write for the user", () => {
     expect(clientErrorMessage(new ApiError("autopilot is not active", 400, "Bad Request")))

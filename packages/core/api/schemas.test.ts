@@ -65,11 +65,13 @@ import {
   EMPTY_PLUGIN_INSTALLATION_LIST,
   EMPTY_PLUGIN_PREVIEW,
   ProductSchema,
+  ProductVersionSchema,
   ListProductsResponseSchema,
   EMPTY_PRODUCT,
   EMPTY_LIST_PRODUCTS_RESPONSE,
   SystemSettingsSchema,
   EMPTY_SYSTEM_SETTINGS,
+  GetKBFoldersResponseSchema,
   SystemWorkspaceListSchema,
 } from "./schemas";
 import { IssueViewSchema, IssueViewListSchema } from "./schemas";
@@ -560,6 +562,20 @@ describe("Product schemas", () => {
         { endpoint: "GET /api/products" },
       ),
     ).toEqual(EMPTY_LIST_PRODUCTS_RESPONSE);
+  });
+
+  it("keeps the version folder id used by task folder selection", () => {
+    const parsed = ProductVersionSchema.parse({
+      id: "version-1",
+      product_id: baseProduct.id,
+      name: "2026",
+      directory: "2026",
+      remark: "",
+      folder_id: "12998",
+      created_at: baseProduct.created_at,
+      updated_at: baseProduct.updated_at,
+    });
+    expect(parsed.folder_id).toBe("12998");
   });
 });
 
@@ -2262,5 +2278,27 @@ describe("system settings schemas", () => {
     );
 
     expect(parsed).toEqual(EMPTY_SYSTEM_SETTINGS);
+  });
+
+});
+
+describe("KB folder schemas", () => {
+  it("maps the tree response to the camelCase client model", () => {
+    expect(GetKBFoldersResponseSchema.parse({
+      total_count: 1,
+      current_folder: { id: "42", name: "Parent", folder_path: "/parent", parent_id: "1" },
+      folders: [{ id: "43", name: "Child", folder_path: "/parent/child", parent_id: "42" }],
+    })).toEqual({
+      totalCount: 1,
+      currentFolder: { id: "42", name: "Parent", folderPath: "/parent", parentId: "1" },
+      folders: [{ id: "43", name: "Child", folderPath: "/parent/child", parentId: "42" }],
+    });
+  });
+
+  it("rejects malformed folder identifiers", () => {
+    expect(() => GetKBFoldersResponseSchema.parse({
+      total_count: 1,
+      folders: [{ id: 43, name: "Child", parent_id: "1" }],
+    })).toThrow();
   });
 });

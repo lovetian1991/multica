@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import { ChevronRight, Folder, FolderOpen, Loader2, X } from "lucide-react";
 import { api } from "@multica/core/api";
 import type { KBFolder } from "@multica/core/types";
@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from "@multica/ui/components/ui/dialog";
 import { Input } from "@multica/ui/components/ui/input";
-import { cn } from "@multica/ui/lib";
+import { cn } from "@multica/ui/lib/utils";
 
 interface KBFolderPickerProps {
   open: boolean;
@@ -34,7 +34,6 @@ export function KBFolderPicker({
   open,
   onOpenChange,
   onSelect,
-  selectedFolderId,
 }: KBFolderPickerProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [rootFolders, setRootFolders] = useState<FolderNode[]>([]);
@@ -163,7 +162,7 @@ export function KBFolderPicker({
     onOpenChange(false);
   };
 
-  const renderFolderTree = (nodes: FolderNode[], level = 0): JSX.Element[] => {
+  const renderFolderTree = (nodes: FolderNode[], level = 0): ReactElement[] => {
     return nodes
       .filter((node) => {
         if (!searchQuery) return true;

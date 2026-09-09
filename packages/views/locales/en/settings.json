@@ -371,6 +371,19 @@
       "save": "Save",
       "saving": "Saving..."
     },
+    "folder_picker": {
+      "title": "Choose folder",
+      "library_root": "Company content library",
+      "loading": "Loading...",
+      "load_failed": "Couldn't load folders.",
+      "empty": "No folders found",
+      "selected": "Selected",
+      "cancel": "Cancel",
+      "confirm": "Choose",
+      "expand": "Expand folder",
+      "collapse": "Collapse folder",
+      "load_more": "Load more"
+    },
     "delete_dialog": {
       "title": "Delete product?",
       "description": "\"{{name}}\" will be permanently deleted.",

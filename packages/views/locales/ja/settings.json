@@ -371,6 +371,19 @@
       "save": "保存",
       "saving": "保存中..."
     },
+    "folder_picker": {
+      "title": "フォルダーを選択",
+      "library_root": "企業コンテンツライブラリ",
+      "loading": "読み込み中...",
+      "load_failed": "フォルダーを読み込めませんでした。",
+      "empty": "フォルダーが見つかりません",
+      "selected": "選択済み",
+      "cancel": "キャンセル",
+      "confirm": "選択",
+      "expand": "フォルダーを展開",
+      "collapse": "フォルダーを折りたたむ",
+      "load_more": "さらに読み込む"
+    },
     "delete_dialog": {
       "title": "製品を削除しますか？",
       "description": "「{{name}}」を完全に削除します。",

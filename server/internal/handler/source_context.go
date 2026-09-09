@@ -666,6 +666,8 @@ func (h *Handler) createManualCommentSubIssue(w http.ResponseWriter, r *http.Req
 		projectID = parsed
 	}
 	var productID pgtype.UUID
+	var productVersionID pgtype.UUID
+	var kbFolderID pgtype.Text
 	if input.ProductID != nil {
 		parsed, err := util.ParseUUID(strings.TrimSpace(*input.ProductID))
 		if err != nil {
@@ -675,6 +677,23 @@ func (h *Handler) createManualCommentSubIssue(w http.ResponseWriter, r *http.Req
 			return service.ErrProductNotFound
 		}
 		productID = parsed
+	}
+	if input.ProductVersionID != nil && strings.TrimSpace(*input.ProductVersionID) != "" {
+		parsed, err := util.ParseUUID(strings.TrimSpace(*input.ProductVersionID))
+		if err != nil {
+			return sourceContextBadRequest("invalid product_version_id")
+		}
+		version, err := h.Queries.GetProductVersion(r.Context(), parsed)
+		if err != nil {
+			return service.ErrProductNotFound
+		}
+		if productID.Valid && version.ProductID != productID {
+			return sourceContextBadRequest("product version does not belong to product")
+		}
+		productVersionID = parsed
+	}
+	if input.KBFolderID != nil && strings.TrimSpace(*input.KBFolderID) != "" {
+		kbFolderID = pgtype.Text{String: strings.TrimSpace(*input.KBFolderID), Valid: true}
 	}
 	attachmentIDs, ok := parseUUIDSliceOrBadRequest(w, input.AttachmentIDs, "attachment_ids")
 	if !ok {
@@ -713,7 +732,7 @@ func (h *Handler) createManualCommentSubIssue(w http.ResponseWriter, r *http.Req
 	result, err := h.IssueService.Create(r.Context(), service.IssueCreateParams{
 		WorkspaceID: workspaceID, Title: title, Description: ptrToText(input.Description), Status: status, Priority: priority,
 		AssigneeType: assigneeType, AssigneeID: assigneeID, CreatorType: "member", CreatorID: userID,
-		ParentIssueID: capture.SourceIssueID, ProjectID: projectID, ProductID: productID, StartDate: startDate, DueDate: dueDate,
+		ParentIssueID: capture.SourceIssueID, ProjectID: projectID, ProductID: productID, ProductVersionID: productVersionID, KBFolderID: kbFolderID, StartDate: startDate, DueDate: dueDate,
 		AttachmentIDs: attachmentIDs, LabelIDs: labelIDs, Stage: stage,
 		AllowDuplicate: input.AllowDuplicate, SourceContext: &capture,
 	}, service.IssueCreateOpts{
@@ -742,6 +761,7 @@ type preparedAgentCommentSubIssue struct {
 	prompt, priority, dueDate   string
 	projectID                   pgtype.UUID
 	productID                   pgtype.UUID
+	kbFolderID                  string
 	attachmentIDs               []pgtype.UUID
 }
 
@@ -849,7 +869,7 @@ func (h *Handler) prepareAgentCommentSubIssue(w http.ResponseWriter, r *http.Req
 	return &preparedAgentCommentSubIssue{
 		agentID: agentID, squadID: squadID, runtimeID: agent.RuntimeID,
 		prompt: prompt, priority: priority, dueDate: dueDate,
-		projectID: projectID, productID: productID, attachmentIDs: attachmentIDs,
+		projectID: projectID, productID: productID, kbFolderID: strings.TrimSpace(input.KBFolderID), attachmentIDs: attachmentIDs,
 	}, nil
 }
 
@@ -861,7 +881,7 @@ func (h *Handler) createAgentCommentSubIssue(w http.ResponseWriter, r *http.Requ
 		writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"code": "source_context_quick_create_unsupported", "error": "selected agent runtime must be updated before using captured context"})
 		return errSourceContextResponseWritten
 	}
-	task, err := h.TaskService.EnqueueQuickCreateTaskWithSourceContext(r.Context(), workspaceID, userID, prepared.agentID, prepared.squadID, prepared.prompt, prepared.priority, prepared.dueDate, prepared.projectID, prepared.productID, capture.SourceIssueID, prepared.attachmentIDs, capture)
+	task, err := h.TaskService.EnqueueQuickCreateTaskWithSourceContextAndFolder(r.Context(), workspaceID, userID, prepared.agentID, prepared.squadID, prepared.prompt, prepared.priority, prepared.dueDate, prepared.projectID, prepared.productID, prepared.kbFolderID, capture.SourceIssueID, prepared.attachmentIDs, capture)
 	if err != nil {
 		return err
 	}

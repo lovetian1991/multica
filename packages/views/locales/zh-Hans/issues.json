@@ -699,7 +699,16 @@
       "search_placeholder": "搜索产品...",
       "no_product": "无产品",
       "empty": "暂无产品",
-      "clear_aria": "清除产品"
+      "clear_aria": "清除产品",
+      "folder_dialog_title": "选择产品版本和文件夹",
+      "no_versions": "暂无版本",
+      "choose_version": "请选择产品版本",
+      "no_folder": "该版本未配置根文件夹",
+      "no_folders": "暂无子文件夹",
+      "folder_name": "文件夹",
+      "folder_id": "文件夹 ID",
+      "cancel": "取消",
+      "confirm": "确认选择"
     },
     "custom_property": {
       "empty": "空",

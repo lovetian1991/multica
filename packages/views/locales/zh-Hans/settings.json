@@ -371,6 +371,19 @@
       "save": "保存",
       "saving": "正在保存..."
     },
+    "folder_picker": {
+      "title": "选择文件夹",
+      "library_root": "企业内容库",
+      "loading": "加载中...",
+      "load_failed": "无法加载文件夹。",
+      "empty": "没有找到文件夹",
+      "selected": "已选择",
+      "cancel": "取消",
+      "confirm": "确认选择",
+      "expand": "展开文件夹",
+      "collapse": "收起文件夹",
+      "load_more": "加载更多"
+    },
     "delete_dialog": {
       "title": "删除产品？",
       "description": "“{{name}}”将被永久删除。",

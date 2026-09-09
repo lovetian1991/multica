@@ -699,7 +699,16 @@
       "search_placeholder": "製品を検索...",
       "no_product": "製品なし",
       "empty": "製品がありません",
-      "clear_aria": "製品をクリア"
+      "clear_aria": "製品をクリア",
+      "folder_dialog_title": "製品バージョンとフォルダーを選択",
+      "no_versions": "バージョンがありません",
+      "choose_version": "製品バージョンを選択してください",
+      "no_folder": "このバージョンにはルートフォルダーがありません",
+      "no_folders": "子フォルダーがありません",
+      "folder_name": "フォルダー",
+      "folder_id": "フォルダー ID",
+      "cancel": "キャンセル",
+      "confirm": "選択を確定"
     },
     "custom_property": {
       "empty": "空",

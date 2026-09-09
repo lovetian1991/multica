@@ -70,6 +70,8 @@ type IssueResponse struct {
 	ParentIssueID *string `json:"parent_issue_id"`
 	ProjectID     *string `json:"project_id"`
 	ProductID     *string `json:"product_id"`
+	ProductVersionID *string `json:"product_version_id"`
+	KBFolderID    *string `json:"kb_folder_id"`
 	Position      float64 `json:"position"`
 	// Stage groups sub-issues under the same parent into ordered barrier
 	// groups (null = unstaged). See issue_child_done.go for how a closed
@@ -318,6 +320,8 @@ func issueToResponse(i db.Issue, issuePrefix string) IssueResponse {
 		ParentIssueID:  uuidToPtr(i.ParentIssueID),
 		ProjectID:      uuidToPtr(i.ProjectID),
 		ProductID:      uuidToPtr(i.ProductID),
+		ProductVersionID: uuidToPtr(i.ProductVersionID),
+		KBFolderID:      textToPtr(i.KBFolderID),
 		Position:       i.Position,
 		Stage:          int4ToPtr(i.Stage),
 		StartDate:      dateToPtr(i.StartDate),
@@ -356,6 +360,8 @@ func issueListRowToResponse(i db.ListIssuesRow, issuePrefix string) IssueRespons
 		ParentIssueID:  uuidToPtr(i.ParentIssueID),
 		ProjectID:      uuidToPtr(i.ProjectID),
 		ProductID:      uuidToPtr(i.ProductID),
+		ProductVersionID: uuidToPtr(i.ProductVersionID),
+		KBFolderID:      textToPtr(i.KBFolderID),
 		Position:       i.Position,
 		Stage:          int4ToPtr(i.Stage),
 		StartDate:      dateToPtr(i.StartDate),
@@ -426,6 +432,8 @@ func openIssueRowToResponse(i db.ListOpenIssuesRow, issuePrefix string) IssueRes
 		ParentIssueID:  uuidToPtr(i.ParentIssueID),
 		ProjectID:      uuidToPtr(i.ProjectID),
 		ProductID:      uuidToPtr(i.ProductID),
+		ProductVersionID: uuidToPtr(i.ProductVersionID),
+		KBFolderID:      textToPtr(i.KBFolderID),
 		Position:       i.Position,
 		Stage:          int4ToPtr(i.Stage),
 		StartDate:      dateToPtr(i.StartDate),
@@ -863,7 +871,7 @@ func buildSearchQuery(phrase string, terms []string, queryNum int, hasNum bool, 
 	query := fmt.Sprintf(`SELECT i.id, i.workspace_id, i.title, i.description, i.status, i.priority,
 		i.assignee_type, i.assignee_id, i.creator_type, i.creator_id,
 		i.parent_issue_id, i.acceptance_criteria, i.context_refs, i.position,
-		i.start_date, i.due_date, i.created_at, i.updated_at, i.last_activity_at, i.number, i.project_id, i.product_id,
+		i.start_date, i.due_date, i.created_at, i.updated_at, i.last_activity_at, i.number, i.project_id, i.product_id, i.product_version_id, i.kb_folder_id,
 		i.revision,
 		COUNT(*) OVER() AS total_count,
 		%s AS match_source,
@@ -964,6 +972,8 @@ func (h *Handler) SearchIssues(w http.ResponseWriter, r *http.Request) {
 				&sr.issue.Number,
 				&sr.issue.ProjectID,
 				&sr.issue.ProductID,
+				&sr.issue.ProductVersionID,
+				&sr.issue.KBFolderID,
 				&sr.issue.Revision,
 				&sr.totalCount,
 				&sr.matchSource,
@@ -1506,7 +1516,7 @@ func (h *Handler) ListIssues(w http.ResponseWriter, r *http.Request) {
 
 	query := fmt.Sprintf(`SELECT i.id, i.workspace_id, i.title, i.description, i.status, i.priority,
        i.assignee_type, i.assignee_id, i.creator_type, i.creator_id,
-       i.parent_issue_id, i.position, i.start_date, i.due_date, i.created_at, i.updated_at, i.last_activity_at, i.number, i.project_id, i.product_id, i.metadata, i.stage, i.properties,
+       i.parent_issue_id, i.position, i.start_date, i.due_date, i.created_at, i.updated_at, i.last_activity_at, i.number, i.project_id, i.product_id, i.product_version_id, i.kb_folder_id, i.metadata, i.stage, i.properties,
 	   i.revision
 FROM issue i
 WHERE %s
@@ -1545,6 +1555,8 @@ LIMIT %s OFFSET %s`, whereSql, orderBy, limitRef, offsetRef)
 			&row.Number,
 			&row.ProjectID,
 			&row.ProductID,
+			&row.ProductVersionID,
+			&row.KBFolderID,
 			&row.Metadata,
 			&row.Stage,
 			&row.Properties,
@@ -2099,7 +2111,7 @@ WITH ranked AS (
 		i.id, i.workspace_id, i.title, i.description, i.status, i.priority,
 		i.assignee_type, i.assignee_id, i.creator_type, i.creator_id,
 		i.parent_issue_id, i.position, i.start_date, i.due_date, i.created_at, i.updated_at, i.last_activity_at,
-		i.number, i.project_id, i.product_id, i.metadata, i.stage, i.properties, i.revision,
+		i.number, i.project_id, i.product_id, i.product_version_id, i.kb_folder_id, i.metadata, i.stage, i.properties, i.revision,
 		COUNT(*) OVER (PARTITION BY i.assignee_type, i.assignee_id) AS group_total,
 		ROW_NUMBER() OVER (
 			PARTITION BY i.assignee_type, i.assignee_id
@@ -2112,7 +2124,7 @@ SELECT
 	id, workspace_id, title, description, status, priority,
 	assignee_type, assignee_id, creator_type, creator_id,
 	parent_issue_id, position, start_date, due_date, created_at, updated_at, last_activity_at,
-	number, project_id, product_id, metadata, stage, properties, revision, group_total
+	number, project_id, product_id, product_version_id, kb_folder_id, metadata, stage, properties, revision, group_total
 FROM ranked
 WHERE rn > %s AND rn <= %s + %s
 ORDER BY
@@ -2158,6 +2170,8 @@ ORDER BY
 			&row.Number,
 			&row.ProjectID,
 			&row.ProductID,
+			&row.ProductVersionID,
+			&row.KBFolderID,
 			&row.Metadata,
 			&row.Stage,
 			&row.Properties,
@@ -2461,6 +2475,7 @@ type QuickCreateIssueRequest struct {
 	DueDate       string   `json:"due_date,omitempty"`
 	ProjectID     string   `json:"project_id,omitempty"`
 	ProductID     string   `json:"product_id,omitempty"`
+	KBFolderID    string   `json:"kb_folder_id,omitempty"`
 	ParentIssueID string   `json:"parent_issue_id,omitempty"`
 	AttachmentIDs []string `json:"attachment_ids,omitempty"`
 }
@@ -2679,7 +2694,7 @@ func (h *Handler) QuickCreateIssue(w http.ResponseWriter, r *http.Request) {
 		parentIssueUUID = pid
 	}
 
-	task, err := h.TaskService.EnqueueQuickCreateTask(r.Context(), wsUUID, requesterUUID, agentUUID, squadUUID, prompt, priority, dueDate, projectUUID, productUUID, parentIssueUUID, attachmentIDs)
+	task, err := h.TaskService.EnqueueQuickCreateTaskWithFolder(r.Context(), wsUUID, requesterUUID, agentUUID, squadUUID, prompt, priority, dueDate, projectUUID, productUUID, strings.TrimSpace(req.KBFolderID), parentIssueUUID, attachmentIDs)
 	if err != nil {
 		if writeIssueLimitReached(w, err) {
 			return
@@ -2799,6 +2814,8 @@ type CreateIssueRequest struct {
 	ParentIssueID *string  `json:"parent_issue_id"`
 	ProjectID     *string  `json:"project_id"`
 	ProductID     *string  `json:"product_id"`
+	ProductVersionID *string `json:"product_version_id"`
+	KBFolderID    *string  `json:"kb_folder_id"`
 	Stage         *int32   `json:"stage,omitempty"`
 	StartDate     *string  `json:"start_date"`
 	DueDate       *string  `json:"due_date"`
@@ -2882,6 +2899,8 @@ func (h *Handler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 	var parentIssueID pgtype.UUID
 	var projectID pgtype.UUID
 	var productID pgtype.UUID
+	var productVersionID pgtype.UUID
+	var kbFolderID pgtype.Text
 	if req.ParentIssueID != nil {
 		id, ok := parseUUIDOrBadRequest(w, *req.ParentIssueID, "parent_issue_id")
 		if !ok {
@@ -2933,6 +2952,32 @@ func (h *Handler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		productID = id
+	}
+	if req.ProductVersionID != nil {
+		id, ok := parseUUIDOrBadRequest(w, *req.ProductVersionID, "product_version_id")
+		if !ok {
+			return
+		}
+		version, err := h.Queries.GetProductVersion(r.Context(), id)
+		if err != nil {
+			if isNotFound(err) {
+				writeError(w, http.StatusBadRequest, "product version not found")
+			} else {
+				writeError(w, http.StatusInternalServerError, "failed to validate product version")
+			}
+			return
+		}
+		if productID.Valid && version.ProductID != productID {
+			writeError(w, http.StatusBadRequest, "product version does not belong to product")
+			return
+		}
+		productVersionID = id
+	}
+	if req.KBFolderID != nil {
+		value := strings.TrimSpace(*req.KBFolderID)
+		if value != "" {
+			kbFolderID = pgtype.Text{String: value, Valid: true}
+		}
 	}
 	// Project existence and the final parent boundary check are enforced inside
 	// IssueService.Create atomically with the create. The handler preloads a
@@ -3068,6 +3113,8 @@ func (h *Handler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 		ParentIssueID:  parentIssueID,
 		ProjectID:      projectID,
 		ProductID:      productID,
+		ProductVersionID: productVersionID,
+		KBFolderID:     kbFolderID,
 		StartDate:      startDate,
 		DueDate:        dueDate,
 		OriginType:     originType,
@@ -3177,6 +3224,8 @@ type UpdateIssueRequest struct {
 	ParentIssueID   *string  `json:"parent_issue_id"`
 	ProjectID       *string  `json:"project_id"`
 	ProductID       *string  `json:"product_id"`
+	ProductVersionID *string `json:"product_version_id"`
+	KBFolderID      *string  `json:"kb_folder_id"`
 	Stage           *int32   `json:"stage"`
 	// AttachmentIDs lets the description editor bind newly uploaded files to
 	// this issue so they surface in `GET /api/issues/:id/attachments` and the
@@ -3270,6 +3319,12 @@ func refreshUntouchedNullableIssueParams(params *db.UpdateIssueParams, current d
 	}
 	if _, touched := rawFields["product_id"]; !touched {
 		params.ProductID = current.ProductID
+	}
+	if _, touched := rawFields["product_version_id"]; !touched {
+		params.ProductVersionID = current.ProductVersionID
+	}
+	if _, touched := rawFields["kb_folder_id"]; !touched {
+		params.KBFolderID = current.KBFolderID
 	}
 	if _, touched := rawFields["stage"]; !touched {
 		params.Stage = current.Stage
@@ -3419,6 +3474,8 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 		ParentIssueID: prevIssue.ParentIssueID,
 		ProjectID:     prevIssue.ProjectID,
 		ProductID:     prevIssue.ProductID,
+		ProductVersionID: prevIssue.ProductVersionID,
+		KBFolderID:    prevIssue.KBFolderID,
 		Stage:         prevIssue.Stage,
 	}
 	if req.ExpectedRevision != nil {
@@ -3586,6 +3643,38 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 			params.ProductID = productUUID
 		} else {
 			params.ProductID = pgtype.UUID{Valid: false}
+		}
+	}
+	if _, ok := rawFields["product_version_id"]; ok {
+		if req.ProductVersionID != nil {
+			versionUUID, ok := parseUUIDOrBadRequest(w, *req.ProductVersionID, "product_version_id")
+			if !ok {
+				return
+			}
+			version, err := h.Queries.GetProductVersion(r.Context(), versionUUID)
+			if err != nil {
+				if isNotFound(err) {
+					writeError(w, http.StatusBadRequest, "product version not found")
+				} else {
+					writeError(w, http.StatusInternalServerError, "failed to validate product version")
+				}
+				return
+			}
+			if params.ProductID.Valid && version.ProductID != params.ProductID {
+				writeError(w, http.StatusBadRequest, "product version does not belong to product")
+				return
+			}
+			params.ProductVersionID = versionUUID
+		} else {
+			params.ProductVersionID = pgtype.UUID{Valid: false}
+		}
+	}
+	if _, ok := rawFields["kb_folder_id"]; ok {
+		if req.KBFolderID != nil {
+			value := strings.TrimSpace(*req.KBFolderID)
+			params.KBFolderID = pgtype.Text{String: value, Valid: value != ""}
+		} else {
+			params.KBFolderID = pgtype.Text{Valid: false}
 		}
 	}
 	if _, ok := rawFields["stage"]; ok {
@@ -4146,7 +4235,7 @@ func (h *Handler) BatchUpdateIssues(w http.ResponseWriter, r *http.Request) {
 		req.Updates.Priority != nil ||
 		req.Updates.Position != nil
 	if !hasMutation {
-		for _, k := range []string{"assignee_type", "assignee_id", "start_date", "due_date", "parent_issue_id", "project_id", "product_id", "stage"} {
+		for _, k := range []string{"assignee_type", "assignee_id", "start_date", "due_date", "parent_issue_id", "project_id", "product_id", "product_version_id", "kb_folder_id", "stage"} {
 			if _, ok := rawUpdates[k]; ok {
 				hasMutation = true
 				break
@@ -4221,6 +4310,34 @@ func (h *Handler) BatchUpdateIssues(w http.ResponseWriter, r *http.Request) {
 		}
 		batchProductID = productUUID
 	}
+	batchProductVersionID := pgtype.UUID{Valid: false}
+	if _, ok := rawUpdates["product_version_id"]; ok && req.Updates.ProductVersionID != nil {
+		versionUUID, ok := parseUUIDOrBadRequest(w, *req.Updates.ProductVersionID, "product_version_id")
+		if !ok {
+			return
+		}
+		version, err := h.Queries.GetProductVersion(r.Context(), versionUUID)
+		if err != nil {
+			if isNotFound(err) {
+				writeError(w, http.StatusBadRequest, "product version not found")
+			} else {
+				writeError(w, http.StatusInternalServerError, "failed to validate product version")
+			}
+			return
+		}
+		if batchProductID.Valid && version.ProductID != batchProductID {
+			writeError(w, http.StatusBadRequest, "product version does not belong to product")
+			return
+		}
+		batchProductVersionID = versionUUID
+	}
+	batchKBFolderID := pgtype.Text{Valid: false}
+	if _, ok := rawUpdates["kb_folder_id"]; ok {
+		if req.Updates.KBFolderID != nil {
+			value := strings.TrimSpace(*req.Updates.KBFolderID)
+			batchKBFolderID = pgtype.Text{String: value, Valid: value != ""}
+		}
+	}
 
 	updated := 0
 	// One Resolver for the whole batch — a per-issue filler would query the
@@ -4252,7 +4369,9 @@ func (h *Handler) BatchUpdateIssues(w http.ResponseWriter, r *http.Request) {
 			ParentIssueID: prevIssue.ParentIssueID,
 			ProjectID:     prevIssue.ProjectID,
 			ProductID:     prevIssue.ProductID,
-			Stage:         prevIssue.Stage,
+			ProductVersionID: prevIssue.ProductVersionID,
+			KBFolderID:       prevIssue.KBFolderID,
+			Stage:            prevIssue.Stage,
 		}
 
 		if req.Updates.Title != nil {
@@ -4266,6 +4385,12 @@ func (h *Handler) BatchUpdateIssues(w http.ResponseWriter, r *http.Request) {
 		}
 		if req.Updates.Priority != nil {
 			params.Priority = pgtype.Text{String: *req.Updates.Priority, Valid: true}
+		}
+		if _, touched := rawUpdates["product_version_id"]; touched {
+			params.ProductVersionID = batchProductVersionID
+		}
+		if _, touched := rawUpdates["kb_folder_id"]; touched {
+			params.KBFolderID = batchKBFolderID
 		}
 		if req.Updates.Position != nil {
 			params.Position = pgtype.Float8{Float64: *req.Updates.Position, Valid: true}

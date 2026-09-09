@@ -584,6 +584,26 @@ func TestTaskMulticaEnvironmentIncludesPrivateConfigRoot(t *testing.T) {
 	}
 }
 
+func TestTaskMulticaEnvironmentIncludesQuickCreateKBFolderID(t *testing.T) {
+	t.Parallel()
+
+	task := Task{
+		ID:                   "task-kb-folder",
+		AgentID:              "agent-test",
+		WorkspaceID:          "workspace-test",
+		QuickCreateKBFolderID: " 12998 ",
+	}
+	env := taskMulticaEnvironment(task, "agent-name", "mat_task", "/task/config", "/daemon/workspaces", "https://task.example", 19514, 1, "/task/tmp")
+	if got := env["MULTICA_KB_FOLDER_ID"]; got != "12998" {
+		t.Fatalf("MULTICA_KB_FOLDER_ID = %q, want %q", got, "12998")
+	}
+
+	plain := taskMulticaEnvironment(Task{ID: "plain-task"}, "agent-name", "mat_task", "/task/config", "/daemon/workspaces", "https://task.example", 19514, 1, "/task/tmp")
+	if _, ok := plain["MULTICA_KB_FOLDER_ID"]; ok {
+		t.Fatal("plain task unexpectedly received MULTICA_KB_FOLDER_ID")
+	}
+}
+
 func TestInjectTaskOCKeyIsTaskScoped(t *testing.T) {
 	t.Parallel()
 

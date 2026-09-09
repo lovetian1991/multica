@@ -93,6 +93,8 @@ import type {
   ListProductsResponse,
   ListProductVersionsResponse,
   SystemSettings,
+  KBFolder,
+  GetKBFoldersResponse,
 } from "../types";
 import type { CloudRuntimeNode } from "../runtimes/cloud-runtime";
 import type { CreateFeedbackResponse } from "../feedback/types";
@@ -508,6 +510,7 @@ export const ProductVersionSchema = z.object({
   name: z.string(),
   directory: z.string().optional().default(""),
   remark: z.string().optional().default(""),
+  folder_id: z.string().optional().default(""),
   created_at: z.string(),
   updated_at: z.string(),
 }).loose();
@@ -518,6 +521,7 @@ export const EMPTY_PRODUCT_VERSION: ProductVersion = {
   name: "",
   directory: "",
   remark: "",
+  folder_id: "",
   created_at: "",
   updated_at: "",
 };
@@ -545,18 +549,29 @@ export const EMPTY_SYSTEM_SETTINGS: SystemSettings = {
 export const KBFolderSchema = z.object({
   id: z.string(),
   name: z.string(),
-  type: z.string(),
+  folder_path: z.string().default(""),
   parent_id: z.string(),
-});
+}).transform((folder): KBFolder => ({
+  id: folder.id,
+  name: folder.name,
+  folderPath: folder.folder_path,
+  parentId: folder.parent_id,
+}));
 
 export const GetKBFoldersResponseSchema = z.object({
   folders: z.array(KBFolderSchema).default([]),
-  total: z.number().default(0),
-});
+  total_count: z.number().int().nonnegative().default(0),
+  current_folder: KBFolderSchema.nullable().optional(),
+}).transform((response): GetKBFoldersResponse => ({
+  folders: response.folders,
+  totalCount: response.total_count,
+  currentFolder: response.current_folder ?? null,
+}));
 
 export const EMPTY_KB_FOLDERS_RESPONSE: GetKBFoldersResponse = {
   folders: [],
-  total: 0,
+  totalCount: 0,
+  currentFolder: null,
 };
 
 const WorkspaceRepoSchema = z.object({
@@ -1353,6 +1368,8 @@ export const IssueSchema = z.object({
   // Global products are optional issue metadata and are not workspace-scoped.
   // Older backends omit this field, so normalize that response to null.
   product_id: z.string().nullable().default(null).catch(null),
+  product_version_id: z.string().nullable().default(null).catch(null),
+  kb_folder_id: z.string().nullable().default(null).catch(null),
   position: z.number(),
   // Older backends predate `stage`; default to null so a missing field parses
   // cleanly into the non-optional Issue.stage (number | null).

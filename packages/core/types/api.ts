@@ -14,6 +14,8 @@ export interface CreateIssueRequest {
   parent_issue_id?: string;
   project_id?: string;
   product_id?: string;
+  product_version_id?: string | null;
+  kb_folder_id?: string | null;
   /** Ordered stage (>= 1) grouping this sub-issue under its parent. */
   stage?: number;
   start_date?: string;
@@ -41,6 +43,7 @@ export interface CreateCommentSubIssueAgentRequest {
     due_date?: string;
     project_id?: string | null;
     product_id?: string | null;
+    kb_folder_id?: string | null;
     attachment_ids?: string[];
   };
 }
@@ -70,6 +73,8 @@ export interface UpdateIssueRequest {
   parent_issue_id?: string | null;
   project_id?: string | null;
   product_id?: string | null;
+  product_version_id?: string | null;
+  kb_folder_id?: string | null;
   /** Ordered stage (>= 1); null clears it (unstaged). */
   stage?: number | null;
   /** Attachment IDs to bind to this issue alongside the description update.
