@@ -384,6 +384,33 @@
       "collapse": "收起文件夹",
       "load_more": "加载更多"
     },
+    "version_editor": {
+      "create_title": "新建版本",
+      "edit_title": "编辑版本",
+      "description": "设置版本名称、文件夹目录和可选备注。",
+      "name": "版本名称",
+      "name_placeholder": "输入版本名称",
+      "remark": "备注",
+      "remark_placeholder": "添加备注",
+      "cancel": "取消",
+      "save": "保存",
+      "saving": "正在保存..."
+    },
+    "versions": {
+      "select_product": "请选择一个产品来管理其版本",
+      "search_placeholder": "搜索版本名称",
+      "new_version": "新建版本",
+      "columns": {
+        "directory": "存放目录",
+        "status": "状态"
+      },
+      "directory": "存放目录",
+      "directory_placeholder": "选择 KB 文件夹",
+      "enabled_label": "启用状态",
+      "enabled": "已启用",
+      "disabled": "已禁用",
+      "disabled_description": "禁用后创建任务时不会显示此版本"
+    },
     "delete_dialog": {
       "title": "删除产品？",
       "description": "“{{name}}”将被永久删除。",

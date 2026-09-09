@@ -34,6 +34,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@multica/ui/components/ui/dropdown-menu";
 import { Input } from "@multica/ui/components/ui/input";
 import { Label as FieldLabel } from "@multica/ui/components/ui/label";
+import { Switch } from "@multica/ui/components/ui/switch";
 import { Textarea } from "@multica/ui/components/ui/textarea";
 import { CollapsedNavTrigger } from "../layout/page-header";
 import { useT } from "../i18n";
@@ -49,6 +50,7 @@ interface ProductVersionDraft {
   directory: string;
   remark: string;
   folder_id: string;
+  enabled: boolean;
 }
 
 const EMPTY_PRODUCT_DRAFT: ProductDraft = {
@@ -60,6 +62,7 @@ const EMPTY_VERSION_DRAFT: ProductVersionDraft = {
   directory: "",
   remark: "",
   folder_id: "",
+  enabled: true,
 };
 
 export function ProductVersionManagementPage() {
@@ -140,7 +143,7 @@ export function ProductVersionManagementPage() {
         >
           <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-5 py-12 text-center">
             <p className="text-body font-medium">
-              需要认证，请登录。
+              {t(($) => $.products.unauthorized)}
             </p>
           </div>
         </SystemPageShell>
@@ -260,7 +263,7 @@ export function ProductVersionManagementPage() {
                 <div className="text-center">
                   <Package className="mx-auto size-8 text-faint-foreground" />
                   <p className="mt-3 text-body font-medium text-muted-foreground">
-                    请选择一个产品来管理其版本
+                    {t(($) => $.products.versions.select_product)}
                   </p>
                 </div>
               </div>
@@ -272,7 +275,7 @@ export function ProductVersionManagementPage() {
                     <Input
                       value={versionQuery}
                       onChange={(event) => setVersionQuery(event.target.value)}
-                      placeholder="搜索版本名称"
+                      placeholder={t(($) => $.products.versions.search_placeholder)}
                       className="pl-9"
                     />
                   </div>
@@ -281,15 +284,16 @@ export function ProductVersionManagementPage() {
                     onClick={() => setCreateVersionOpen(true)}
                   >
                     <Plus className="size-4" />
-                    新建版本
+                    {t(($) => $.products.versions.new_version)}
                   </Button>
                 </div>
 
                 <div className="overflow-hidden rounded-lg border border-surface-border bg-card">
-                  <div className="hidden grid-cols-[minmax(8rem,0.8fr)_minmax(10rem,1fr)_minmax(8rem,0.8fr)_2rem] gap-4 border-b border-surface-border bg-muted/20 px-4 py-2.5 text-caption font-medium text-muted-foreground md:grid">
+                  <div className="hidden grid-cols-[minmax(8rem,0.8fr)_minmax(10rem,1fr)_minmax(8rem,0.8fr)_5rem_2rem] gap-4 border-b border-surface-border bg-muted/20 px-4 py-2.5 text-caption font-medium text-muted-foreground md:grid">
                     <span>{t(($) => $.products.columns.name)}</span>
-                    <span>存放目录</span>
+                    <span>{t(($) => $.products.versions.columns.directory)}</span>
                     <span>{t(($) => $.products.columns.remark)}</span>
+                    <span>{t(($) => $.products.versions.columns.status)}</span>
                     <span />
                   </div>
 
@@ -317,7 +321,7 @@ export function ProductVersionManagementPage() {
                       {filteredVersions.map((version) => (
                         <div
                           key={version.id}
-                          className="grid gap-2 px-4 py-3 md:grid-cols-[minmax(8rem,0.8fr)_minmax(10rem,1fr)_minmax(8rem,0.8fr)_2rem] md:items-center md:gap-4"
+                          className="grid gap-2 px-4 py-3 md:grid-cols-[minmax(8rem,0.8fr)_minmax(10rem,1fr)_minmax(8rem,0.8fr)_5rem_2rem] md:items-center md:gap-4"
                         >
                           <span className="truncate text-body font-medium">{version.name}</span>
                           <div className="flex min-w-0 items-center gap-2 text-caption text-muted-foreground md:text-body">
@@ -329,6 +333,19 @@ export function ProductVersionManagementPage() {
                           <p className="min-w-0 truncate text-caption text-muted-foreground md:text-body">
                             {version.remark || t(($) => $.products.not_set)}
                           </p>
+                          <div className="flex items-center">
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                                version.enabled
+                                  ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                  : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                              }`}
+                            >
+                              {version.enabled
+                                ? t(($) => $.products.versions.enabled)
+                                : t(($) => $.products.versions.disabled)}
+                            </span>
+                          </div>
                           <DropdownMenu>
                             <DropdownMenuTrigger
                               render={
@@ -491,14 +508,18 @@ function ProductEditorDialog({
         <DialogHeader>
           <DialogTitle>
             {product
-              ? t(($) => $.products.editor.edit_title)
-              : t(($) => $.products.editor.create_title)}
+              ? t(($) => $.products.product_editor.edit_title)
+              : t(($) => $.products.product_editor.create_title)}
           </DialogTitle>
-          <DialogDescription>{t(($) => $.products.editor.description)}</DialogDescription>
+          <DialogDescription>
+            {t(($) => $.products.product_editor.description)}
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-5 py-2">
           <div className="space-y-2">
-            <FieldLabel htmlFor="system-product-name">{t(($) => $.products.editor.name)}</FieldLabel>
+            <FieldLabel htmlFor="system-product-name">
+              {t(($) => $.products.product_editor.name)}
+            </FieldLabel>
             <Input
               id="system-product-name"
               autoFocus
@@ -506,16 +527,18 @@ function ProductEditorDialog({
               maxLength={128}
               value={draft.name}
               onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
-              placeholder={t(($) => $.products.editor.name_placeholder)}
+              placeholder={t(($) => $.products.product_editor.name_placeholder)}
             />
           </div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
-            {t(($) => $.products.editor.cancel)}
+            {t(($) => $.products.product_editor.cancel)}
           </Button>
           <Button onClick={submit} disabled={!draft.name.trim() || saving}>
-            {saving ? t(($) => $.products.editor.saving) : t(($) => $.products.editor.save)}
+            {saving
+              ? t(($) => $.products.product_editor.saving)
+              : t(($) => $.products.product_editor.save)}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -597,8 +620,9 @@ function ProductVersionEditorDialog({
         directory: version.directory,
         remark: version.remark,
         folder_id: version.folder_id || "",
+        enabled: version.enabled,
       });
-      // 回显文件夹名称（存储在directory字段中）
+      // Restore the folder name stored in the directory field.
       setSelectedFolderName(version.directory || "");
     } else {
       setDraft(EMPTY_VERSION_DRAFT);
@@ -607,7 +631,7 @@ function ProductVersionEditorDialog({
   }, [open, version]);
 
   const handleFolderSelect = (folder: KBFolder) => {
-    // 同时更新folder_id和directory（存储文件夹名称）
+    // Keep the folder id and stored folder name in sync.
     setDraft((current) => ({
       ...current,
       folder_id: folder.id,
@@ -625,6 +649,7 @@ function ProductVersionEditorDialog({
       directory: draft.directory.trim(),
       remark: draft.remark.trim(),
       folder_id: draft.folder_id.trim(),
+      enabled: draft.enabled,
     };
     const options = {
       onSuccess: () => onOpenChange(false),
@@ -651,17 +676,17 @@ function ProductVersionEditorDialog({
           <DialogHeader>
             <DialogTitle>
               {version
-                ? t(($) => $.products.editor.edit_title)
-                : t(($) => $.products.editor.create_title)}
+                ? t(($) => $.products.version_editor.edit_title)
+                : t(($) => $.products.version_editor.create_title)}
             </DialogTitle>
             <DialogDescription>
-              {t(($) => $.products.editor.description)}
+              {t(($) => $.products.version_editor.description)}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-5 py-2">
             <div className="space-y-2">
               <FieldLabel htmlFor="product-version-name">
-                {t(($) => $.products.editor.name)}
+                {t(($) => $.products.version_editor.name)}
               </FieldLabel>
               <Input
                 id="product-version-name"
@@ -672,19 +697,19 @@ function ProductVersionEditorDialog({
                 onChange={(event) =>
                   setDraft((current) => ({ ...current, name: event.target.value }))
                 }
-                placeholder={t(($) => $.products.editor.name_placeholder)}
+                placeholder={t(($) => $.products.version_editor.name_placeholder)}
               />
             </div>
             <div className="space-y-2">
               <FieldLabel htmlFor="product-version-directory">
-                存放目录
+                {t(($) => $.products.versions.directory)}
               </FieldLabel>
               <div className="flex gap-2">
                 <Input
                   id="product-version-directory"
                   readOnly
                   value={selectedFolderName}
-                  placeholder="选择KB文件夹"
+                  placeholder={t(($) => $.products.versions.directory_placeholder)}
                   className="flex-1"
                 />
                 <Button
@@ -699,7 +724,7 @@ function ProductVersionEditorDialog({
             </div>
             <div className="space-y-2">
               <FieldLabel htmlFor="product-version-remark">
-                {t(($) => $.products.editor.remark)}
+                {t(($) => $.products.version_editor.remark)}
               </FieldLabel>
               <Textarea
                 id="product-version-remark"
@@ -709,18 +734,35 @@ function ProductVersionEditorDialog({
                 onChange={(event) =>
                   setDraft((current) => ({ ...current, remark: event.target.value }))
                 }
-                placeholder={t(($) => $.products.editor.remark_placeholder)}
+                placeholder={t(($) => $.products.version_editor.remark_placeholder)}
+              />
+            </div>
+            <div className="flex items-center justify-between space-x-2">
+              <div className="space-y-0.5">
+                <FieldLabel htmlFor="product-version-enabled">
+                  {t(($) => $.products.versions.enabled_label)}
+                </FieldLabel>
+                <div className="text-caption text-muted-foreground">
+                  {t(($) => $.products.versions.disabled_description)}
+                </div>
+              </div>
+              <Switch
+                id="product-version-enabled"
+                checked={draft.enabled}
+                onCheckedChange={(checked) =>
+                  setDraft((current) => ({ ...current, enabled: checked }))
+                }
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
-              {t(($) => $.products.editor.cancel)}
+              {t(($) => $.products.version_editor.cancel)}
             </Button>
             <Button onClick={submit} disabled={!draft.name.trim() || saving}>
               {saving
-                ? t(($) => $.products.editor.saving)
-                : t(($) => $.products.editor.save)}
+                ? t(($) => $.products.version_editor.saving)
+                : t(($) => $.products.version_editor.save)}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -789,5 +831,3 @@ function DeleteProductVersionDialog({
     </AlertDialog>
   );
 }
-
-

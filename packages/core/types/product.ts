@@ -12,6 +12,7 @@ export interface ProductVersion {
   directory: string;
   remark: string;
   folder_id?: string;
+  enabled: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -29,6 +30,7 @@ export interface CreateProductVersionRequest {
   directory?: string;
   remark?: string;
   folder_id?: string;
+  enabled?: boolean;
 }
 
 export interface UpdateProductVersionRequest {
@@ -36,6 +38,7 @@ export interface UpdateProductVersionRequest {
   directory?: string;
   remark?: string;
   folder_id?: string;
+  enabled?: boolean;
 }
 
 export interface ListProductsResponse {

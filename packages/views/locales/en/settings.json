@@ -384,6 +384,33 @@
       "collapse": "Collapse folder",
       "load_more": "Load more"
     },
+    "version_editor": {
+      "create_title": "New version",
+      "edit_title": "Edit version",
+      "description": "Define a version name, folder directory, and optional remark.",
+      "name": "Version name",
+      "name_placeholder": "Enter a version name",
+      "remark": "Remark",
+      "remark_placeholder": "Add a remark",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving..."
+    },
+    "versions": {
+      "select_product": "Select a product to manage its versions",
+      "search_placeholder": "Search version names",
+      "new_version": "New version",
+      "columns": {
+        "directory": "Directory",
+        "status": "Status"
+      },
+      "directory": "Folder directory",
+      "directory_placeholder": "Select a KB folder",
+      "enabled_label": "Enabled",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "disabled_description": "Disabled versions won't appear when creating tasks."
+    },
     "delete_dialog": {
       "title": "Delete product?",
       "description": "\"{{name}}\" will be permanently deleted.",

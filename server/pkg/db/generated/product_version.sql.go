@@ -12,9 +12,9 @@ import (
 )
 
 const createProductVersion = `-- name: CreateProductVersion :one
-INSERT INTO product_version (product_id, name, directory, remark, folder_id)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, product_id, name, directory, remark, created_at, updated_at, folder_id
+INSERT INTO product_version (product_id, name, directory, remark, folder_id, enabled)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, product_id, name, directory, remark, created_at, updated_at, folder_id, enabled
 `
 
 type CreateProductVersionParams struct {
@@ -23,6 +23,7 @@ type CreateProductVersionParams struct {
 	Directory string      `json:"directory"`
 	Remark    string      `json:"remark"`
 	FolderID  string      `json:"folder_id"`
+	Enabled   bool        `json:"enabled"`
 }
 
 func (q *Queries) CreateProductVersion(ctx context.Context, arg CreateProductVersionParams) (ProductVersion, error) {
@@ -32,6 +33,7 @@ func (q *Queries) CreateProductVersion(ctx context.Context, arg CreateProductVer
 		arg.Directory,
 		arg.Remark,
 		arg.FolderID,
+		arg.Enabled,
 	)
 	var i ProductVersion
 	err := row.Scan(
@@ -43,6 +45,7 @@ func (q *Queries) CreateProductVersion(ctx context.Context, arg CreateProductVer
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.FolderID,
+		&i.Enabled,
 	)
 	return i, err
 }
@@ -61,7 +64,7 @@ func (q *Queries) DeleteProductVersion(ctx context.Context, id pgtype.UUID) (pgt
 }
 
 const getProductVersion = `-- name: GetProductVersion :one
-SELECT id, product_id, name, directory, remark, created_at, updated_at, folder_id
+SELECT id, product_id, name, directory, remark, created_at, updated_at, folder_id, enabled
 FROM product_version
 WHERE id = $1
 `
@@ -78,12 +81,50 @@ func (q *Queries) GetProductVersion(ctx context.Context, id pgtype.UUID) (Produc
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.FolderID,
+		&i.Enabled,
 	)
 	return i, err
 }
 
+const listEnabledProductVersions = `-- name: ListEnabledProductVersions :many
+SELECT id, product_id, name, directory, remark, created_at, updated_at, folder_id, enabled
+FROM product_version
+WHERE product_id = $1 AND enabled = true
+ORDER BY created_at DESC, id DESC
+`
+
+func (q *Queries) ListEnabledProductVersions(ctx context.Context, productID pgtype.UUID) ([]ProductVersion, error) {
+	rows, err := q.db.Query(ctx, listEnabledProductVersions, productID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ProductVersion{}
+	for rows.Next() {
+		var i ProductVersion
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProductID,
+			&i.Name,
+			&i.Directory,
+			&i.Remark,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.FolderID,
+			&i.Enabled,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listProductVersions = `-- name: ListProductVersions :many
-SELECT id, product_id, name, directory, remark, created_at, updated_at, folder_id
+SELECT id, product_id, name, directory, remark, created_at, updated_at, folder_id, enabled
 FROM product_version
 WHERE product_id = $1
 ORDER BY created_at DESC, id DESC
@@ -107,6 +148,7 @@ func (q *Queries) ListProductVersions(ctx context.Context, productID pgtype.UUID
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.FolderID,
+			&i.Enabled,
 		); err != nil {
 			return nil, err
 		}
@@ -124,9 +166,10 @@ SET name = $2,
     directory = $3,
     remark = $4,
     folder_id = $5,
+    enabled = $6,
     updated_at = now()
 WHERE id = $1
-RETURNING id, product_id, name, directory, remark, created_at, updated_at, folder_id
+RETURNING id, product_id, name, directory, remark, created_at, updated_at, folder_id, enabled
 `
 
 type UpdateProductVersionParams struct {
@@ -135,6 +178,7 @@ type UpdateProductVersionParams struct {
 	Directory string      `json:"directory"`
 	Remark    string      `json:"remark"`
 	FolderID  string      `json:"folder_id"`
+	Enabled   bool        `json:"enabled"`
 }
 
 func (q *Queries) UpdateProductVersion(ctx context.Context, arg UpdateProductVersionParams) (ProductVersion, error) {
@@ -144,6 +188,7 @@ func (q *Queries) UpdateProductVersion(ctx context.Context, arg UpdateProductVer
 		arg.Directory,
 		arg.Remark,
 		arg.FolderID,
+		arg.Enabled,
 	)
 	var i ProductVersion
 	err := row.Scan(
@@ -155,6 +200,7 @@ func (q *Queries) UpdateProductVersion(ctx context.Context, arg UpdateProductVer
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.FolderID,
+		&i.Enabled,
 	)
 	return i, err
 }

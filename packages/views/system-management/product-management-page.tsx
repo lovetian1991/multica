@@ -280,14 +280,18 @@ function ProductEditorDialog({
         <DialogHeader>
           <DialogTitle>
             {product
-              ? t(($) => $.products.editor.edit_title)
-              : t(($) => $.products.editor.create_title)}
+              ? t(($) => $.products.product_editor.edit_title)
+              : t(($) => $.products.product_editor.create_title)}
           </DialogTitle>
-          <DialogDescription>{t(($) => $.products.editor.description)}</DialogDescription>
+          <DialogDescription>
+            {t(($) => $.products.product_editor.description)}
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-5 py-2">
           <div className="space-y-2">
-            <FieldLabel htmlFor="system-product-name">{t(($) => $.products.editor.name)}</FieldLabel>
+            <FieldLabel htmlFor="system-product-name">
+              {t(($) => $.products.product_editor.name)}
+            </FieldLabel>
             <Input
               id="system-product-name"
               autoFocus
@@ -295,16 +299,18 @@ function ProductEditorDialog({
               maxLength={128}
               value={draft.name}
               onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
-              placeholder={t(($) => $.products.editor.name_placeholder)}
+              placeholder={t(($) => $.products.product_editor.name_placeholder)}
             />
           </div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
-            {t(($) => $.products.editor.cancel)}
+            {t(($) => $.products.product_editor.cancel)}
           </Button>
           <Button onClick={submit} disabled={!draft.name.trim() || saving}>
-            {saving ? t(($) => $.products.editor.saving) : t(($) => $.products.editor.save)}
+            {saving
+              ? t(($) => $.products.product_editor.saving)
+              : t(($) => $.products.product_editor.save)}
           </Button>
         </DialogFooter>
       </DialogContent>

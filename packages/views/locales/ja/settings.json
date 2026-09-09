@@ -384,6 +384,33 @@
       "collapse": "フォルダーを折りたたむ",
       "load_more": "さらに読み込む"
     },
+    "version_editor": {
+      "create_title": "新しいバージョン",
+      "edit_title": "バージョンを編集",
+      "description": "バージョン名、フォルダーパス、任意の備考を設定します。",
+      "name": "バージョン名",
+      "name_placeholder": "バージョン名を入力",
+      "remark": "備考",
+      "remark_placeholder": "備考を入力",
+      "cancel": "キャンセル",
+      "save": "保存",
+      "saving": "保存中..."
+    },
+    "versions": {
+      "select_product": "バージョンを管理する製品を選択してください",
+      "search_placeholder": "バージョン名を検索",
+      "new_version": "新しいバージョン",
+      "columns": {
+        "directory": "保存先フォルダー",
+        "status": "ステータス"
+      },
+      "directory": "保存先フォルダー",
+      "directory_placeholder": "KB フォルダーを選択",
+      "enabled_label": "有効状態",
+      "enabled": "有効",
+      "disabled": "無効",
+      "disabled_description": "無効にすると、タスク作成時にこのバージョンは表示されません。"
+    },
     "delete_dialog": {
       "title": "製品を削除しますか？",
       "description": "「{{name}}」を完全に削除します。",

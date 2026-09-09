@@ -384,6 +384,33 @@
       "collapse": "폴더 접기",
       "load_more": "더 불러오기"
     },
+    "version_editor": {
+      "create_title": "새 버전",
+      "edit_title": "버전 편집",
+      "description": "버전 이름, 폴더 디렉터리와 선택 사항인 비고를 설정합니다.",
+      "name": "버전 이름",
+      "name_placeholder": "버전 이름 입력",
+      "remark": "비고",
+      "remark_placeholder": "비고 입력",
+      "cancel": "취소",
+      "save": "저장",
+      "saving": "저장 중..."
+    },
+    "versions": {
+      "select_product": "버전을 관리할 제품을 선택하세요",
+      "search_placeholder": "버전 이름 검색",
+      "new_version": "새 버전",
+      "columns": {
+        "directory": "저장 폴더",
+        "status": "상태"
+      },
+      "directory": "저장 폴더",
+      "directory_placeholder": "KB 폴더 선택",
+      "enabled_label": "활성화 상태",
+      "enabled": "활성",
+      "disabled": "비활성",
+      "disabled_description": "비활성화하면 작업을 만들 때 이 버전이 표시되지 않습니다."
+    },
     "delete_dialog": {
       "title": "제품을 삭제할까요?",
       "description": "\"{{name}}\" 제품을 영구적으로 삭제합니다.",

@@ -26,6 +26,7 @@ type ProductVersionResponse struct {
 	Directory string `json:"directory"`
 	Remark    string `json:"remark"`
 	FolderID  string `json:"folder_id"`
+	Enabled   bool   `json:"enabled"`
 	CreatedAt string `json:"created_at"`
 	UpdatedAt string `json:"updated_at"`
 }
@@ -35,6 +36,7 @@ type ProductVersionRequest struct {
 	Directory string `json:"directory"`
 	Remark    string `json:"remark"`
 	FolderID  string `json:"folder_id"`
+	Enabled   *bool  `json:"enabled,omitempty"`
 }
 
 func productVersionToResponse(version db.ProductVersion) ProductVersionResponse {
@@ -45,6 +47,7 @@ func productVersionToResponse(version db.ProductVersion) ProductVersionResponse 
 		Directory: version.Directory,
 		Remark:    version.Remark,
 		FolderID:  version.FolderID,
+		Enabled:   version.Enabled,
 		CreatedAt: timestampToString(version.CreatedAt),
 		UpdatedAt: timestampToString(version.UpdatedAt),
 	}
@@ -128,12 +131,17 @@ func (h *Handler) CreateSystemProductVersion(w http.ResponseWriter, r *http.Requ
 	if !ok {
 		return
 	}
+	enabled := true
+	if request.Enabled != nil {
+		enabled = *request.Enabled
+	}
 	version, err := h.Queries.CreateProductVersion(r.Context(), db.CreateProductVersionParams{
 		ProductID: productIDUUID,
 		Name:      name,
 		Directory: directory,
 		Remark:    remark,
 		FolderID:  strings.TrimSpace(request.FolderID),
+		Enabled:   enabled,
 	})
 	if err != nil {
 		slog.Warn("CreateProductVersion failed", append(logger.RequestAttrs(r), "error", err)...)
@@ -160,12 +168,17 @@ func (h *Handler) UpdateSystemProductVersion(w http.ResponseWriter, r *http.Requ
 	if !ok {
 		return
 	}
+	enabled := true
+	if request.Enabled != nil {
+		enabled = *request.Enabled
+	}
 	version, err := h.Queries.UpdateProductVersion(r.Context(), db.UpdateProductVersionParams{
 		ID:        idUUID,
 		Name:      name,
 		Directory: directory,
 		Remark:    remark,
 		FolderID:  strings.TrimSpace(request.FolderID),
+		Enabled:   enabled,
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		writeError(w, http.StatusNotFound, "product version not found")
