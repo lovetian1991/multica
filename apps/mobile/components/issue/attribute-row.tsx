@@ -18,6 +18,7 @@
 import { useMemo } from "react";
 import { View } from "react-native";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import type {
   Issue,
@@ -32,6 +33,10 @@ import { ProjectIcon } from "@/components/ui/project-icon";
 import { AttributeChip } from "./attribute-chip";
 import { useActorLookup } from "@/data/use-actor-name";
 import { findProject, projectListOptions } from "@/data/queries/projects";
+import {
+  productListOptions,
+  productVersionListOptions,
+} from "@/data/queries/products";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { PRIORITY_LABEL as PRIORITY_FULL_LABEL } from "@/lib/issue-status";
 import { useIssueStatuses } from "@/lib/use-issue-statuses";
@@ -55,6 +60,7 @@ type IssuePickerField =
   | "assignee"
   | "label"
   | "project"
+  | "product-folder"
   | "due-date";
 
 const ISSUE_PICKER_PATHNAMES = {
@@ -63,6 +69,7 @@ const ISSUE_PICKER_PATHNAMES = {
   assignee: "/[workspace]/issue/[id]/picker/assignee",
   label: "/[workspace]/issue/[id]/picker/label",
   project: "/[workspace]/issue/[id]/picker/project",
+  "product-folder": "/[workspace]/issue/[id]/picker/product-folder",
   "due-date": "/[workspace]/issue/[id]/picker/due-date",
 } as const satisfies Record<IssuePickerField, string>;
 
@@ -90,6 +97,18 @@ export function AttributeRow({ issue }: { issue: Issue }) {
   const project = useMemo(
     () => findProject(projects, issue.project_id),
     [projects, issue.project_id],
+  );
+  const { data: products = [] } = useQuery(productListOptions());
+  const product = useMemo(
+    () => products.find((item) => item.id === issue.product_id),
+    [products, issue.product_id],
+  );
+  const { data: productVersions = [] } = useQuery(
+    productVersionListOptions(issue.product_id ?? null),
+  );
+  const productVersion = useMemo(
+    () => productVersions.find((item) => item.id === issue.product_version_id),
+    [productVersions, issue.product_version_id],
   );
 
   const labels = issue.labels ?? [];
@@ -208,6 +227,20 @@ export function AttributeRow({ issue }: { issue: Issue }) {
           onPress={() => openPicker("project")}
         />
       )}
+
+      {/* Product/version/folder selection mirrors the web task picker. Mobile
+          presents it as one stacked sheet because the desktop two-column
+          layout is not usable at phone width. */}
+      <AttributeChip
+        icon={<Ionicons name="library-outline" size={14} color={issue.product_id ? undefined : "#a1a1aa"} />}
+        label={product
+          ? productVersion
+            ? `${product.name} / ${productVersion.name}`
+            : product.name
+          : "产品版本"}
+        variant={product ? "filled" : "dimmed"}
+        onPress={() => openPicker("product-folder")}
+      />
 
       {/* Due date */}
       <AttributeChip

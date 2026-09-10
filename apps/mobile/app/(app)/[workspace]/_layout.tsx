@@ -219,6 +219,14 @@ export default function WorkspaceLayout() {
           name="issue/[id]/picker/due-date"
           options={SHEET_OPTIONS}
         />
+        <Stack.Screen
+          name="issue/[id]/picker/product-folder"
+          options={{
+            ...SHEET_OPTIONS,
+            headerShown: true,
+            title: "产品版本",
+          }}
+        />
         <Stack.Screen name="issue/[id]/runs" options={SHEET_OPTIONS} />
         {/* Full emoji picker for a comment reaction. Pushed from the "+"
             button inside the comment long-press tapback row — see
@@ -271,6 +279,14 @@ export default function WorkspaceLayout() {
         <Stack.Screen
           name="new-issue-picker/due-date"
           options={SHEET_OPTIONS}
+        />
+        <Stack.Screen
+          name="new-issue-picker/product-folder"
+          options={{
+            ...SHEET_OPTIONS,
+            headerShown: true,
+            title: "产品版本",
+          }}
         />
         {/* New-project draft formSheet pickers — same pattern as
             new-issue-picker/*. Stacked on top of `project/new` (a modal). */}

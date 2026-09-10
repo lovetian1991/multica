@@ -58,6 +58,9 @@ import type {
   User,
   Workspace,
   WorkspaceSubscriptionSummary,
+  ListProductsResponse,
+  ListProductVersionsResponse,
+  GetKBFoldersResponse,
 } from "@multica/core/types";
 import {
   AppConfigSchema,
@@ -70,6 +73,12 @@ import {
   ListIssueStatusesResponseSchema,
   TimelineEntriesSchema,
   WorkspaceSubscriptionSummarySchema,
+  ListProductsResponseSchema,
+  ListProductVersionsResponseSchema,
+  GetKBFoldersResponseSchema,
+  EMPTY_LIST_PRODUCTS_RESPONSE,
+  EMPTY_LIST_PRODUCT_VERSIONS_RESPONSE,
+  EMPTY_KB_FOLDERS_RESPONSE,
 } from "@multica/core/api/schemas";
 import type { AppConfigResponse } from "@multica/core/api/schemas";
 import {
@@ -968,6 +977,53 @@ class ApiClient {
     // half-populated detail page.
     return parseWithFallback(raw, ProjectSchema, EMPTY_PROJECT, {
       endpoint: "GET /api/projects/:id",
+    });
+  }
+
+  // Deployment-scoped product catalog used by issue creation and editing.
+  // These reads intentionally live in the mobile client instead of importing
+  // the web client so mobile keeps its own request lifecycle and drift guards.
+  async listProducts(opts?: { signal?: AbortSignal }): Promise<ListProductsResponse> {
+    const raw = await this.fetch<unknown>("/api/products", {
+      signal: opts?.signal,
+    });
+    return parseWithFallback(raw, ListProductsResponseSchema, EMPTY_LIST_PRODUCTS_RESPONSE, {
+      endpoint: "GET /api/products",
+    });
+  }
+
+  async listProductVersions(
+    productId: string,
+    opts?: { signal?: AbortSignal },
+  ): Promise<ListProductVersionsResponse> {
+    const raw = await this.fetch<unknown>(`/api/products/${productId}/versions`, {
+      signal: opts?.signal,
+    });
+    return parseWithFallback(
+      raw,
+      ListProductVersionsResponseSchema,
+      EMPTY_LIST_PRODUCT_VERSIONS_RESPONSE,
+      { endpoint: "GET /api/products/:id/versions" },
+    );
+  }
+
+  async getKBFolders(
+    folderId?: string,
+    pageIndex?: number,
+    opts?: { signal?: AbortSignal },
+  ): Promise<GetKBFoldersResponse> {
+    const params = new URLSearchParams();
+    if (folderId) params.set("folder_id", folderId);
+    if (pageIndex !== undefined && pageIndex > 0) {
+      params.set("page_index", String(pageIndex));
+    }
+    const query = params.toString();
+    const raw = await this.fetch<unknown>(
+      `/api/system/kb/folders${query ? `?${query}` : ""}`,
+      { signal: opts?.signal },
+    );
+    return parseWithFallback(raw, GetKBFoldersResponseSchema, EMPTY_KB_FOLDERS_RESPONSE, {
+      endpoint: "GET /api/system/kb/folders",
     });
   }
 

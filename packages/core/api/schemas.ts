@@ -483,6 +483,8 @@ export const EMPTY_LIST_LABELS_RESPONSE: ListLabelsResponse = {
 export const ProductSchema = z.object({
   id: z.string(),
   name: z.string(),
+  directory: z.string().optional().default(""),
+  remark: z.string().optional().default(""),
   created_at: z.string(),
   updated_at: z.string(),
 }).loose();
@@ -511,6 +513,7 @@ export const ProductVersionSchema = z.object({
   directory: z.string().optional().default(""),
   remark: z.string().optional().default(""),
   folder_id: z.string().optional().default(""),
+  enabled: z.boolean().optional().default(true),
   created_at: z.string(),
   updated_at: z.string(),
 }).loose();
@@ -522,6 +525,7 @@ export const EMPTY_PRODUCT_VERSION: ProductVersion = {
   directory: "",
   remark: "",
   folder_id: "",
+  enabled: true,
   created_at: "",
   updated_at: "",
 };

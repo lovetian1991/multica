@@ -25,6 +25,9 @@ import { create } from "zustand";
 import type {
   IssuePriority,
   IssueStatus,
+  KBFolder,
+  Product,
+  ProductVersion,
   Project,
 } from "@multica/core/types";
 import type { AssigneeValue } from "@/components/issue/pickers/assignee-picker-body";
@@ -35,11 +38,19 @@ interface NewIssueDraftState {
   assignee: AssigneeValue;
   dueDate: string | null;
   project: Project | null;
+  product: Product | null;
+  productVersion: ProductVersion | null;
+  kbFolder: KBFolder | null;
   setStatus: (next: IssueStatus) => void;
   setPriority: (next: IssuePriority) => void;
   setAssignee: (next: AssigneeValue) => void;
   setDueDate: (next: string | null) => void;
   setProject: (next: Project | null) => void;
+  setProductSelection: (next: {
+    product: Product;
+    productVersion: ProductVersion;
+    kbFolder: KBFolder;
+  } | null) => void;
   reset: () => void;
 }
 
@@ -54,14 +65,31 @@ const INITIAL: Pick<
   project: null,
 };
 
+const INITIAL_SELECTION = {
+  product: null,
+  productVersion: null,
+  kbFolder: null,
+} as const;
+
 export const useNewIssueDraftStore = create<NewIssueDraftState>((set) => ({
   ...INITIAL,
+  ...INITIAL_SELECTION,
   setStatus: (next) => set({ status: next }),
   setPriority: (next) => set({ priority: next }),
   setAssignee: (next) => set({ assignee: next }),
   setDueDate: (next) => set({ dueDate: next }),
   setProject: (next) => set({ project: next }),
-  reset: () => set({ ...INITIAL }),
+  setProductSelection: (next) =>
+    set(
+      next
+        ? {
+            product: next.product,
+            productVersion: next.productVersion,
+            kbFolder: next.kbFolder,
+          }
+        : INITIAL_SELECTION,
+    ),
+  reset: () => set({ ...INITIAL, ...INITIAL_SELECTION }),
 }));
 
 /**

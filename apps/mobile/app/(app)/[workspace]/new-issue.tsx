@@ -45,6 +45,9 @@ export default function NewIssueModal() {
   const assignee = useNewIssueDraftStore((s) => s.assignee);
   const dueDate = useNewIssueDraftStore((s) => s.dueDate);
   const project = useNewIssueDraftStore((s) => s.project);
+  const product = useNewIssueDraftStore((s) => s.product);
+  const productVersion = useNewIssueDraftStore((s) => s.productVersion);
+  const kbFolder = useNewIssueDraftStore((s) => s.kbFolder);
   const resetDraft = useNewIssueDraftStore((s) => s.reset);
 
   useEffect(() => {
@@ -74,6 +77,9 @@ export default function NewIssueModal() {
           : {}),
         ...(dueDate ? { due_date: dueDate } : {}),
         ...(project ? { project_id: project.id } : {}),
+        ...(product ? { product_id: product.id } : {}),
+        ...(productVersion ? { product_version_id: productVersion.id } : {}),
+        ...(kbFolder ? { kb_folder_id: kbFolder.id } : {}),
       });
       router.back();
     } catch (err) {
@@ -90,6 +96,9 @@ export default function NewIssueModal() {
     assignee,
     dueDate,
     project,
+    product,
+    productVersion,
+    kbFolder,
     createIssue,
   ]);
 

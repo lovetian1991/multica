@@ -35,6 +35,7 @@ type NewIssuePickerField =
   | "priority"
   | "assignee"
   | "project"
+  | "product-folder"
   | "due-date";
 
 const NEW_ISSUE_PICKER_PATHNAMES = {
@@ -42,6 +43,7 @@ const NEW_ISSUE_PICKER_PATHNAMES = {
   priority: "/[workspace]/new-issue-picker/priority",
   assignee: "/[workspace]/new-issue-picker/assignee",
   project: "/[workspace]/new-issue-picker/project",
+  "product-folder": "/[workspace]/new-issue-picker/product-folder",
   "due-date": "/[workspace]/new-issue-picker/due-date",
 } as const satisfies Record<NewIssuePickerField, string>;
 
@@ -52,6 +54,9 @@ export function CreateFormAttributeRow() {
   const assignee = useNewIssueDraftStore((s) => s.assignee);
   const dueDate = useNewIssueDraftStore((s) => s.dueDate);
   const project = useNewIssueDraftStore((s) => s.project);
+  const product = useNewIssueDraftStore((s) => s.product);
+  const productVersion = useNewIssueDraftStore((s) => s.productVersion);
+  const kbFolder = useNewIssueDraftStore((s) => s.kbFolder);
 
   const { getName } = useActorLookup();
   // The draft can hold a custom status the user picked in the sheet. (MUL-6243)
@@ -136,6 +141,14 @@ export function CreateFormAttributeRow() {
           label={project?.title ?? "项目"}
           variant={project ? "filled" : "dimmed"}
           onPress={() => open("project")}
+        />
+        <AttributeChip
+          icon={<Ionicons name="library-outline" size={14} color={product ? undefined : "#a1a1aa"} />}
+          label={product && productVersion && kbFolder
+            ? `${product.name} / ${productVersion.name} / ${kbFolder.name}`
+            : "产品版本"}
+          variant={product && productVersion && kbFolder ? "filled" : "dimmed"}
+          onPress={() => open("product-folder")}
         />
       </View>
     </View>

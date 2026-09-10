@@ -576,6 +576,7 @@ describe("Product schemas", () => {
       updated_at: baseProduct.updated_at,
     });
     expect(parsed.folder_id).toBe("12998");
+    expect(parsed.enabled).toBe(true);
   });
 });
 
