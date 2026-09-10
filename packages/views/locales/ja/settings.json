@@ -421,14 +421,14 @@
     }
   },
   "system_management": {
-    "title": "System management",
-    "catalog": "Catalog management",
-    "configuration": "System configuration",
-    "products": "Products",
-    "workspaces": "Workspaces",
-    "users": "Users & permissions",
-    "settings": "System settings",
-    "coming_soon": "Coming soon"
+    "title": "システム管理",
+    "catalog": "カタログ管理",
+    "configuration": "システム設定",
+    "products": "製品",
+    "workspaces": "ワークスペース",
+    "users": "ユーザーと権限",
+    "settings": "システム設定",
+    "coming_soon": "近日公開"
   },
   "plugins": {
     "title": "Plugins",

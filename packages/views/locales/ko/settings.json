@@ -421,14 +421,14 @@
     }
   },
   "system_management": {
-    "title": "System management",
-    "catalog": "Catalog management",
-    "configuration": "System configuration",
-    "products": "Products",
-    "workspaces": "Workspaces",
-    "users": "Users & permissions",
-    "settings": "System settings",
-    "coming_soon": "Coming soon"
+    "title": "시스템 관리",
+    "catalog": "카탈로그 관리",
+    "configuration": "시스템 설정",
+    "products": "제품",
+    "workspaces": "워크스페이스",
+    "users": "사용자 및 권한",
+    "settings": "시스템 설정",
+    "coming_soon": "출시 예정"
   },
   "plugins": {
     "title": "Plugins",
