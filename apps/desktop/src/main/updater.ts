@@ -11,11 +11,15 @@ import {
   updaterPreferencesPath,
 } from "./updater-preferences";
 
+// Local/self-hosted builds can disable the public GitHub updater without
+// deleting the implementation. Flip this back to false to restore updates.
+const DISABLE_UPDATES = true;
+
 // Silent background updates: electron-updater downloads on its own as soon
 // as `update-available` fires; we only surface UI when the package is fully
 // downloaded and ready to install on next quit.
-autoUpdater.autoDownload = true;
-autoUpdater.autoInstallOnAppQuit = true;
+autoUpdater.autoDownload = !DISABLE_UPDATES;
+autoUpdater.autoInstallOnAppQuit = !DISABLE_UPDATES;
 
 // Windows arm64 ships its own update metadata channel because
 // electron-builder's `latest.yml` is not arch-suffixed on Windows — both
@@ -87,6 +91,9 @@ function sendToLiveRenderer(
 // callers onto the same in-flight promise.
 let inFlightCheck: Promise<unknown> | null = null;
 function checkForUpdatesOnce(): Promise<unknown> {
+  if (DISABLE_UPDATES) {
+    return Promise.resolve(null);
+  }
   if (inFlightCheck) return inFlightCheck;
   const p = autoUpdater
     .checkForUpdates()
@@ -137,6 +144,7 @@ export function setupAutoUpdater(getMainWindow: () => BrowserWindow | null): voi
   // Arm the startup + periodic background checks. Idempotent: an already-armed
   // timer is left in place so re-enabling never stacks duplicate schedules.
   const scheduleBackgroundChecks = (): void => {
+    if (DISABLE_UPDATES) return;
     if (startupTimer === null && !startupCheckElapsed) {
       // Initial check shortly after startup so we don't block boot.
       startupTimer = setTimeout(() => {
@@ -198,10 +206,12 @@ export function setupAutoUpdater(getMainWindow: () => BrowserWindow | null): voi
   // Retained for IPC back-compat with older renderer bundles. With
   // autoDownload=true the renderer no longer triggers this path.
   ipcMain.handle("updater:download", () => {
+    if (DISABLE_UPDATES) return;
     return autoUpdater.downloadUpdate();
   });
 
   ipcMain.handle("updater:install", () => {
+    if (DISABLE_UPDATES) return;
     autoUpdater.quitAndInstall(false, true);
   });
 

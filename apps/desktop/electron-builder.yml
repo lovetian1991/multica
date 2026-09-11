@@ -123,6 +123,9 @@ rpm:
   fpm:
     - "--rpm-rpmbuild-define=_build_id_links none"
 win:
+  # Use the explicit Windows ICO so NSIS and the generated executable share
+  # the transparent DIB/AND-mask icon instead of relying on auto-discovery.
+  icon: build/icon.ico
   target:
     - nsis
   artifactName: multica-desktop-${version}-windows-${arch}.${ext}
