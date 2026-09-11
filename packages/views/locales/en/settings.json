@@ -337,6 +337,7 @@
   "products": {
     "system_description": "Manage products across workspaces from the system administration area.",
     "system_admin_required": "System administrator access is required.",
+    "unauthorized": "Authentication is required. Please sign in.",
     "load_failed": "Couldn't load products.",
     "title": "Products",
     "description": "Manage the shared product catalog available to every workspace.",
@@ -357,7 +358,7 @@
       "edit": "Edit",
       "delete": "Delete"
     },
-    "editor": {
+    "product_editor": {
       "create_title": "New product",
       "edit_title": "Edit product",
       "description": "Define a product name, folder directory, and optional remark.",

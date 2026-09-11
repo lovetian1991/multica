@@ -337,6 +337,7 @@
   "products": {
     "system_description": "在系统管理区域统一管理所有工作区共享的公共产品目录。",
     "system_admin_required": "需要系统管理员权限。",
+    "unauthorized": "需要认证，请登录。",
     "load_failed": "无法加载产品。",
     "title": "产品管理",
     "description": "管理所有工作区共享的公共产品目录。",
@@ -357,7 +358,7 @@
       "edit": "编辑",
       "delete": "删除"
     },
-    "editor": {
+    "product_editor": {
       "create_title": "新建产品",
       "edit_title": "编辑产品",
       "description": "设置产品名称、文件夹目录和可选备注。",
