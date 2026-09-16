@@ -3159,6 +3159,20 @@ func (h *Handler) buildClaimedTaskResponse(r *http.Request, task *db.AgentTaskQu
 		}
 	}
 
+	// KB platform address (system settings): the browser-facing address of the KB
+	// UI, which differs from the Multica facade the daemon hands skills for API
+	// calls. Read on every claim so an admin's edit lands on the next task.
+	// Cosmetic only — failure leaves artifact links pointing at the facade rather
+	// than failing the claim, and tasks without a KB association simply get none.
+	if settings, settingsErr := h.Queries.GetSystemSettings(r.Context()); settingsErr != nil {
+		slog.Warn("task claim: failed to load system settings for KB address",
+			"task_id", uuidToString(task.ID),
+			"error", settingsErr,
+		)
+	} else {
+		resp.KBEnvironmentURL = strings.TrimSpace(settings.KbEnvironmentUrl)
+	}
+
 	// Workspace status catalog (MUL-6460): active CUSTOM statuses only, so the
 	// daemon can render them into the brief's status-command line. Read on every
 	// claim, like the agent row, so an admin's edit lands on the next task.

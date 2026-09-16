@@ -564,6 +564,7 @@ func TestTaskMulticaEnvironmentIncludesPrivateConfigRoot(t *testing.T) {
 		"TMP":                          "/task/tmp",
 		"TEMP":                         "/task/tmp",
 		"MULTICA_KB_FOLDER_ID":         "",
+		"OPENCONTENT_WEB_URL":          "",
 	}
 	if !maps.Equal(env, want) {
 		t.Fatalf("taskMulticaEnvironment() = %#v, want %#v", env, want)
@@ -607,6 +608,48 @@ func TestTaskMulticaEnvironmentIncludesQuickCreateKBFolderID(t *testing.T) {
 	issue := taskMulticaEnvironment(Task{ID: "issue-task", KBFolderID: " 1413915 "}, "agent-name", "mat_task", "/task/config", "/daemon/workspaces", "https://task.example", 19514, 1, "/task/tmp")
 	if got := issue["MULTICA_KB_FOLDER_ID"]; got != "1413915" {
 		t.Fatalf("issue task MULTICA_KB_FOLDER_ID = %q, want %q", got, "1413915")
+	}
+}
+
+// The KB address reaches the agent as OPENCONTENT_WEB_URL, from a claim field the
+// struct literal alone cannot prove: a rename on either side of the wire fails
+// nothing and silently leaves artifact preview links on the Multica facade
+// address, which is why the claim is decoded from JSON here.
+func TestTaskMulticaEnvironmentCarriesKBEnvironmentURL(t *testing.T) {
+	t.Parallel()
+
+	var task Task
+	if err := json.Unmarshal([]byte(`{"id": "task-kb-url", "kb_environment_url": " https://kb.example.com "}`), &task); err != nil {
+		t.Fatalf("decode claim: %v", err)
+	}
+	env := taskMulticaEnvironment(task, "agent-name", "mat_task", "/task/config", "/daemon/workspaces", "https://task.example", 19514, 1, "/task/tmp")
+	if got := env["OPENCONTENT_WEB_URL"]; got != "https://kb.example.com" {
+		t.Fatalf("OPENCONTENT_WEB_URL = %q, want %q", got, "https://kb.example.com")
+	}
+
+	// The platform default has to land before the custom_env layer so an agent
+	// can point its own artifact links at a different KB instance.
+	layerCustomEnvAndHermesHome(env, map[string]string{"OPENCONTENT_WEB_URL": "https://other.example.com"}, "", nil)
+	if got := env["OPENCONTENT_WEB_URL"]; got != "https://other.example.com" {
+		t.Fatalf("custom env did not override OPENCONTENT_WEB_URL: %q", got)
+	}
+
+	// A server predating the field sends no address, and a deployment that never
+	// filled in system settings sends an empty one. Both must leave the skill
+	// rewriting nothing rather than pointing at an empty origin.
+	for name, claim := range map[string]string{
+		"older server":     `{"id": "legacy-task"}`,
+		"address unset":    `{"id": "plain-task", "kb_environment_url": ""}`,
+		"whitespace value": `{"id": "blank-task", "kb_environment_url": "   "}`,
+	} {
+		var decoded Task
+		if err := json.Unmarshal([]byte(claim), &decoded); err != nil {
+			t.Fatalf("%s: decode claim: %v", name, err)
+		}
+		plain := taskMulticaEnvironment(decoded, "agent-name", "mat_task", "/task/config", "/daemon/workspaces", "https://task.example", 19514, 1, "/task/tmp")
+		if got := plain["OPENCONTENT_WEB_URL"]; got != "" {
+			t.Errorf("%s: OPENCONTENT_WEB_URL = %q, want empty so links keep oc.js's own origin", name, got)
+		}
 	}
 }
 
