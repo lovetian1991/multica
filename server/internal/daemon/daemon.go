@@ -176,9 +176,14 @@ func taskMulticaEnvironment(task Task, agentName, token, configRoot, workspacesR
 		"TMP":                  tempDir,
 		"TEMP":                 tempDir,
 	}
-	if folderID := strings.TrimSpace(task.QuickCreateKBFolderID); folderID != "" {
-		env["MULTICA_KB_FOLDER_ID"] = folderID
+	folderID := strings.TrimSpace(task.KBFolderID)
+	if folderID == "" {
+		// Keep compatibility with servers that only know the quick-create field.
+		folderID = strings.TrimSpace(task.QuickCreateKBFolderID)
 	}
+	// Keep the variable present for every task. An empty value means the task
+	// has no issue or quick-create folder association.
+	env["MULTICA_KB_FOLDER_ID"] = folderID
 	return env
 }
 

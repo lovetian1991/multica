@@ -87,7 +87,8 @@ claim 时服务端返回：
 ```json
 {
   "quick_create_product_id": "<product-uuid>",
-  "quick_create_kb_folder_id": "12998"
+  "quick_create_kb_folder_id": "12998",
+  "kb_folder_id": "12998"
 }
 ```
 
@@ -122,7 +123,7 @@ MULTICA_TASK_SLOT=<daemon-slot>
 OPENCONTENT_APIKEY=<workspace-oc-key>
 ```
 
-快速创建选择了 folder 时，还会注入：
+所有任务都会注入该变量，folder 来源按任务类型选择：
 
 ```text
 MULTICA_QUICK_CREATE_TASK_ID=<task-uuid>
@@ -131,8 +132,9 @@ MULTICA_KB_FOLDER_ID=12998
 
 规则：
 
-- 只在 folder ID 非空时注入 `MULTICA_KB_FOLDER_ID`。
-- 普通 issue、chat、autopilot 任务不注入该变量。
+- 普通 issue 使用 `issue.kb_folder_id`。
+- quick-create 使用 `context.kb_folder_id`。
+- chat、autopilot 和没有 folder 的任务也会注入 `MULTICA_KB_FOLDER_ID`，值为空字符串。
 - `custom_env` 不能覆盖任何 `MULTICA_*` 变量或 `OPENCONTENT_APIKEY`。
 - `MULTICA_TOKEN` 是当前 `(agent, task)` 的临时令牌，不能当作长期凭据使用。
 

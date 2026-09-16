@@ -2269,6 +2269,9 @@ func (h *Handler) buildClaimedTaskResponse(r *http.Request, task *db.AgentTaskQu
 		}
 		resp.ThreadName = issue.Title
 		issueNumber = issue.Number
+		if issue.KBFolderID.Valid {
+			resp.KBFolderID = strings.TrimSpace(issue.KBFolderID.String)
+		}
 
 		// Squad-leader briefing injection: keyed off the task being a
 		// leader-task (is_leader_task) carrying a squad_id — NOT off the
@@ -2897,6 +2900,7 @@ func (h *Handler) buildClaimedTaskResponse(r *http.Request, task *db.AgentTaskQu
 			resp.QuickCreateDueDate = qc.DueDate
 			resp.QuickCreateProductID = qc.ProductID
 			resp.QuickCreateKBFolderID = qc.KBFolderID
+			resp.KBFolderID = strings.TrimSpace(qc.KBFolderID)
 			resp.QuickCreateAttachmentIDs = append([]string(nil), qc.AttachmentIDs...)
 			resp.ThreadName = qc.Prompt
 			resp.WorkspaceID = qc.WorkspaceID

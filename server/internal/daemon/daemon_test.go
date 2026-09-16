@@ -563,6 +563,7 @@ func TestTaskMulticaEnvironmentIncludesPrivateConfigRoot(t *testing.T) {
 		"TMPDIR":                       "/task/tmp",
 		"TMP":                          "/task/tmp",
 		"TEMP":                         "/task/tmp",
+		"MULTICA_KB_FOLDER_ID":         "",
 	}
 	if !maps.Equal(env, want) {
 		t.Fatalf("taskMulticaEnvironment() = %#v, want %#v", env, want)
@@ -588,9 +589,9 @@ func TestTaskMulticaEnvironmentIncludesQuickCreateKBFolderID(t *testing.T) {
 	t.Parallel()
 
 	task := Task{
-		ID:                   "task-kb-folder",
-		AgentID:              "agent-test",
-		WorkspaceID:          "workspace-test",
+		ID:                    "task-kb-folder",
+		AgentID:               "agent-test",
+		WorkspaceID:           "workspace-test",
 		QuickCreateKBFolderID: " 12998 ",
 	}
 	env := taskMulticaEnvironment(task, "agent-name", "mat_task", "/task/config", "/daemon/workspaces", "https://task.example", 19514, 1, "/task/tmp")
@@ -599,8 +600,13 @@ func TestTaskMulticaEnvironmentIncludesQuickCreateKBFolderID(t *testing.T) {
 	}
 
 	plain := taskMulticaEnvironment(Task{ID: "plain-task"}, "agent-name", "mat_task", "/task/config", "/daemon/workspaces", "https://task.example", 19514, 1, "/task/tmp")
-	if _, ok := plain["MULTICA_KB_FOLDER_ID"]; ok {
-		t.Fatal("plain task unexpectedly received MULTICA_KB_FOLDER_ID")
+	if got := plain["MULTICA_KB_FOLDER_ID"]; got != "" {
+		t.Fatalf("plain task MULTICA_KB_FOLDER_ID = %q, want empty value", got)
+	}
+
+	issue := taskMulticaEnvironment(Task{ID: "issue-task", KBFolderID: " 1413915 "}, "agent-name", "mat_task", "/task/config", "/daemon/workspaces", "https://task.example", 19514, 1, "/task/tmp")
+	if got := issue["MULTICA_KB_FOLDER_ID"]; got != "1413915" {
+		t.Fatalf("issue task MULTICA_KB_FOLDER_ID = %q, want %q", got, "1413915")
 	}
 }
 
