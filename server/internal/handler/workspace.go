@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -96,21 +98,30 @@ func normalizeIssuePrefix(raw string) (string, bool) {
 const issuePrefixFormatError = "issue prefix must be 1-10 uppercase letters or digits"
 
 type WorkspaceResponse struct {
-	ID              string  `json:"id"`
-	Name            string  `json:"name"`
-	Slug            string  `json:"slug"`
-	Description     *string `json:"description"`
-	Context         *string `json:"context"`
-	Settings        any     `json:"settings"`
-	Repos           any     `json:"repos"`
-	IssuePrefix     string  `json:"issue_prefix"`
-	AvatarURL       *string `json:"avatar_url"`
-	OCKeyConfigured bool    `json:"oc_key_configured"`
-	CreatedAt       string  `json:"created_at"`
-	UpdatedAt       string  `json:"updated_at"`
+	ID                       string  `json:"id"`
+	Name                     string  `json:"name"`
+	Slug                     string  `json:"slug"`
+	Description              *string `json:"description"`
+	Context                  *string `json:"context"`
+	Settings                 any     `json:"settings"`
+	Repos                    any     `json:"repos"`
+	IssuePrefix              string  `json:"issue_prefix"`
+	AvatarURL                *string `json:"avatar_url"`
+	OCKeyConfigured          bool    `json:"oc_key_configured"`
+	ZentaoPasswordConfigured bool    `json:"zentao_password_configured"`
+	CreatedAt                string  `json:"created_at"`
+	UpdatedAt                string  `json:"updated_at"`
 }
 
-const workspaceOCKeySettingsField = "oc_key_encrypted"
+const (
+	workspaceOCKeySettingsField          = "oc_key_encrypted"
+	workspaceZentaoURLSettingsField      = "zentao_url"
+	workspaceZentaoAccountSettingsField  = "zentao_account"
+	workspaceZentaoPasswordSettingsField = "zentao_password_encrypted"
+	maxZentaoURLLength                   = 2048
+	maxZentaoAccountLength               = 256
+	maxZentaoPasswordLength              = 4096
+)
 
 func (h *Handler) workspaceToResponse(w db.Workspace) WorkspaceResponse {
 	var settings any
@@ -121,11 +132,16 @@ func (h *Handler) workspaceToResponse(w db.Workspace) WorkspaceResponse {
 		settings = map[string]any{}
 	}
 	ocKeyConfigured := false
+	zentaoPasswordConfigured := false
 	if settingsMap, ok := settings.(map[string]any); ok {
 		if encrypted, ok := settingsMap[workspaceOCKeySettingsField].(string); ok {
 			ocKeyConfigured = strings.TrimSpace(encrypted) != ""
 		}
 		delete(settingsMap, workspaceOCKeySettingsField)
+		if encrypted, ok := settingsMap[workspaceZentaoPasswordSettingsField].(string); ok {
+			zentaoPasswordConfigured = strings.TrimSpace(encrypted) != ""
+		}
+		delete(settingsMap, workspaceZentaoPasswordSettingsField)
 	}
 	var repos any
 	if w.Repos != nil {
@@ -135,18 +151,19 @@ func (h *Handler) workspaceToResponse(w db.Workspace) WorkspaceResponse {
 		repos = []any{}
 	}
 	return WorkspaceResponse{
-		ID:              uuidToString(w.ID),
-		Name:            w.Name,
-		Slug:            w.Slug,
-		Description:     textToPtr(w.Description),
-		Context:         textToPtr(w.Context),
-		Settings:        settings,
-		Repos:           repos,
-		IssuePrefix:     w.IssuePrefix,
-		AvatarURL:       h.resolveAvatarURLPtr(textToPtr(w.AvatarUrl)),
-		OCKeyConfigured: ocKeyConfigured,
-		CreatedAt:       timestampToString(w.CreatedAt),
-		UpdatedAt:       timestampToString(w.UpdatedAt),
+		ID:                       uuidToString(w.ID),
+		Name:                     w.Name,
+		Slug:                     w.Slug,
+		Description:              textToPtr(w.Description),
+		Context:                  textToPtr(w.Context),
+		Settings:                 settings,
+		Repos:                    repos,
+		IssuePrefix:              w.IssuePrefix,
+		AvatarURL:                h.resolveAvatarURLPtr(textToPtr(w.AvatarUrl)),
+		OCKeyConfigured:          ocKeyConfigured,
+		ZentaoPasswordConfigured: zentaoPasswordConfigured,
+		CreatedAt:                timestampToString(w.CreatedAt),
+		UpdatedAt:                timestampToString(w.UpdatedAt),
 	}
 }
 
@@ -181,6 +198,62 @@ func (h *Handler) workspaceOCKey(w db.Workspace) (string, error) {
 	plaintext, err := h.SystemSettingsSecretBox.Open(sealed)
 	if err != nil {
 		return "", fmt.Errorf("decrypt workspace OC key: %w", err)
+	}
+	return string(plaintext), nil
+}
+
+func workspaceSettingString(settings map[string]any, key string) string {
+	value, ok := settings[key].(string)
+	if !ok {
+		return ""
+	}
+	return strings.TrimSpace(value)
+}
+
+func setWorkspaceSettingString(settings map[string]any, key, value string) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		delete(settings, key)
+		return
+	}
+	settings[key] = value
+}
+
+func validateZentaoURL(raw string) (string, error) {
+	value := strings.TrimSpace(raw)
+	if value == "" {
+		return "", nil
+	}
+	if utf8.RuneCountInString(value) > maxZentaoURLLength {
+		return "", errors.New("zentao url is too long")
+	}
+	parsed, err := url.Parse(value)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" ||
+		(parsed.Scheme != "http" && parsed.Scheme != "https") {
+		return "", errors.New("zentao url must be a valid http or https url")
+	}
+	return strings.TrimRight(value, "/"), nil
+}
+
+func (h *Handler) workspaceZentaoPassword(w db.Workspace) (string, error) {
+	settings, err := workspaceSettingsMap(w.Settings)
+	if err != nil {
+		return "", err
+	}
+	encoded, ok := settings[workspaceZentaoPasswordSettingsField].(string)
+	if !ok || strings.TrimSpace(encoded) == "" {
+		return "", nil
+	}
+	if h.SystemSettingsSecretBox == nil {
+		return "", errors.New("workspace Zentao password encryption is not configured")
+	}
+	sealed, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return "", fmt.Errorf("decode workspace Zentao password: %w", err)
+	}
+	plaintext, err := h.SystemSettingsSecretBox.Open(sealed)
+	if err != nil {
+		return "", fmt.Errorf("decrypt workspace Zentao password: %w", err)
 	}
 	return string(plaintext), nil
 }
@@ -367,15 +440,19 @@ func (h *Handler) CreateWorkspace(w http.ResponseWriter, r *http.Request) {
 }
 
 type UpdateWorkspaceRequest struct {
-	Name        *string `json:"name"`
-	Description *string `json:"description"`
-	Context     *string `json:"context"`
-	Settings    any     `json:"settings"`
-	Repos       any     `json:"repos"`
-	IssuePrefix *string `json:"issue_prefix"`
-	AvatarURL   *string `json:"avatar_url"`
-	OCKey       *string `json:"oc_key"`
-	ClearOCKey  bool    `json:"clear_oc_key"`
+	Name                *string `json:"name"`
+	Description         *string `json:"description"`
+	Context             *string `json:"context"`
+	Settings            any     `json:"settings"`
+	Repos               any     `json:"repos"`
+	IssuePrefix         *string `json:"issue_prefix"`
+	AvatarURL           *string `json:"avatar_url"`
+	OCKey               *string `json:"oc_key"`
+	ClearOCKey          bool    `json:"clear_oc_key"`
+	ZentaoURL           *string `json:"zentao_url"`
+	ZentaoAccount       *string `json:"zentao_account"`
+	ZentaoPassword      *string `json:"zentao_password"`
+	ClearZentaoPassword bool    `json:"clear_zentao_password"`
 }
 
 type workspaceRepoRef struct {
@@ -439,9 +516,25 @@ func (h *Handler) UpdateWorkspace(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "oc_key and clear_oc_key cannot be used together")
 		return
 	}
+	if req.ZentaoPassword != nil && req.ClearZentaoPassword {
+		writeError(w, http.StatusBadRequest, "zentao_password and clear_zentao_password cannot be used together")
+		return
+	}
+	if req.ZentaoAccount != nil && utf8.RuneCountInString(strings.TrimSpace(*req.ZentaoAccount)) > maxZentaoAccountLength {
+		writeError(w, http.StatusBadRequest, "zentao account is too long")
+		return
+	}
+	if req.ZentaoPassword != nil && utf8.RuneCountInString(strings.TrimSpace(*req.ZentaoPassword)) > maxZentaoPasswordLength {
+		writeError(w, http.StatusBadRequest, "zentao password is too long")
+		return
+	}
 	needsSettings := req.Settings != nil ||
 		(req.OCKey != nil && strings.TrimSpace(*req.OCKey) != "") ||
-		req.ClearOCKey
+		req.ClearOCKey ||
+		req.ZentaoURL != nil ||
+		req.ZentaoAccount != nil ||
+		(req.ZentaoPassword != nil && strings.TrimSpace(*req.ZentaoPassword) != "") ||
+		req.ClearZentaoPassword
 	var settingsMap map[string]any
 	if needsSettings {
 		existing, err := h.Queries.GetWorkspace(r.Context(), idUUID)
@@ -481,6 +574,8 @@ func (h *Handler) UpdateWorkspace(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		delete(incoming, workspaceOCKeySettingsField)
+		delete(incoming, workspaceZentaoPasswordSettingsField)
+		delete(incoming, "zentao_password")
 		for key, value := range incoming {
 			settingsMap[key] = value
 		}
@@ -499,6 +594,39 @@ func (h *Handler) UpdateWorkspace(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.ClearOCKey {
 		delete(settingsMap, workspaceOCKeySettingsField)
+	}
+	if req.ZentaoURL != nil {
+		normalized, err := validateZentaoURL(*req.ZentaoURL)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		setWorkspaceSettingString(settingsMap, workspaceZentaoURLSettingsField, normalized)
+	} else if _, ok := settingsMap[workspaceZentaoURLSettingsField]; ok {
+		normalized, err := validateZentaoURL(workspaceSettingString(settingsMap, workspaceZentaoURLSettingsField))
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		setWorkspaceSettingString(settingsMap, workspaceZentaoURLSettingsField, normalized)
+	}
+	if req.ZentaoAccount != nil {
+		setWorkspaceSettingString(settingsMap, workspaceZentaoAccountSettingsField, *req.ZentaoAccount)
+	}
+	if req.ZentaoPassword != nil && strings.TrimSpace(*req.ZentaoPassword) != "" {
+		if h.SystemSettingsSecretBox == nil {
+			writeError(w, http.StatusServiceUnavailable, "workspace Zentao password encryption is not configured")
+			return
+		}
+		sealed, err := h.SystemSettingsSecretBox.Seal([]byte(strings.TrimSpace(*req.ZentaoPassword)))
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to encrypt workspace Zentao password")
+			return
+		}
+		settingsMap[workspaceZentaoPasswordSettingsField] = base64.StdEncoding.EncodeToString(sealed)
+	}
+	if req.ClearZentaoPassword {
+		delete(settingsMap, workspaceZentaoPasswordSettingsField)
 	}
 	if needsSettings {
 		params.Settings, _ = json.Marshal(settingsMap)

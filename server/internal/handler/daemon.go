@@ -2272,6 +2272,30 @@ func (h *Handler) buildClaimedTaskResponse(r *http.Request, task *db.AgentTaskQu
 		if issue.KBFolderID.Valid {
 			resp.KBFolderID = strings.TrimSpace(issue.KBFolderID.String)
 		}
+		if issue.ProductID.Valid {
+			resp.ProductID = uuidToString(issue.ProductID)
+			product, productErr := h.Queries.GetProduct(r.Context(), issue.ProductID)
+			if productErr != nil {
+				slog.Warn("daemon claim: load product failed",
+					"task_id", uuidToString(task.ID),
+					"product_id", resp.ProductID,
+					"error", productErr)
+			} else {
+				resp.ProductName = strings.TrimSpace(product.Name)
+			}
+		}
+		if issue.ProductVersionID.Valid {
+			resp.ProductVersionID = uuidToString(issue.ProductVersionID)
+			version, versionErr := h.Queries.GetProductVersion(r.Context(), issue.ProductVersionID)
+			if versionErr != nil {
+				slog.Warn("daemon claim: load product version failed",
+					"task_id", uuidToString(task.ID),
+					"product_version_id", resp.ProductVersionID,
+					"error", versionErr)
+			} else {
+				resp.ProductVersionName = strings.TrimSpace(version.Name)
+			}
+		}
 
 		// Squad-leader briefing injection: keyed off the task being a
 		// leader-task (is_leader_task) carrying a squad_id — NOT off the
@@ -3145,6 +3169,25 @@ func (h *Handler) buildClaimedTaskResponse(r *http.Request, task *db.AgentTaskQu
 			)
 		} else {
 			resp.OCKey = ocKey
+		}
+		if settings, settingsErr := workspaceSettingsMap(ws.Settings); settingsErr != nil {
+			slog.Warn("task claim: failed to read workspace Zentao settings",
+				"task_id", uuidToString(task.ID),
+				"workspace_id", resp.WorkspaceID,
+				"error", settingsErr,
+			)
+		} else {
+			resp.ZentaoURL = workspaceSettingString(settings, workspaceZentaoURLSettingsField)
+			resp.ZentaoAccount = workspaceSettingString(settings, workspaceZentaoAccountSettingsField)
+		}
+		if password, passwordErr := h.workspaceZentaoPassword(ws); passwordErr != nil {
+			slog.Error("task claim: failed to load workspace Zentao password; continuing without it",
+				"task_id", uuidToString(task.ID),
+				"workspace_id", resp.WorkspaceID,
+				"error", passwordErr,
+			)
+		} else {
+			resp.ZentaoPassword = password
 		}
 	} else {
 		slog.Error("task claim: failed to load workspace for context and OC key injection; refusing dispatch",

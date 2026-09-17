@@ -80,6 +80,28 @@ func TestCodexShellEnvAllowlistUsesExactTaskAndSafeInheritedNames(t *testing.T) 
 	}
 }
 
+func TestCodexShellEnvAllowlistIncludesWorkspaceZentaoEnv(t *testing.T) {
+	t.Parallel()
+
+	explicit := map[string]string{
+		"PATH":            "/usr/bin",
+		"ZENTAO_URL":      "https://zentao.example.com",
+		"ZENTAO_ACCOUNT":  "admin",
+		"ZENTAO_PASSWORD": "workspace-secret",
+	}
+
+	got := CodexShellEnvAllowlist(nil, explicit, nil)
+	want := []string{
+		"PATH",
+		"ZENTAO_ACCOUNT",
+		"ZENTAO_PASSWORD",
+		"ZENTAO_URL",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("CodexShellEnvAllowlist() = %#v, want %#v", got, want)
+	}
+}
+
 func TestCodexShellEnvAllowlistOnlyAuthorizesExplicitCustomSecrets(t *testing.T) {
 	t.Parallel()
 

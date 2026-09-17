@@ -610,6 +610,44 @@ func TestTaskMulticaEnvironmentIncludesQuickCreateKBFolderID(t *testing.T) {
 	}
 }
 
+func TestTaskMulticaEnvironmentIncludesProductVersion(t *testing.T) {
+	t.Parallel()
+
+	task := Task{
+		ID:                 "task-product",
+		AgentID:            "agent-test",
+		WorkspaceID:        "workspace-test",
+		ProductID:          " product-id ",
+		ProductName:        " AgentProduct ",
+		ProductVersionID:   " version-id ",
+		ProductVersionName: " 8.6.0.0 ",
+	}
+	env := taskMulticaEnvironment(task, "agent-name", "mat_task", "/task/config", "/daemon/workspaces", "https://task.example", 19514, 1, "/task/tmp")
+	want := map[string]string{
+		"MULTICA_PRODUCT_ID":           "product-id",
+		"MULTICA_PRODUCT_NAME":         "AgentProduct",
+		"MULTICA_PRODUCT_VERSION_ID":   "version-id",
+		"MULTICA_PRODUCT_VERSION_NAME": "8.6.0.0",
+	}
+	for key, value := range want {
+		if got := env[key]; got != value {
+			t.Fatalf("%s = %q, want %q", key, got, value)
+		}
+	}
+
+	plain := taskMulticaEnvironment(Task{ID: "plain-task"}, "agent-name", "mat_task", "/task/config", "/daemon/workspaces", "https://task.example", 19514, 1, "/task/tmp")
+	for _, key := range []string{
+		"MULTICA_PRODUCT_ID",
+		"MULTICA_PRODUCT_NAME",
+		"MULTICA_PRODUCT_VERSION_ID",
+		"MULTICA_PRODUCT_VERSION_NAME",
+	} {
+		if _, ok := plain[key]; ok {
+			t.Fatalf("plain task unexpectedly injected %s=%q", key, plain[key])
+		}
+	}
+}
+
 func TestInjectTaskOCKeyIsTaskScoped(t *testing.T) {
 	t.Parallel()
 
@@ -656,6 +694,91 @@ func TestOCKeyCannotBeOverriddenByAgentCustomEnv(t *testing.T) {
 	}
 	if !isBlockedEnvKey("OPENCONTENT_APIKEY") {
 		t.Fatal("OPENCONTENT_APIKEY is not protected by the daemon environment blocklist")
+	}
+}
+
+func TestInjectTaskZentaoIsTaskScoped(t *testing.T) {
+	t.Parallel()
+
+	keys := []string{"ZENTAO_URL", "ZENTAO_ACCOUNT", "ZENTAO_PASSWORD"}
+	type envSnapshot struct {
+		value string
+		ok    bool
+	}
+	before := make(map[string]envSnapshot, len(keys))
+	for _, key := range keys {
+		value, ok := os.LookupEnv(key)
+		before[key] = envSnapshot{value: value, ok: ok}
+	}
+
+	envA := map[string]string{}
+	injectTaskZentao(envA, "https://zentao-a.example.com", "admin-a", "secret-a")
+	if got := envA["ZENTAO_URL"]; got != "https://zentao-a.example.com" {
+		t.Fatalf("workspace A ZENTAO_URL = %q, want %q", got, "https://zentao-a.example.com")
+	}
+	if got := envA["ZENTAO_ACCOUNT"]; got != "admin-a" {
+		t.Fatalf("workspace A ZENTAO_ACCOUNT = %q, want %q", got, "admin-a")
+	}
+	if got := envA["ZENTAO_PASSWORD"]; got != "secret-a" {
+		t.Fatalf("workspace A ZENTAO_PASSWORD = %q, want %q", got, "secret-a")
+	}
+
+	envB := map[string]string{}
+	injectTaskZentao(envB, "https://zentao-b.example.com", "admin-b", "secret-b")
+	if got := envB["ZENTAO_PASSWORD"]; got != "secret-b" {
+		t.Fatalf("workspace B ZENTAO_PASSWORD = %q, want %q", got, "secret-b")
+	}
+	if envA["ZENTAO_PASSWORD"] == envB["ZENTAO_PASSWORD"] {
+		t.Fatal("different task environments unexpectedly share ZENTAO_PASSWORD")
+	}
+
+	envPartial := map[string]string{}
+	injectTaskZentao(envPartial, "https://zentao.example.com", "   ", "")
+	if got := envPartial["ZENTAO_URL"]; got != "https://zentao.example.com" {
+		t.Fatalf("partial ZENTAO_URL = %q, want %q", got, "https://zentao.example.com")
+	}
+	if _, ok := envPartial["ZENTAO_ACCOUNT"]; ok {
+		t.Fatal("empty ZENTAO_ACCOUNT should not be injected")
+	}
+	if _, ok := envPartial["ZENTAO_PASSWORD"]; ok {
+		t.Fatal("empty ZENTAO_PASSWORD should not be injected")
+	}
+
+	for _, key := range keys {
+		after, stillSet := os.LookupEnv(key)
+		if stillSet != before[key].ok || after != before[key].value {
+			t.Fatalf("injectTaskZentao changed daemon process environment for %s: before=%q/%v after=%q/%v", key, before[key].value, before[key].ok, after, stillSet)
+		}
+	}
+}
+
+func TestZentaoEnvCannotBeOverriddenByAgentCustomEnv(t *testing.T) {
+	t.Parallel()
+
+	env := map[string]string{}
+	layerCustomEnvAndHermesHome(env, map[string]string{
+		"ZENTAO_URL":      "https://attacker.example.com",
+		"ZENTAO_ACCOUNT":  "attacker",
+		"ZENTAO_PASSWORD": "attacker-secret",
+	}, "", slog.Default())
+	for _, key := range []string{"ZENTAO_URL", "ZENTAO_ACCOUNT", "ZENTAO_PASSWORD"} {
+		if _, ok := env[key]; ok {
+			t.Fatalf("custom_env was allowed to set %s", key)
+		}
+		if !isBlockedEnvKey(key) {
+			t.Fatalf("%s is not protected by the daemon environment blocklist", key)
+		}
+	}
+
+	injectTaskZentao(env, "https://zentao.example.com", "admin", "workspace-secret")
+	if got := env["ZENTAO_URL"]; got != "https://zentao.example.com" {
+		t.Fatalf("ZENTAO_URL = %q, want workspace URL", got)
+	}
+	if got := env["ZENTAO_ACCOUNT"]; got != "admin" {
+		t.Fatalf("ZENTAO_ACCOUNT = %q, want workspace account", got)
+	}
+	if got := env["ZENTAO_PASSWORD"]; got != "workspace-secret" {
+		t.Fatalf("ZENTAO_PASSWORD = %q, want task workspace secret", got)
 	}
 }
 

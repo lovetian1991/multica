@@ -184,6 +184,18 @@ func taskMulticaEnvironment(task Task, agentName, token, configRoot, workspacesR
 	// Keep the variable present for every task. An empty value means the task
 	// has no issue or quick-create folder association.
 	env["MULTICA_KB_FOLDER_ID"] = folderID
+	if productID := strings.TrimSpace(task.ProductID); productID != "" {
+		env["MULTICA_PRODUCT_ID"] = productID
+	}
+	if productName := strings.TrimSpace(task.ProductName); productName != "" {
+		env["MULTICA_PRODUCT_NAME"] = productName
+	}
+	if versionID := strings.TrimSpace(task.ProductVersionID); versionID != "" {
+		env["MULTICA_PRODUCT_VERSION_ID"] = versionID
+	}
+	if versionName := strings.TrimSpace(task.ProductVersionName); versionName != "" {
+		env["MULTICA_PRODUCT_VERSION_NAME"] = versionName
+	}
 	return env
 }
 
@@ -7943,6 +7955,7 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, slot i
 	}
 	layerCustomEnvAndHermesHome(agentEnv, agentCustomEnv, env.HermesHome, d.logger)
 	injectTaskOCKey(agentEnv, task.OCKey)
+	injectTaskZentao(agentEnv, task.ZentaoURL, task.ZentaoAccount, task.ZentaoPassword)
 	if provider == "reasonix" {
 		reasonixStateHome, err := prepareReasonixTaskStateHome(d.cfg.Profile, task.RuntimeID, task.AgentID)
 		if err != nil {
@@ -9504,7 +9517,7 @@ func isBlockedEnvKey(key string) bool {
 		return true
 	}
 	switch upper {
-	case "HOME", "PATH", "USER", "SHELL", "TERM", "TMPDIR", "TMP", "TEMP", "CODEX_HOME", "REASONIX_STATE_HOME", "CURSOR_DATA_DIR", execenv.CursorMcpAuthSourceEnv, "OPENCLAW_CONFIG_PATH", "OPENCLAW_INCLUDE_ROOTS", "OPENCONTENT_APIKEY":
+	case "HOME", "PATH", "USER", "SHELL", "TERM", "TMPDIR", "TMP", "TEMP", "CODEX_HOME", "REASONIX_STATE_HOME", "CURSOR_DATA_DIR", execenv.CursorMcpAuthSourceEnv, "OPENCLAW_CONFIG_PATH", "OPENCLAW_INCLUDE_ROOTS", "OPENCONTENT_APIKEY", "ZENTAO_URL", "ZENTAO_ACCOUNT", "ZENTAO_PASSWORD":
 		return true
 	}
 	return false
@@ -9601,6 +9614,21 @@ func injectTaskOCKey(agentEnv map[string]string, ocKey string) {
 	if strings.TrimSpace(ocKey) != "" {
 		agentEnv["OPENCONTENT_APIKEY"] = ocKey
 	}
+}
+
+// injectTaskZentao adds workspace Zentao credentials only to the environment
+// map for the task's child process. Empty values are omitted so a partial
+// config does not inject blank secrets, and the daemon process environment is
+// left untouched so concurrent tasks stay isolated.
+func injectTaskZentao(agentEnv map[string]string, zentaoURL, account, password string) {
+	set := func(key, value string) {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			agentEnv[key] = trimmed
+		}
+	}
+	set("ZENTAO_URL", zentaoURL)
+	set("ZENTAO_ACCOUNT", account)
+	set("ZENTAO_PASSWORD", password)
 }
 
 // prepareReasonixTaskStateHome isolates persisted transcripts and leases per

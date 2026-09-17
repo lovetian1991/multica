@@ -592,6 +592,7 @@ describe("System workspace schemas", () => {
     issue_prefix: "OPS",
     avatar_url: null,
     oc_key_configured: false,
+    zentao_password_configured: false,
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
   };
@@ -614,6 +615,12 @@ describe("System workspace schemas", () => {
   it("defaults oc_key_configured for older backends", () => {
     const parsed = SystemWorkspaceListSchema.parse([workspace]);
     expect(parsed[0]?.oc_key_configured).toBe(false);
+  });
+
+  it("defaults zentao_password_configured for older backends", () => {
+    const { zentao_password_configured: _ignored, ...legacy } = workspace;
+    const parsed = SystemWorkspaceListSchema.parse([legacy]);
+    expect(parsed[0]?.zentao_password_configured).toBe(false);
   });
 });
 

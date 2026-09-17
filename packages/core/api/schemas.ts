@@ -594,6 +594,7 @@ export const SystemWorkspaceSchema = z.object({
   issue_prefix: z.string().default(""),
   avatar_url: z.string().nullable().default(null),
   oc_key_configured: z.boolean().default(false),
+  zentao_password_configured: z.boolean().default(false),
   created_at: z.string().default(""),
   updated_at: z.string().default(""),
 }).loose().transform((value): Workspace => ({
@@ -607,6 +608,7 @@ export const SystemWorkspaceSchema = z.object({
   issue_prefix: value.issue_prefix,
   avatar_url: value.avatar_url,
   oc_key_configured: value.oc_key_configured,
+  zentao_password_configured: value.zentao_password_configured,
   created_at: value.created_at,
   updated_at: value.updated_at,
 }));

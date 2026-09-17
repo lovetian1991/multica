@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -13,6 +15,7 @@ import (
 	"time"
 
 	"github.com/multica-ai/multica/server/internal/testutil"
+	"github.com/multica-ai/multica/server/internal/util/secretbox"
 	db "github.com/multica-ai/multica/server/pkg/db/generated"
 )
 
@@ -1506,4 +1509,228 @@ func TestUpdateWorkspace_RejectsInvalidIssuePrefix(t *testing.T) {
 	if after != before {
 		t.Fatalf("issue_prefix changed on a rejected update: %q → %q", before, after)
 	}
+}
+
+func withSystemSettingsSecretBox(t *testing.T) *secretbox.Box {
+	t.Helper()
+	box, err := secretbox.New(bytes.Repeat([]byte("z"), 32))
+	if err != nil {
+		t.Fatalf("secretbox.New: %v", err)
+	}
+	prev := testHandler.SystemSettingsSecretBox
+	testHandler.SystemSettingsSecretBox = box
+	t.Cleanup(func() { testHandler.SystemSettingsSecretBox = prev })
+	return box
+}
+
+func TestWorkspaceToResponse_HidesZentaoPassword(t *testing.T) {
+	settings, err := json.Marshal(map[string]any{
+		"zentao_url":                "https://zentao.example.com",
+		"zentao_account":            "admin",
+		"zentao_password_encrypted": "sealed-ciphertext",
+		"oc_key_encrypted":          "oc-ciphertext",
+		"co_authored_by_enabled":    true,
+	})
+	if err != nil {
+		t.Fatalf("marshal settings: %v", err)
+	}
+
+	resp := (&Handler{}).workspaceToResponse(db.Workspace{
+		Name:        "Ops",
+		Slug:        "ops",
+		IssuePrefix: "OPS",
+		Settings:    settings,
+	})
+	settingsMap, ok := resp.Settings.(map[string]any)
+	if !ok {
+		t.Fatalf("settings type %T, want map", resp.Settings)
+	}
+	if _, ok := settingsMap["zentao_password_encrypted"]; ok {
+		t.Fatal("encrypted Zentao password leaked in workspace response")
+	}
+	if _, ok := settingsMap["oc_key_encrypted"]; ok {
+		t.Fatal("encrypted OC key leaked in workspace response")
+	}
+	if settingsMap["zentao_url"] != "https://zentao.example.com" {
+		t.Fatalf("zentao_url = %v", settingsMap["zentao_url"])
+	}
+	if settingsMap["zentao_account"] != "admin" {
+		t.Fatalf("zentao_account = %v", settingsMap["zentao_account"])
+	}
+	if !resp.ZentaoPasswordConfigured {
+		t.Fatal("expected zentao_password_configured=true")
+	}
+	if !resp.OCKeyConfigured {
+		t.Fatal("expected oc_key_configured=true")
+	}
+}
+
+func TestUpdateWorkspace_ZentaoSettings(t *testing.T) {
+	if testHandler == nil {
+		t.Skip("database not available")
+	}
+	ctx := context.Background()
+	box := withSystemSettingsSecretBox(t)
+
+	const slug = "handler-tests-zentao-settings"
+	_, _ = testPool.Exec(ctx, `DELETE FROM workspace WHERE slug = $1`, slug)
+	t.Cleanup(func() {
+		_, _ = testPool.Exec(context.Background(), `DELETE FROM workspace WHERE slug = $1`, slug)
+	})
+
+	wsID := dbfx.Insert(t, "workspace", testutil.Cols{
+		"name":        "Handler Test Zentao Settings",
+		"slug":        slug,
+		"description": "UpdateWorkspace zentao settings test",
+	})
+	dbfx.Exec(t, `
+INSERT INTO member (workspace_id, user_id, role)
+VALUES ($1, $2, 'owner')
+`, wsID, testUserID)
+
+	req := newRequest("PATCH", "/api/workspaces/"+wsID, map[string]any{
+		"zentao_url":      "https://zentao.example.com/",
+		"zentao_account":  "admin",
+		"zentao_password": "p@ss",
+	})
+	req = withURLParam(req, "id", wsID)
+	w := testutil.Call(t, testHandler.UpdateWorkspace, req).Want(http.StatusOK)
+
+	var resp WorkspaceResponse
+	w.JSON(&resp)
+	if !resp.ZentaoPasswordConfigured {
+		t.Fatal("expected zentao_password_configured=true after save")
+	}
+	settings, ok := resp.Settings.(map[string]any)
+	if !ok {
+		t.Fatalf("settings type %T, want map", resp.Settings)
+	}
+	if settings["zentao_url"] != "https://zentao.example.com" {
+		t.Fatalf("zentao_url = %v, want trimmed https URL", settings["zentao_url"])
+	}
+	if settings["zentao_account"] != "admin" {
+		t.Fatalf("zentao_account = %v", settings["zentao_account"])
+	}
+	if _, ok := settings["zentao_password_encrypted"]; ok {
+		t.Fatal("encrypted Zentao password leaked in API response")
+	}
+	if _, ok := settings["zentao_password"]; ok {
+		t.Fatal("plaintext Zentao password leaked in API response")
+	}
+
+	var raw []byte
+	dbfx.QueryRow(t, `SELECT settings FROM workspace WHERE id = $1`, wsID).Scan(&raw)
+	stored := map[string]any{}
+	if err := json.Unmarshal(raw, &stored); err != nil {
+		t.Fatalf("unmarshal stored settings: %v", err)
+	}
+	encoded, _ := stored["zentao_password_encrypted"].(string)
+	if strings.TrimSpace(encoded) == "" {
+		t.Fatal("expected encrypted Zentao password to be stored")
+	}
+	if encoded == "p@ss" {
+		t.Fatal("stored Zentao password was plaintext")
+	}
+	sealed, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		t.Fatalf("decode stored password: %v", err)
+	}
+	plain, err := box.Open(sealed)
+	if err != nil {
+		t.Fatalf("decrypt stored password: %v", err)
+	}
+	if string(plain) != "p@ss" {
+		t.Fatalf("decrypted password = %q, want %q", plain, "p@ss")
+	}
+
+	req2 := newRequest("PATCH", "/api/workspaces/"+wsID, map[string]any{
+		"zentao_url": "https://zentao.example.com/pro",
+	})
+	req2 = withURLParam(req2, "id", wsID)
+	w2 := testutil.Call(t, testHandler.UpdateWorkspace, req2).Want(http.StatusOK)
+	var resp2 WorkspaceResponse
+	w2.JSON(&resp2)
+	if !resp2.ZentaoPasswordConfigured {
+		t.Fatal("URL-only update cleared the stored Zentao password")
+	}
+	settings2, _ := resp2.Settings.(map[string]any)
+	if settings2["zentao_url"] != "https://zentao.example.com/pro" {
+		t.Fatalf("zentao_url after URL-only update = %v", settings2["zentao_url"])
+	}
+	if settings2["zentao_account"] != "admin" {
+		t.Fatalf("zentao_account after URL-only update = %v", settings2["zentao_account"])
+	}
+
+	bad := newRequest("PATCH", "/api/workspaces/"+wsID, map[string]any{
+		"zentao_password":       "next",
+		"clear_zentao_password": true,
+	})
+	bad = withURLParam(bad, "id", wsID)
+	testutil.Call(t, testHandler.UpdateWorkspace, bad).Want(http.StatusBadRequest)
+
+	invalidURL := newRequest("PATCH", "/api/workspaces/"+wsID, map[string]any{
+		"zentao_url": "ftp://zentao.example.com",
+	})
+	invalidURL = withURLParam(invalidURL, "id", wsID)
+	testutil.Call(t, testHandler.UpdateWorkspace, invalidURL).Want(http.StatusBadRequest)
+
+	strip := newRequest("PATCH", "/api/workspaces/"+wsID, map[string]any{
+		"settings": map[string]any{
+			"zentao_password_encrypted": "attacker-ciphertext",
+			"zentao_password":           "plaintext-leak",
+		},
+	})
+	strip = withURLParam(strip, "id", wsID)
+	w3 := testutil.Call(t, testHandler.UpdateWorkspace, strip).Want(http.StatusOK)
+	var resp3 WorkspaceResponse
+	w3.JSON(&resp3)
+	if !resp3.ZentaoPasswordConfigured {
+		t.Fatal("incoming settings blob cleared the stored Zentao password")
+	}
+	settings3, _ := resp3.Settings.(map[string]any)
+	if _, ok := settings3["zentao_password_encrypted"]; ok {
+		t.Fatal("incoming encrypted password leaked in API response")
+	}
+	if _, ok := settings3["zentao_password"]; ok {
+		t.Fatal("incoming plaintext password persisted in settings")
+	}
+
+	var rawAfter []byte
+	dbfx.QueryRow(t, `SELECT settings FROM workspace WHERE id = $1`, wsID).Scan(&rawAfter)
+	storedAfter := map[string]any{}
+	if err := json.Unmarshal(rawAfter, &storedAfter); err != nil {
+		t.Fatalf("unmarshal stored settings after strip: %v", err)
+	}
+	if storedAfter["zentao_password_encrypted"] != encoded {
+		t.Fatal("incoming settings blob replaced the stored encrypted password")
+	}
+	if _, ok := storedAfter["zentao_password"]; ok {
+		t.Fatal("incoming plaintext password was stored")
+	}
+
+	clear := newRequest("PATCH", "/api/workspaces/"+wsID, map[string]any{
+		"clear_zentao_password": true,
+	})
+	clear = withURLParam(clear, "id", wsID)
+	w4 := testutil.Call(t, testHandler.UpdateWorkspace, clear).Want(http.StatusOK)
+	var resp4 WorkspaceResponse
+	w4.JSON(&resp4)
+	if resp4.ZentaoPasswordConfigured {
+		t.Fatal("expected zentao_password_configured=false after clear")
+	}
+}
+
+func TestUpdateWorkspace_ZentaoPasswordRequiresEncryption(t *testing.T) {
+	if testHandler == nil {
+		t.Skip("database not available")
+	}
+	prev := testHandler.SystemSettingsSecretBox
+	testHandler.SystemSettingsSecretBox = nil
+	t.Cleanup(func() { testHandler.SystemSettingsSecretBox = prev })
+
+	req := newRequest("PATCH", "/api/workspaces/"+testWorkspaceID, map[string]any{
+		"zentao_password": "secret",
+	})
+	req = withURLParam(req, "id", testWorkspaceID)
+	testutil.Call(t, testHandler.UpdateWorkspace, req).Want(http.StatusServiceUnavailable)
 }

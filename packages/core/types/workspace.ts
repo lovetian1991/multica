@@ -16,6 +16,7 @@ export interface Workspace {
   issue_prefix: string;
   avatar_url: string | null;
   oc_key_configured?: boolean;
+  zentao_password_configured?: boolean;
   created_at: string;
   updated_at: string;
 }

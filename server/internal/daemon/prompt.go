@@ -233,6 +233,30 @@ func BuildPrompt(task Task, provider string, options ...PromptOption) string {
 	return body
 }
 
+func appendIssueProductContext(b *strings.Builder, task Task) {
+	productID := strings.TrimSpace(task.ProductID)
+	productName := strings.TrimSpace(task.ProductName)
+	versionID := strings.TrimSpace(task.ProductVersionID)
+	versionName := strings.TrimSpace(task.ProductVersionName)
+	if productID == "" && productName == "" && versionID == "" && versionName == "" {
+		return
+	}
+	b.WriteString("This issue is bound to a Multica product version. Treat the product name as the ZenTao product scope for assigned active bugs. Do not ask for a ZenTao project name.\n")
+	if productName != "" {
+		fmt.Fprintf(b, "- Product name: %s\n", productName)
+	}
+	if productID != "" {
+		fmt.Fprintf(b, "- Product ID: %s\n", productID)
+	}
+	if versionName != "" {
+		fmt.Fprintf(b, "- Product version: %s\n", versionName)
+	}
+	if versionID != "" {
+		fmt.Fprintf(b, "- Product version ID: %s\n", versionID)
+	}
+	b.WriteString("Credentials come from the injected ZENTAO_* environment variables. Do not require a skill-directory .env file.\n\n")
+}
+
 func buildPromptBody(task Task, provider string) string {
 	if task.ChatSessionID != "" {
 		return buildChatPrompt(task)
@@ -249,6 +273,7 @@ func buildPromptBody(task Task, provider string) string {
 	var b strings.Builder
 	b.WriteString("You are running as a local coding agent for a Multica workspace.\n\n")
 	fmt.Fprintf(&b, "Your assigned issue ID is: %s\n\n", task.IssueID)
+	appendIssueProductContext(&b, task)
 	// Assignment handoff (MUL-3375): a free-text instruction the person who
 	// assigned/promoted this issue left for you. Frame it as a handoff, not a
 	// comment to reply to — there is no comment thread to answer here.
@@ -395,6 +420,7 @@ func buildCommentPrompt(task Task, provider string) string {
 	var b strings.Builder
 	b.WriteString("You are running as a local coding agent for a Multica workspace.\n\n")
 	fmt.Fprintf(&b, "Your assigned issue ID is: %s\n\n", task.IssueID)
+	appendIssueProductContext(&b, task)
 	if task.TriggerCommentContent != "" {
 		authorLabel := "A user"
 		if task.TriggerAuthorType == "system" {

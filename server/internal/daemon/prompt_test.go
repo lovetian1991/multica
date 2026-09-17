@@ -110,6 +110,51 @@ func TestIssuePromptsKeepSourceContextRuleOutOfPerTurnMessage(t *testing.T) {
 	}
 }
 
+func TestIssuePromptsIncludeProductVersion(t *testing.T) {
+	task := Task{
+		IssueID:            "issue-1",
+		ProductID:          "product-id",
+		ProductName:        "AgentProduct",
+		ProductVersionID:   "version-id",
+		ProductVersionName: "8.6.0.0",
+	}
+	assignment := buildPromptBody(task, "claude")
+	comment := buildCommentPrompt(Task{
+		IssueID:            "issue-1",
+		TriggerCommentID:   "comment-1",
+		ProductID:          "product-id",
+		ProductName:        "AgentProduct",
+		ProductVersionID:   "version-id",
+		ProductVersionName: "8.6.0.0",
+	}, "claude")
+	quick := buildQuickCreatePrompt(Task{
+		QuickCreatePrompt:  "fix login",
+		ProductName:        "AgentProduct",
+		ProductVersionName: "8.6.0.0",
+	})
+
+	for _, out := range []string{assignment, comment} {
+		for _, want := range []string{
+			"Treat the product name as the ZenTao product scope",
+			"Product name: AgentProduct",
+			"Product version: 8.6.0.0",
+			"Do not require a skill-directory .env file",
+		} {
+			if !strings.Contains(out, want) {
+				t.Fatalf("issue prompt missing %q\n%s", want, out)
+			}
+		}
+	}
+	if strings.Contains(quick, "Treat the product name as the ZenTao product scope") {
+		t.Fatal("quick-create prompt must not include issue product-version context")
+	}
+
+	plainAssignment := buildPromptBody(Task{IssueID: "issue-1"}, "claude")
+	if strings.Contains(plainAssignment, "Treat the product name as the ZenTao product scope") {
+		t.Fatal("issue prompt without product version must omit product context")
+	}
+}
+
 // TestBuildQuickCreatePromptAssigneeIncludesSquads locks in the MUL-2165
 // fix: the assignee-resolution rules must tell the agent to consult the
 // squad list alongside members and agents. Before this, a quick-create

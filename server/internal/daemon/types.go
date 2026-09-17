@@ -88,6 +88,9 @@ type Task struct {
 	WorkspaceID          string                 `json:"workspace_id"`
 	WorkspaceSlug        string                 `json:"workspace_slug,omitempty"`
 	OCKey                string                 `json:"oc_key,omitempty"` // claim-only workspace key, injected into this task process
+	ZentaoURL            string                 `json:"zentao_url,omitempty"`
+	ZentaoAccount        string                 `json:"zentao_account,omitempty"`
+	ZentaoPassword       string                 `json:"zentao_password,omitempty"` // claim-only workspace Zentao credentials, injected into this task process
 	IssueIdentifier      string                 `json:"issue_identifier,omitempty"`
 	RemoteMCPConnections []remotemcp.Connection `json:"remote_mcp_connections,omitempty"`
 	// RemoteMCPDaemonToken stays inside the daemon and authenticates the local
@@ -153,6 +156,10 @@ type Task struct {
 	QuickCreateProductID          string                 `json:"quick_create_product_id,omitempty"`          // globally scoped product selected in quick-create
 	QuickCreateKBFolderID         string                 `json:"quick_create_kb_folder_id,omitempty"`        // KB folder selected in quick-create
 	KBFolderID                    string                 `json:"kb_folder_id,omitempty"`                     // folder associated with the claimed task's issue or quick-create context
+	ProductID                     string                 `json:"product_id,omitempty"`                       // issue product UUID when the claimed task is bound to a product version
+	ProductName                   string                 `json:"product_name,omitempty"`                     // issue product name, used as the ZenTao product selector
+	ProductVersionID              string                 `json:"product_version_id,omitempty"`               // issue product version UUID
+	ProductVersionName            string                 `json:"product_version_name,omitempty"`             // issue product version name, used as ZenTao resolve --build
 	QuickCreateAttachmentIDs      []string               `json:"quick_create_attachment_ids,omitempty"`      // attachments uploaded in the quick-create prompt and bound by issue create
 	QuickCreateSourceContext      json.RawMessage        `json:"quick_create_source_context,omitempty"`      // immutable historical context, separate from the new instruction
 	HandoffNote                   string                 `json:"handoff_note,omitempty"`                     // assignment handoff instruction; rendered into the opening prompt + issue_context.md

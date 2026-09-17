@@ -53,6 +53,11 @@ interface WorkspaceDetailsDraft {
   context: string;
 }
 
+interface WorkspaceZentaoDraft {
+  url: string;
+  account: string;
+}
+
 function workspaceDetailsEqual(
   left: WorkspaceDetailsDraft,
   right: WorkspaceDetailsDraft,
@@ -62,6 +67,21 @@ function workspaceDetailsEqual(
     left.description === right.description &&
     left.context === right.context
   );
+}
+
+function workspaceZentaoEqual(
+  left: WorkspaceZentaoDraft,
+  right: WorkspaceZentaoDraft,
+) {
+  return left.url === right.url && left.account === right.account;
+}
+
+function workspaceStringSetting(
+  workspace: Workspace | null | undefined,
+  key: string,
+): string {
+  const value = workspace?.settings?.[key];
+  return typeof value === "string" ? value : "";
 }
 
 export function WorkspaceTab() {
@@ -136,6 +156,15 @@ export function WorkspaceTab() {
   const [ocKey, setOcKey] = useState("");
   const [ocKeySaveStatus, setOcKeySaveStatus] =
     useState<SettingsSaveStatus>("idle");
+  const [zentaoURL, setZentaoURL] = useState(
+    workspaceStringSetting(workspace, "zentao_url"),
+  );
+  const [zentaoAccount, setZentaoAccount] = useState(
+    workspaceStringSetting(workspace, "zentao_account"),
+  );
+  const [zentaoPassword, setZentaoPassword] = useState("");
+  const [zentaoPasswordSaveStatus, setZentaoPasswordSaveStatus] =
+    useState<SettingsSaveStatus>("idle");
   const [actionId, setActionId] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<{
     title: string;
@@ -167,6 +196,10 @@ export function WorkspaceTab() {
     setIssuePrefix(workspace?.issue_prefix ?? "");
     setOcKey("");
     setOcKeySaveStatus("idle");
+    setZentaoURL(workspaceStringSetting(workspace, "zentao_url"));
+    setZentaoAccount(workspaceStringSetting(workspace, "zentao_account"));
+    setZentaoPassword("");
+    setZentaoPasswordSaveStatus("idle");
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed on id only; see comment above
   }, [workspace?.id]);
 
@@ -311,6 +344,107 @@ export function WorkspaceTab() {
             error instanceof Error
               ? error.message
               : t(($) => $.workspace.oc_key_save_failed),
+          );
+        }
+      },
+    });
+  };
+
+  const zentaoDraft = useMemo(
+    () => ({ url: zentaoURL, account: zentaoAccount }),
+    [zentaoAccount, zentaoURL],
+  );
+  const savedZentao = useMemo(
+    () => ({
+      url: workspaceStringSetting(workspace, "zentao_url"),
+      account: workspaceStringSetting(workspace, "zentao_account"),
+    }),
+    [workspace],
+  );
+  const saveZentao = useCallback(
+    async (next: WorkspaceZentaoDraft) => {
+      if (!workspace) return;
+      const updated = await api.updateWorkspace(workspace.id, {
+        zentao_url: next.url.trim(),
+        zentao_account: next.account.trim(),
+      });
+      qc.setQueryData(workspaceKeys.list(), (old: Workspace[] | undefined) =>
+        old?.map((ws) => (ws.id === updated.id ? updated : ws)),
+      );
+    },
+    [qc, workspace],
+  );
+  const zentaoAutoSave = useAutoSave({
+    value: zentaoDraft,
+    savedValue: savedZentao,
+    onSave: saveZentao,
+    onSuccess: () =>
+      toast.success(t(($) => $.workspace.toast_saved), {
+        id: "settings-auto-save",
+      }),
+    onError: (error) =>
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t(($) => $.workspace.toast_save_failed),
+      ),
+    enabled: !!workspace && canManageWorkspace,
+    isEqual: workspaceZentaoEqual,
+  });
+
+  const handleZentaoPasswordSave = async () => {
+    if (!workspace || !canManageWorkspace || !zentaoPassword.trim()) return;
+    setZentaoPasswordSaveStatus("saving");
+    try {
+      const updated = await api.updateWorkspace(workspace.id, {
+        zentao_password: zentaoPassword.trim(),
+      });
+      qc.setQueryData(workspaceKeys.list(), (old: Workspace[] | undefined) =>
+        old?.map((ws) => (ws.id === updated.id ? updated : ws)),
+      );
+      setZentaoPassword("");
+      setZentaoPasswordSaveStatus("saved");
+      toast.success(t(($) => $.workspace.zentao_password_saved));
+    } catch (error) {
+      setZentaoPasswordSaveStatus("error");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t(($) => $.workspace.zentao_password_save_failed),
+      );
+    }
+  };
+
+  const handleZentaoPasswordClear = () => {
+    if (
+      !workspace ||
+      !canManageWorkspace ||
+      workspace.zentao_password_configured !== true
+    ) {
+      return;
+    }
+    setConfirmAction({
+      title: t(($) => $.workspace.zentao_password_clear),
+      description: t(($) => $.workspace.zentao_password_clear_confirm),
+      variant: "destructive",
+      onConfirm: async () => {
+        setZentaoPasswordSaveStatus("saving");
+        try {
+          const updated = await api.updateWorkspace(workspace.id, {
+            clear_zentao_password: true,
+          });
+          qc.setQueryData(workspaceKeys.list(), (old: Workspace[] | undefined) =>
+            old?.map((ws) => (ws.id === updated.id ? updated : ws)),
+          );
+          setZentaoPassword("");
+          setZentaoPasswordSaveStatus("saved");
+          toast.success(t(($) => $.workspace.zentao_password_cleared));
+        } catch (error) {
+          setZentaoPasswordSaveStatus("error");
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : t(($) => $.workspace.zentao_password_save_failed),
           );
         }
       },
@@ -587,6 +721,134 @@ export function WorkspaceTab() {
                   }
                 >
                   {t(($) => $.workspace.oc_key_clear)}
+                </Button>
+              </div>
+            </div>
+          </SettingsRow>
+          {!canManageWorkspace && (
+            <div className="px-4 py-3 text-caption text-muted-foreground">
+              {t(($) => $.workspace.manage_hint)}
+            </div>
+          )}
+        </SettingsCard>
+      </SettingsSection>
+
+      <SettingsSection
+        title={t(($) => $.workspace.zentao_section)}
+        action={
+          <SettingsSaveState
+            status={
+              zentaoPasswordSaveStatus === "saving" ||
+              zentaoPasswordSaveStatus === "error"
+                ? zentaoPasswordSaveStatus
+                : zentaoAutoSave.status === "idle"
+                  ? zentaoPasswordSaveStatus
+                  : zentaoAutoSave.status
+            }
+            savingLabel={t(($) => $.auto_save.saving)}
+            savedLabel={
+              zentaoPasswordSaveStatus === "saved"
+                ? t(($) => $.workspace.zentao_password_saved)
+                : t(($) => $.auto_save.saved)
+            }
+            errorLabel={
+              zentaoPasswordSaveStatus === "error"
+                ? t(($) => $.workspace.zentao_password_save_failed)
+                : t(($) => $.auto_save.failed)
+            }
+          />
+        }
+      >
+        <SettingsCard>
+          <SettingsRow
+            label={t(($) => $.workspace.zentao_url_label)}
+            description={t(($) => $.workspace.zentao_url_description)}
+            size="text"
+          >
+            <Input
+              type="url"
+              name="workspace-zentao-url"
+              autoComplete="off"
+              spellCheck={false}
+              aria-label={t(($) => $.workspace.zentao_url_label)}
+              placeholder={t(($) => $.workspace.zentao_url_placeholder)}
+              value={zentaoURL}
+              onChange={(event) => setZentaoURL(event.target.value)}
+              onBlur={zentaoAutoSave.flush}
+              disabled={!canManageWorkspace}
+            />
+          </SettingsRow>
+
+          <SettingsRow
+            label={t(($) => $.workspace.zentao_account_label)}
+            description={t(($) => $.workspace.zentao_account_description)}
+            size="text"
+          >
+            <Input
+              type="text"
+              name="workspace-zentao-account"
+              autoComplete="off"
+              spellCheck={false}
+              aria-label={t(($) => $.workspace.zentao_account_label)}
+              placeholder={t(($) => $.workspace.zentao_account_placeholder)}
+              value={zentaoAccount}
+              onChange={(event) => setZentaoAccount(event.target.value)}
+              onBlur={zentaoAutoSave.flush}
+              disabled={!canManageWorkspace}
+            />
+          </SettingsRow>
+
+          <SettingsRow
+            label={t(($) => $.workspace.zentao_password_label)}
+            description={t(($) => $.workspace.zentao_password_description)}
+            size="text"
+            align="start"
+          >
+            <div className="space-y-2">
+              <Input
+                type="password"
+                name="workspace-zentao-password"
+                autoComplete="new-password"
+                spellCheck={false}
+                aria-label={t(($) => $.workspace.zentao_password_label)}
+                placeholder={t(($) => $.workspace.zentao_password_placeholder)}
+                value={zentaoPassword}
+                onChange={(event) => {
+                  setZentaoPasswordSaveStatus("idle");
+                  setZentaoPassword(event.target.value);
+                }}
+                disabled={!canManageWorkspace || zentaoPasswordSaveStatus === "saving"}
+              />
+              {workspace.zentao_password_configured === true ? (
+                <p className="text-caption text-muted-foreground">
+                  {t(($) => $.workspace.zentao_password_configured)}
+                </p>
+              ) : null}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleZentaoPasswordSave}
+                  disabled={
+                    !canManageWorkspace ||
+                    !zentaoPassword.trim() ||
+                    zentaoPasswordSaveStatus === "saving"
+                  }
+                >
+                  {t(($) => $.workspace.zentao_password_save)}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleZentaoPasswordClear}
+                  disabled={
+                    !canManageWorkspace ||
+                    workspace.zentao_password_configured !== true ||
+                    zentaoPasswordSaveStatus === "saving"
+                  }
+                >
+                  {t(($) => $.workspace.zentao_password_clear)}
                 </Button>
               </div>
             </div>
