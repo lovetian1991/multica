@@ -364,6 +364,11 @@ type AgentTaskResponse struct {
 	ZentaoURL            string                 `json:"zentao_url,omitempty"`
 	ZentaoAccount        string                 `json:"zentao_account,omitempty"`
 	ZentaoPassword       string                 `json:"zentao_password,omitempty"` // daemon-claim only: current workspace Zentao credentials for this task
+	// KBEnvironmentURL is the deployment-wide KB platform address from system
+	// settings. It travels to the daemon so artifact skills can build
+	// browser-facing links; the Multica facade address they use for API calls is
+	// not the KB UI address, and a task token cannot read system settings.
+	KBEnvironmentURL     string                 `json:"kb_environment_url,omitempty"`
 	IssueIdentifier      string                 `json:"issue_identifier,omitempty"`
 	RemoteMCPConnections []remotemcp.Connection `json:"remote_mcp_connections,omitempty"`
 	// PluginHookTools are the workspace's agent-trigger plugin hooks, which the

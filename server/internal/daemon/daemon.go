@@ -196,6 +196,13 @@ func taskMulticaEnvironment(task Task, agentName, token, configRoot, workspacesR
 	if versionName := strings.TrimSpace(task.ProductVersionName); versionName != "" {
 		env["MULTICA_PRODUCT_VERSION_NAME"] = versionName
 	}
+	// The KB UI lives on its own address, while MULTICA_SERVER_URL is the API
+	// facade that oc.js builds preview links from, so artifact skills need the
+	// browser-facing address separately. Set here rather than next to
+	// OPENCONTENT_APIKEY so an agent's custom_env can override it. Empty means
+	// the deployment configures no KB address; the skill then leaves links as
+	// oc.js returned them.
+	env["OPENCONTENT_WEB_URL"] = strings.TrimSpace(task.KBEnvironmentURL)
 	return env
 }
 

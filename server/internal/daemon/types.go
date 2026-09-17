@@ -91,6 +91,7 @@ type Task struct {
 	ZentaoURL            string                 `json:"zentao_url,omitempty"`
 	ZentaoAccount        string                 `json:"zentao_account,omitempty"`
 	ZentaoPassword       string                 `json:"zentao_password,omitempty"` // claim-only workspace Zentao credentials, injected into this task process
+	KBEnvironmentURL     string                 `json:"kb_environment_url,omitempty"` // claim-only KB platform address, injected as OPENCONTENT_WEB_URL
 	IssueIdentifier      string                 `json:"issue_identifier,omitempty"`
 	RemoteMCPConnections []remotemcp.Connection `json:"remote_mcp_connections,omitempty"`
 	// RemoteMCPDaemonToken stays inside the daemon and authenticates the local
