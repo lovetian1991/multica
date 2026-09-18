@@ -19,12 +19,12 @@ export function createEnDict(allowSignup: boolean): LandingDict {
     headlineLine1: "Your next 10 hires",
     headlineLine2: "won\u2019t be human.",
     subheading:
-      "鸿翼灵工 is an open-source platform that turns coding agents into real teammates. Assign tasks, track progress, compound skills \u2014 manage your human + agent workforce in one place.",
+      "Multica is an open-source platform that turns coding agents into real teammates. Assign tasks, track progress, compound skills \u2014 manage your human + agent workforce in one place.",
     cta: "Start free trial",
     downloadDesktop: "Download Desktop",
     talkToSales: "Talk to sales",
-    worksWith: "Works with",
-    imageAlt: "鸿翼灵工 board view \u2014 issues managed by humans and agents",
+    worksWith: "Works with 20+ AI coding tools",
+    imageAlt: "Multica board view \u2014 issues managed by humans and agents",
   },
 
   features: {
@@ -116,7 +116,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
         {
           title: "Auto-detection on first run",
           description:
-            "鸿翼灵工 scans for 26 supported coding tools \u2014 Antigravity, Claude Code, CodeBuddy, CodeArts, Codex, Copilot, Cursor, DeepSeek Harness, DevEco Code, Dim, Grok, Hermes, Kimi, Kiro CLI, MiniMax Code, Oh-My-Pi, OpenClaw, OpenCode, Pi, Qoder, Qoder CN, Qwen Code, QwenPaw, Reasonix, Trae CLI, and ZeroClaw \u2014 and registers a runtime for each one it finds.",
+            "Multica scans for 26 supported coding tools \u2014 Antigravity, Claude Code, CodeBuddy, CodeArts, Codex, Copilot, Cursor, DeepSeek Harness, DevEco Code, Dim, Grok, Hermes, Kimi, Kiro CLI, MiniMax Code, Oh-My-Pi, OpenClaw, OpenCode, Pi, Qoder, Qoder CN, Qwen Code, QwenPaw, Reasonix, Trae CLI, and ZeroClaw \u2014 and registers a runtime for each one it finds.",
         },
       ],
     },
@@ -159,13 +159,13 @@ export function createEnDict(allowSignup: boolean): LandingDict {
     headlineLine1: "Open source",
     headlineLine2: "for all.",
     description:
-      "鸿翼灵工 is fully open source. Inspect every line, self-host on your own terms, and shape the future of human + agent collaboration.",
+      "Multica is fully open source. Inspect every line, self-host on your own terms, and shape the future of human + agent collaboration.",
     cta: "Star on GitHub",
     highlights: [
       {
         title: "Self-host anywhere",
         description:
-          "Run 鸿翼灵工 on your own infrastructure. Docker Compose, single binary, or Kubernetes \u2014 your data never leaves your network.",
+          "Run Multica on your own infrastructure. Docker Compose, single binary, or Kubernetes \u2014 your data never leaves your network.",
       },
       {
         title: "No vendor lock-in",
@@ -190,30 +190,30 @@ export function createEnDict(allowSignup: boolean): LandingDict {
     headline: "Questions & answers.",
     items: [
       {
-        question: "What coding agents does 鸿翼灵工 support?",
+        question: "What coding agents does Multica support?",
         answer:
-          "鸿翼灵工 supports 26 coding tools out of the box: Antigravity, Claude Code, CodeBuddy, CodeArts, Codex, Copilot, Cursor, DeepSeek Harness, DevEco Code, Dim, Grok, Hermes, Kimi, Kiro CLI, MiniMax Code, Oh-My-Pi, OpenClaw, OpenCode, Pi, Qoder, Qoder CN, Qwen Code, QwenPaw, Reasonix, Trae CLI, and ZeroClaw. The daemon auto-detects whichever CLIs you already have installed and registers a runtime for each one. Since it's open source, you can also add your own backends.",
+          "Multica supports 26 coding tools out of the box: Antigravity, Claude Code, CodeBuddy, CodeArts, Codex, Copilot, Cursor, DeepSeek Harness, DevEco Code, Dim, Grok, Hermes, Kimi, Kiro CLI, MiniMax Code, Oh-My-Pi, OpenClaw, OpenCode, Pi, Qoder, Qoder CN, Qwen Code, QwenPaw, Reasonix, Trae CLI, and ZeroClaw. The daemon auto-detects whichever CLIs you already have installed and registers a runtime for each one. Since it's open source, you can also add your own backends.",
       },
       {
         question: "Do I need to self-host, or is there a cloud version?",
         answer:
-          "Both. You can self-host 鸿翼灵工 on your own infrastructure with Docker Compose or Kubernetes, or use our hosted cloud version. Your data, your choice.",
+          "Both. You can self-host Multica on your own infrastructure with Docker Compose or Kubernetes, or use our hosted cloud version. Your data, your choice.",
       },
       {
         question:
           "How is this different from just using coding agents directly?",
         answer:
-          "Coding agents are great at executing. 鸿翼灵工 adds the management layer: task queues, team coordination, skill reuse, runtime monitoring, and a unified view of what every agent is doing. Think of it as the project manager for your agents.",
+          "Coding agents are great at executing. Multica adds the management layer: task queues, team coordination, skill reuse, runtime monitoring, and a unified view of what every agent is doing. Think of it as the project manager for your agents.",
       },
       {
         question: "Can agents work on long-running tasks autonomously?",
         answer:
-          "Yes. 鸿翼灵工 manages the full task lifecycle \u2014 enqueue, claim, execute, complete or fail. Agents report blockers proactively and stream progress in real time. You can check in whenever you want or let them run overnight.",
+          "Yes. Multica manages the full task lifecycle \u2014 enqueue, claim, execute, complete or fail. Agents report blockers proactively and stream progress in real time. You can check in whenever you want or let them run overnight.",
       },
       {
         question: "Is my code safe? Where does agent execution happen?",
         answer:
-          "Agent execution happens on your machine (local daemon) or your own cloud infrastructure. Code never passes through 鸿翼灵工 servers. The platform only coordinates task state and broadcasts events.",
+          "Agent execution happens on your machine (local daemon) or your own cloud infrastructure. Code never passes through Multica servers. The platform only coordinates task state and broadcasts events.",
       },
       {
         question: "How many agents can I run?",
@@ -257,16 +257,27 @@ export function createEnDict(allowSignup: boolean): LandingDict {
         ],
       },
     },
-    copyright: "\u00a9 {year} 鸿翼灵工. All rights reserved.",
+    copyright: "\u00a9 {year} Multica. All rights reserved.",
   },
 
   about: {
-    title: "About 鸿翼灵工",
-    nameLine:
-      "鸿翼灵工 is an open platform for teams where people and AI agents work side by side.",
+    title: "About Multica",
+    nameLine: {
+      prefix: "Multica \u2014 ",
+      mult: "Mult",
+      iplexed: "iplexed ",
+      i: "I",
+      nformationAnd: "nformation and ",
+      c: "C",
+      omputing: "omputing ",
+      a: "A",
+      gent: "gent.",
+    },
     paragraphs: [
-      "In 鸿翼灵工, agents are first-class teammates. They get assigned issues, report progress, raise blockers, and ship code \u2014 just like their human colleagues. The assignee picker, the activity timeline, the task lifecycle, and the runtime infrastructure are all built around this idea from day one.",
-      "The goal is simple: give every team a clear, dependable way to coordinate human judgment with autonomous execution, while keeping work visible and controllable.",
+      "The name is a nod to Multics, the pioneering operating system of the 1960s that introduced time-sharing \u2014 letting multiple users share a single machine as if each had it to themselves. Unix was born as a deliberate simplification of Multics: one user, one task, one elegant philosophy.",
+      "We think the same inflection is happening again. For decades, software teams have been single-threaded \u2014 one engineer, one task, one context switch at a time. AI agents change that equation. Multica brings time-sharing back, but for an era where the \u201cusers\u201d multiplexing the system are both humans and autonomous agents.",
+      "In Multica, agents are first-class teammates. They get assigned issues, report progress, raise blockers, and ship code \u2014 just like their human colleagues. The assignee picker, the activity timeline, the task lifecycle, and the runtime infrastructure are all built around this idea from day one.",
+      "Like Multics before it, the bet is on multiplexing: a small team shouldn\u2019t feel small. With the right system, two engineers and a fleet of agents can move like twenty.",
       "The platform is fully open source and self-hostable. Your data stays on your infrastructure. Inspect every line, extend the API, bring your own LLM providers, and contribute back to the community.",
     ],
     cta: "View on GitHub",
@@ -274,7 +285,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
 
   changelog: {
     title: "Changelog",
-    subtitle: "New updates and improvements to 鸿翼灵工.",
+    subtitle: "New updates and improvements to Multica.",
     toc: "All releases",
     categories: {
       features: "New Features",
@@ -282,6 +293,205 @@ export function createEnDict(allowSignup: boolean): LandingDict {
       fixes: "Bug Fixes",
     },
     entries: [
+      {
+        version: "0.4.44",
+        date: "2026-09-15",
+        title: "DingTalk quoted replies, reworked Issue status settings, more accurate run usage, and safer comment deletion",
+        changes: [],
+        features: [
+          "A DingTalk reply in a group now quotes the message you sent.",
+          "DingTalk marks your request with a reaction while it runs, and again when it is done.",
+          "A DingTalk command confirmation keeps what you typed, and links the Issue it created.",
+          "Issue statuses in Settings are grouped as Unstarted, Started, Done, and Closed.",
+          "Drag a status, built-in ones included, to set its place in boards, lists, and status menus.",
+          "Give a custom status the icon shape you want.",
+          "DeepSeek Harness Desktop is picked up as a runtime on its own, with no manual setup.",
+          "Self-hosted servers send one anonymous daily snapshot of deployment size and run volume; set DO_NOT_TRACK=1 to turn it off.",
+        ],
+        improvements: [
+          "Archiving a status tells you how many Issues still use it, and takes you to them.",
+          "A DeepSeek Harness runtime that cannot start now says what is missing.",
+          "The command line shows how each Autopilot's last run went.",
+          "Agent steps in an Issue preview what each one was working on.",
+          "A refreshing Issue list says so in the page title, and quick refreshes no longer flicker.",
+          "An agent posting a long final comment finishes sooner.",
+        ],
+        fixes: [
+          "Deleting a comment keeps the replies people left under it.",
+          "A deleted reply leaves nothing behind, and a link to one lands on the message beside it.",
+          "Sorting an Issue list by status again follows the order you set.",
+          "You are told when an Issue your agent filed is waiting on you.",
+          "Two comments handing the same agent work at once join one run instead of failing.",
+          "A delegated task that failed is picked up again instead of being left behind.",
+          "Usage and cost no longer overstate what Claude, CodeBuddy, Codex, OpenCode, and Qwen runs used.",
+          "A cancelled task no longer counts against an agent's success rate.",
+          "Codex runs no longer mix in a reply meant for another conversation.",
+          "A skill archive packed on Windows imports as a skill you can use.",
+          "Hermes picks up your local skills from the home directory its tasks actually run in.",
+          "WeCom no longer sends a blank message ahead of a file, and says when the file did not go through.",
+          "The Lark binding QR code lasts its full hour, and no longer dies on the first check.",
+          "A desktop app on an older version keeps your custom statuses after the server updates.",
+          "Help in the sidebar stays aligned once you dismiss the Discord link.",
+          "The self-hosted web image picks up the latest OpenSSL security fix.",
+        ],
+      },
+      {
+        version: "0.4.43",
+        date: "2026-09-11",
+        title: "Comment and description annotations, desktop history menus, new Issue board defaults, and performance improvements",
+        changes: [],
+        features: [
+          "Select text in a comment, add a note, and your reply carries that quote.",
+          "Select text in an Issue description to start a new thread from it.",
+          "Back and Forward on the desktop app list the pages you visited, so you can jump straight to one.",
+          "A new Issue view opens on your latest work, and keeps the sorting you saved.",
+          "The transcript now says when a tool's output was not kept in full.",
+          "Run history shows who cancelled a task.",
+          "Set or clear an agent's conversation starters from the command line.",
+          "GPT-6 Astra is available, with its published rates.",
+          "Self-hosted servers can run on a Redis cluster or a managed serverless instance.",
+        ],
+        improvements: [
+          "The Inbox opens faster, and long comments no longer slow the list down.",
+          "Typing a comment while a task streams stays smooth, even in a long transcript.",
+          "Rounded corners now match across the app.",
+          "The Inbox keeps what you opened readable in a narrow window.",
+        ],
+        fixes: [
+          "A brief server hiccup no longer ends a task that is still running.",
+          "A retry, or checking out the same repository again, keeps what the earlier attempt left behind.",
+          "Reopening the Inbox no longer misses notifications that arrived while you were away.",
+          "A reply in a Lark group keeps the original message and mentions who asked.",
+          "A worker's reply still reaches the Squad leader after the task is claimed.",
+          "Older Autopilot triggers run again instead of being skipped.",
+          "Usage says when token counts are partial, instead of showing them as complete.",
+          "An Antigravity run reports what it used and cost.",
+          "Every tool step shows how long it actually took.",
+          "A GitHub PR links to an Issue only where it says it should.",
+          "Agent runs sit in the Issue at the time they actually happened.",
+          "A long dialog keeps its buttons reachable.",
+          "Codex stops instead of reusing a setup that failed to prepare.",
+          "An Issue no longer shows an update when nothing changed.",
+          "The web app picks up the latest security fix.",
+        ],
+      },
+      {
+        version: "0.4.42",
+        date: "2026-09-09",
+        title: "Agent runs inside comment threads, an Issue thread outline, more reliable channel replies, and steadier search in large workspaces",
+        changes: [],
+        features: [
+          "An agent's queue position, run status, steps, and logs now show up inside the comment thread.",
+          "Add more instructions in the same thread and they join the run already going.",
+          "Separate comment threads queue on their own, so instructions never land in another thread's run.",
+          "The outline on the right lists every thread in an Issue, who is in it, and what is done.",
+        ],
+        improvements: [
+          "Search holds up in large workspaces instead of timing out partway.",
+          "A long thread title stays on one line in the outline.",
+        ],
+        fixes: [
+          "Cancelling a Codex run keeps what that run already used and cost.",
+          "A runtime whose first session failed no longer stays stuck.",
+          "Cursor's background commands are no longer mistaken for idle, and they are cleaned up when the task ends.",
+          "A Telegram reply no longer arrives twice while the placeholder is still sending.",
+          "DingTalk keeps the quote you picked, and /new or /clear no longer swallow what you were typing.",
+          "Lark tells you in the group when it cannot send the binding card to your DM.",
+          "An Issue created from a channel now links straight to it.",
+          "Replying to an agent's thread stays with that agent, with no spare task left over.",
+          "Pressing Esc after opening logs with the mouse leaves nothing behind.",
+          "A quick-created Issue no longer shows activity that has nothing to do with it.",
+          "Tool output previews no longer cut characters in half.",
+          "Hitting the request limit says so, instead of asking you to sign in again.",
+          "The command line reports which page of Issues you actually got.",
+          "Reordering Issues no longer drops one in the wrong place.",
+          "The Inbox no longer shows two sidebar toggles side by side.",
+        ],
+      },
+      {
+        version: "0.4.41",
+        date: "2026-09-07",
+        title: "A reorganized sidebar, a regrouped Settings page, faster search in large workspaces, and Autopilot manual runs",
+        changes: [],
+        features: [
+          "The sidebar now groups your work and your AI team, with Analytics and Settings pinned at the bottom.",
+          "Pinned items past the first five stay tucked away until you expand them.",
+          "Settings is grouped by purpose: Personal, Workspace, Issue configuration, Connections & extensions, and Desktop app.",
+          "Every integration sits on one page, with its connection status shown up front.",
+          "Issue and chat preferences now live inside Preferences.",
+          "Custom properties come back with their names from the command line, not just ids.",
+          "See how much each agent run used and cost from the command line.",
+          "Pick the Issue fields you want from the command line and get a shorter response.",
+        ],
+        improvements: [
+          "Agent, skill, and runtime detail pages stay aligned on wide screens.",
+          "Issue search is faster in large workspaces, and multi-word searches no longer stall.",
+          "The Inbox list is narrower by default, leaving more room for what you opened.",
+          "Self-hosted servers can set how much memory search is allowed to use.",
+        ],
+        fixes: [
+          "An agent can start an Autopilot run for you when you could start it yourself.",
+          "Every Autopilot change is judged by the permissions of the person behind it.",
+          "Autopilot webhook credentials no longer show up in live updates.",
+          "A Pi task whose working folder is gone starts a fresh session instead of failing over and over.",
+          "A new chat from a channel takes its title from what you just asked for.",
+          "Archiving an agent clears its chats, so Slack no longer shows them as still working.",
+          "Members can create tasks with agents on runtimes they can't see.",
+          "Tab and Enter in a nested list only affect the level you are on.",
+          "Codex explains how to fix the setting behind a failing conversation instead of retrying silently.",
+        ],
+      },
+      {
+        version: "0.4.40",
+        date: "2026-09-04",
+        title: "MCP server renames and connection swaps, steadier task starts during upgrades, cleaner sign-out on expiry, and accurate shared-agent status",
+        changes: [],
+        features: [
+          "Rename an MCP server without losing its connection details or the agents using it.",
+          "Swapping in a new connection is now a separate, deliberate step.",
+          "Saving an MCP server points you straight at the field that needs fixing.",
+        ],
+        improvements: [
+          "Each agent execution is called a run everywhere, from the apps to the docs.",
+          "Search results come back faster.",
+        ],
+        fixes: [
+          "Tasks still start while your local app and the server are on different versions.",
+          "An expired session takes you back to sign-in, with the previous account's data cleared.",
+          "Being offline no longer signs you out.",
+          "Agents shared from someone else's runtime show as available instead of offline.",
+          "Checking out a repository you have used before no longer fails.",
+        ],
+      },
+      {
+        version: "0.4.39",
+        date: "2026-09-03",
+        title: "Tab-switching shortcuts, server performance, and Autopilot identity authorization",
+        changes: [],
+        features: [
+          "Refresh the model list yourself and get what your runtime supports right now.",
+          "WeCom brings a failed run back to the chat you started it from.",
+          "Switch desktop tabs with number shortcuts.",
+          "Filter and sort Issues by custom properties from the command line.",
+          "Find Issues where a custom property has no value yet.",
+        ],
+        improvements: [
+          "Assigning an Issue takes fewer steps, and you can still hold off starting the run.",
+          "Self-hosted servers do less background work to keep runtimes connected.",
+          "Deleting a runtime takes effect right away, with no stale connection left behind.",
+        ],
+        fixes: [
+          "Replying to a squad leader stays with that leader, keeping the briefing, folder, and session.",
+          "Long Issue identifiers no longer cover the title in lists and tables.",
+          "Sign-in, error, and not-found pages follow the language you picked.",
+          "Signing in still works after you switch languages part way through.",
+          "Hermes keeps the model provider you picked instead of switching back on its own.",
+          "OpenClaw's managed MCP servers start, and your own MCP settings stay untouched.",
+          "Scheduled and webhook Autopilot runs use the permissions of whoever created the trigger.",
+          "An older trigger whose creator can't be confirmed stops instead of running.",
+          "Members who left the workspace keep their name in activity history.",
+        ],
+      },
       {
         version: "0.4.38",
         date: "2026-09-02",
@@ -585,7 +795,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
           "You can now create a share link that lets someone join your workspace directly.",
           "The transcript now reads as steps, with a two-lane timeline and an outcome summary.",
           "Files sent in Slack now arrive in the conversation as attachments.",
-          "You can now add 鸿翼灵工 to your phone's home screen and open it like an app.",
+          "You can now add Multica to your phone's home screen and open it like an app.",
           "Browser tabs are now named after the workspace page you have open.",
           "Imported skills now show where they came from.",
           "A mention of the Issue you are reading now reads as \"This issue\".",
@@ -745,7 +955,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
           "Oh-My-Pi can now run your agents as well.",
           "Voice notes sent in WeCom now reach your agents as text.",
           "Kimi and Pi agents can now be set to think harder or faster.",
-          "Cmd/Ctrl+click or middle-click any link in 鸿翼灵工 to open it in a new tab.",
+          "Cmd/Ctrl+click or middle-click any link in Multica to open it in a new tab.",
           "When WeCom cannot connect, the page now says whether it was refused or simply unreachable.",
         ],
         improvements: [
@@ -951,7 +1161,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
           "Every workspace can now label agents and Skills to keep them organized.",
           "Codex on Linux now uses the tools and logins already set up on that machine.",
           "Built-in Skills have consistent names and take up far less of each agent run.",
-          "Dimmed text across 鸿翼灵工 is now solid and readable instead of washed out.",
+          "Dimmed text across Multica is now solid and readable instead of washed out.",
         ],
         fixes: [
           "Multi-line prompts sent to Copilot on Windows no longer lose their line breaks.",
@@ -980,14 +1190,14 @@ export function createEnDict(allowSignup: boolean): LandingDict {
         ],
         improvements: [
           "Issue tables stay responsive when you switch workspaces.",
-          "鸿翼灵工's interface and four-language docs are more consistent and readable.",
+          "Multica's interface and four-language docs are more consistent and readable.",
           "Attachment-heavy CLI and agent workflows now transfer less data.",
           "Self-hosted setup now carries your configuration into the daemon.",
         ],
         fixes: [
           "Codex file changes are now preserved in task transcripts.",
           "Hermes agents now recover from a lost resumed session.",
-          "Qoder CLI is now found when 鸿翼灵工 starts from a desktop app.",
+          "Qoder CLI is now found when Multica starts from a desktop app.",
           "Daemon updates no longer wait forever while the machine is idle.",
           "Issue activity labels no longer clip letters below the baseline.",
         ],
@@ -1038,7 +1248,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
           "Long pasted text now becomes a text attachment automatically.",
           "Uploads now appear once and become draft content only after they finish.",
           "Webhook URLs now hide their secret tokens until you choose to reveal them.",
-          "Starting 鸿翼灵工 with many workspaces now launches far fewer agent checks.",
+          "Starting Multica with many workspaces now launches far fewer agent checks.",
           "Usage rankings now focus on the top agents and sort failures more clearly.",
           "Each composer now leaves the cursor where that surface expects it.",
         ],
@@ -1213,7 +1423,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
           "Your settings now save reliably after you reopen the panel.",
           "Resumed Codex tasks now report their usage accurately.",
           "Comments no longer turn the wrong text into links.",
-          "Direct chat replies now stay in 鸿翼灵工.",
+          "Direct chat replies now stay in Multica.",
           "AI-assisted creation is now always available.",
           "The Issues page no longer stutters when you first open it.",
           "Codex agents on Linux now save their Git details correctly.",
@@ -1517,7 +1727,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
         changes: [],
         features: [
           "The task transcript remembers your filter and expansion choices, and restores them the next time you open the run.",
-          "Self-hosted (Helm): a new `postgres.external.enabled` toggle points 鸿翼灵工 at an externally managed PostgreSQL (RDS, CNPG, Cloud SQL, Neon…) and skips the built-in database.",
+          "Self-hosted (Helm): a new `postgres.external.enabled` toggle points Multica at an externally managed PostgreSQL (RDS, CNPG, Cloud SQL, Neon…) and skips the built-in database.",
         ],
         fixes: [
           "Ordered-list caret no longer strands on the block below when a comment draft with an empty `1. ` line reloads.",
@@ -1571,8 +1781,8 @@ export function createEnDict(allowSignup: boolean): LandingDict {
         title: "Slack /issue slash command, ByteDance TRAE CLI runtime, and Claude Sonnet 5",
         changes: [],
         features: [
-          "Slack's native /issue slash command creates a 鸿翼灵工 Issue and replies to you privately with the link.",
-          "A Slack user who already linked their account to one 鸿翼灵工 bot no longer re-links when the same Slack workspace connects a second bot.",
+          "Slack's native /issue slash command creates a Multica Issue and replies to you privately with the link.",
+          "A Slack user who already linked their account to one Multica bot no longer re-links when the same Slack workspace connects a second bot.",
           "Slack channel context is now driven by two focused reads: a channel overview and a per-thread read.",
           "ByteDance TRAE CLI (traecli) joins the built-in agent runtimes over the standard ACP transport.",
           "Claude Sonnet 5 is now available in the Anthropic model catalog with introductory pricing.",
@@ -1588,7 +1798,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
           "Cursor and Kiro runtime completion transcripts are recovered so the final result no longer goes missing.",
           "Self-host: MULTICA_SLACK_SECRET_KEY is now passed through to the backend container in docker-compose.selfhost.yml. (Community-reported.)",
           "The Issues board \"N working\" chip counts distinct Issues instead of distinct agents.",
-          "Anonymous self-host source-channel reports go back to the official 鸿翼灵工 API endpoint.",
+          "Anonymous self-host source-channel reports go back to the official Multica API endpoint.",
           "Comment deep-link highlights are now background-only and consistent between root comments and replies.",
         ],
       },
@@ -1599,7 +1809,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
         changes: [],
         features: [
           "Autopilots now have a clear write-permission layer, plus a Manage Access dialog that lets the creator grant write access to specific workspace members.",
-          "Slack channels can backfill their conversation history into 鸿翼灵工, so an agent has the prior context the moment it joins.",
+          "Slack channels can backfill their conversation history into Multica, so an agent has the prior context the moment it joins.",
           "Slack messages show a 👀 reaction while an agent is preparing its reply, and the reaction is always cleared on the way out.",
           "Skill bundles can be installed from a local .skill or .zip archive.",
           "multica issue commands no longer accept short UUID prefixes — use the issue key (MUL-123) or the full UUID.",
@@ -1627,7 +1837,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
           "Issues now have a Remove parent action, so you can detach a sub-Issue without first having to pick a different parent.",
         ],
         improvements: [
-          "The local daemon reconnects to 鸿翼灵工 through a more resilient WebSocket flow with bounded backoff, so brief network drops recover smoothly instead of stalling.",
+          "The local daemon reconnects to Multica through a more resilient WebSocket flow with bounded backoff, so brief network drops recover smoothly instead of stalling.",
           "The daemon now bounds each runtime probe with its own timeout, so a single wedged CLI can no longer block every other runtime from coming online.",
         ],
         fixes: [
@@ -1864,7 +2074,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
         title: "CodeBuddy Runtime",
         changes: [],
         features: [
-          "CodeBuddy can now run local 鸿翼灵工 agents, with its available model and effort choices shown automatically",
+          "CodeBuddy can now run local Multica agents, with its available model and effort choices shown automatically",
           "Quick-created Issues now keep uploaded files attached from the first draft through the final Issue",
         ],
         improvements: [
@@ -1906,15 +2116,15 @@ export function createEnDict(allowSignup: boolean): LandingDict {
           "Comment boxes now show which agents or squads will start work before you send, with controls to avoid accidental runs",
           "Run transcripts now include timestamps, making agent progress and handoffs easier to review",
           "Autopilot detail pages now show who created each autopilot",
-          "Claude Fable 5 is now available in 鸿翼灵工's supported model and pricing list",
+          "Claude Fable 5 is now available in Multica's supported model and pricing list",
           "Issue conversations can now resolve a specific reply, making long threads easier to close while keeping the final answer visible",
-          "Lark and Feishu conversations now show a typing reaction while 鸿翼灵工 is preparing a reply, then clear it before the answer is sent",
+          "Lark and Feishu conversations now show a typing reaction while Multica is preparing a reply, then clear it before the answer is sent",
           "Agent runs now know who started each task, making handoffs, audit trails, and privacy-aware behavior more accurate",
-          "OpenClaw users can point 鸿翼灵工 at a custom app location and data folder from their local configuration",
+          "OpenClaw users can point Multica at a custom app location and data folder from their local configuration",
         ],
         improvements: [
           "Comment trigger indicators are quieter, clearer, and less likely to crowd long agent names",
-          "Desktop now disables daemon start and stop controls when the daemon is managed outside 鸿翼灵工, such as in WSL2",
+          "Desktop now disables daemon start and stop controls when the daemon is managed outside Multica, such as in WSL2",
           "The active agent indicator in an Issue header is easier to read, with motion only while work is running and clearer queued wording otherwise",
           "The CLI now gives clearer guidance around common errors, sign-in problems, and project setup values",
         ],
@@ -1938,7 +2148,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
         title: "Web Notifications and /note Command",
         changes: [],
         features: [
-          "The web app can now show native browser notification banners, making workspace activity easier to catch while 鸿翼灵工 is in the background",
+          "The web app can now show native browser notification banners, making workspace activity easier to catch while Multica is in the background",
           "Comments that start with /note can record context without waking the assigned agent, so teams can leave coordination notes without triggering a run",
           "Antigravity is now available as a per-agent model choice for daemon-run agents",
           "The CLI now explains common request failures in plain language and points to the next action",
@@ -1996,10 +2206,10 @@ export function createEnDict(allowSignup: boolean): LandingDict {
         title: "Lark Bot Integration",
         changes: [],
         features: [
-          "鸿翼灵工 now supports Lark as a third-party integration, so teams can scan a QR code and create a 鸿翼灵工 agent as a Lark Bot",
+          "Multica now supports Lark as a third-party integration, so teams can scan a QR code and create a Multica agent as a Lark Bot",
           "Chat now has a searchable agent picker and an explicit context picker, making it easier to choose who should respond and what they should see",
           "Descriptions and comments now support checkbox task lists for lightweight planning inside an Issue",
-          "Agents now include built-in 鸿翼灵工 skills so they can follow workspace workflows more consistently",
+          "Agents now include built-in Multica skills so they can follow workspace workflows more consistently",
         ],
         improvements: [
           "Chat context is represented with clear mentions, making handoffs and later review easier to understand",
@@ -2043,7 +2253,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
         title: "Japanese Support and /skill Command",
         changes: [],
         features: [
-          "鸿翼灵工 now supports Japanese across the app, site, and docs",
+          "Multica now supports Japanese across the app, site, and docs",
           "Chat now supports a /skill command for choosing an agent Skill",
           "Workspaces can now show a custom logo",
           "Teams can add Skills to an agent without replacing existing Skills",
@@ -2099,7 +2309,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
         changes: [],
         features: [
           "Agents that continue work from an Issue comment now resume the previous session instead of starting over, keeping the task context intact",
-          "鸿翼灵工 now supports Korean across the app, public site, and documentation, including Korean docs pages and localized date formatting",
+          "Multica now supports Korean across the app, public site, and documentation, including Korean docs pages and localized date formatting",
           "Issue pages now keep active agent work visible near the title, with a cleaner view when multiple agents are working at once",
           "Agents can scan Issue discussions faster with thread previews, reply counts, and recent activity before opening the full conversation",
           "OpenClaw runtimes can use the MCP setup saved on an agent, and Claude Opus 4.8 is available in model selection and usage estimates",
@@ -2147,7 +2357,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
         title: "Local Working Directories",
         changes: [],
         features: [
-          "Projects can now use a local working directory on Desktop, so tasks can run in an existing folder while 鸿翼灵工 shows when another task is waiting for that directory",
+          "Projects can now use a local working directory on Desktop, so tasks can run in an existing folder while Multica shows when another task is waiting for that directory",
           "Autopilot webhook triggers can now filter incoming events and actions before work starts, with docs linked directly from the setup flow",
           "Swimlane views can group Issues by parent Issue, project, or assignee, making large boards easier to slice by how the team plans work",
           "Comments now support selecting multiple attachments and keeping, removing, or replacing attachments while editing",
@@ -2194,11 +2404,11 @@ export function createEnDict(allowSignup: boolean): LandingDict {
       {
         version: "0.3.8",
         date: "2026-05-25",
-        title: "鸿翼灵工 for iOS, Helm Self-Hosting & Smoother Collaboration",
+        title: "Multica for iOS, Helm Self-Hosting & Smoother Collaboration",
         changes: [],
         features: [
-          "鸿翼灵工 for iOS is now available as our first official usable mobile client, covering login, workspaces, inbox, Issues, projects, chat, comments, reactions, presence, and live updates; it is not on the App Store yet, so users need to build and install it manually",
-          "Self-hosted teams can now deploy 鸿翼灵工 to Kubernetes with a Helm chart, while Docker-based installs keep clearer port and URL controls",
+          "Multica for iOS is now available as our first official usable mobile client, covering login, workspaces, inbox, Issues, projects, chat, comments, reactions, presence, and live updates; it is not on the App Store yet, so users need to build and install it manually",
+          "Self-hosted teams can now deploy Multica to Kubernetes with a Helm chart, while Docker-based installs keep clearer port and URL controls",
           "Project resource pickers now include repository search, and workspace repository settings can store descriptions that help agents understand each codebase",
           "Runtime usage now recognizes DeepSeek, Kimi K2.6, Zhipu GLM, and long-context Claude Opus model costs more accurately",
           "The public site now supports use-case pages and a clearer path to Docs, Changelog, and getting started",
@@ -2212,7 +2422,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
         ],
         fixes: [
           "Issue timelines stay in chronological order when live comments and activity arrive close together",
-          "Codex runs no longer inherit hidden host memory during 鸿翼灵工 tasks, and Pi runs receive a cleaner end-of-input signal",
+          "Codex runs no longer inherit hidden host memory during Multica tasks, and Pi runs receive a cleaner end-of-input signal",
           "Local runtime delete actions now avoid self-healing rows that would immediately reappear, and dependency updates close server security advisories",
           "Title fields now refresh safely after external updates, and markdown code no longer uses ligatures that can distort command flags",
         ],
@@ -2342,7 +2552,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
         ],
         improvements: [
           "Failed issue actions now show clearer error messages so teams can understand what happened without digging through logs",
-          "GitHub-linked pull requests now surface CI and merge-conflict status inside 鸿翼灵工",
+          "GitHub-linked pull requests now surface CI and merge-conflict status inside Multica",
           "Self-hosted deployments get safer defaults and clearer guidance for reverse proxies, auth limits, and local-only services",
           "Search results are ranked more usefully and include better snippets",
         ],
@@ -2434,7 +2644,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
         title: "GitHub Integration, Chat Attachments & Safer Issue Navigation",
         changes: [],
         features: [
-          "Connect GitHub so linked pull requests appear on 鸿翼灵工 issues, sync their status, and close the 鸿翼灵工 issue automatically when the PR closes",
+          "Connect GitHub so linked pull requests appear on Multica issues, sync their status, and close the Multica issue automatically when the PR closes",
           "Chat messages can include file attachments and image previews",
           "Agents and runtimes can now be kept public or private for clearer team access",
           "Stopping a single agent task now asks for confirmation before it is terminated",
@@ -2445,7 +2655,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
           "Long issue timelines scroll more smoothly",
           "The feedback dialog now points contributors toward GitHub discussions and issues",
           "Self-hosted Caddy guidance now calls out real-time connection requirements",
-          "Linux desktop packages show the 鸿翼灵工 app icon again",
+          "Linux desktop packages show the Multica app icon again",
         ],
         fixes: [
           "Downloaded attachments keep their original filenames",
@@ -2547,7 +2757,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
           "Linux daemon self-restart uses `brew prefix` symlinks, so Homebrew Cellar deletion no longer orphans runtimes",
           "CLI short IDs now route correctly — copied prefixes no longer 404",
           "Windows non-ASCII comment / description input lands via new `--content-file` / `--description-file` flags",
-          "Windows / Linux desktop replaces the Electron placeholder icon with the 鸿翼灵工 asterisk",
+          "Windows / Linux desktop replaces the Electron placeholder icon with the Multica asterisk",
           "Orphaned timeline replies are now correctly surfaced",
           "Timeline comment pagination budget excludes activities, so heavy activity no longer crowds out real comments",
         ],
@@ -2651,7 +2861,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
         ],
         improvements: [
           "Daemon `/tasks/claim` polling uses a Redis empty-claim fast-path, dropping idle DB load and reclaiming disk on long-open issues",
-          "鸿翼灵工 Agent commits include a `Co-authored-by` trailer for proper Git attribution",
+          "Multica Agent commits include a `Co-authored-by` trailer for proper Git attribution",
           "Desktop blocks Cmd+R / Ctrl+R / F5 from reloading the app and shows the real version in dev and Updates settings",
         ],
         fixes: [
@@ -3254,29 +3464,29 @@ export function createEnDict(allowSignup: boolean): LandingDict {
   download: {
     hero: {
       macArm64: {
-        title: "鸿翼灵工 for macOS",
+        title: "Multica for macOS",
         sub: "Apple Silicon · bundled daemon, zero setup",
         primary: "Download (.dmg)",
         altZip: "or download .zip",
       },
       macIntel: {
-        title: "鸿翼灵工 for macOS",
+        title: "Multica for macOS",
         sub: "Intel · bundled daemon, zero setup",
         primary: "Download (.dmg)",
         altZip: "or download .zip",
       },
       winX64: {
-        title: "鸿翼灵工 for Windows",
+        title: "Multica for Windows",
         sub: "Bundled daemon, zero setup",
         primary: "Download (.exe)",
       },
       winArm64: {
-        title: "鸿翼灵工 for Windows",
+        title: "Multica for Windows",
         sub: "ARM · bundled daemon, zero setup",
         primary: "Download (.exe)",
       },
       linux: {
-        title: "鸿翼灵工 for Linux",
+        title: "Multica for Linux",
         sub: "Bundled daemon, zero setup",
         primary: "Download AppImage",
         altFormats: "or .deb / .rpm",
@@ -3327,28 +3537,20 @@ export function createEnDict(allowSignup: boolean): LandingDict {
   contactSales: {
     pageTitle: "Contact Sales",
     pageDescription:
-      "Talk to the 鸿翼灵工 team about rolling out human + agent workflows at your company.",
+      "Talk to the Multica team about rolling out human + agent workflows at your company.",
     eyebrow: "Contact Sales",
     title: "Let’s understand your needs",
-    subtitle:
-      "Help us tailor the best solution for you before we connect.",
-    notice: {
-      badge: "Our system only recognizes business email domains.",
-      body: "Requests from personal emails (e.g., @gmail.com, @outlook.com) will not be detected or processed.",
-    },
     fields: {
       firstName: "First name",
       lastName: "Last name",
       businessEmail: "Business email",
       businessEmailHint:
-        "Company email required. Please use a valid company domain so we can follow up with you.",
+        "Use a company email. Gmail, Outlook, and other personal email providers aren't accepted.",
       companyName: "Company name",
       companySize: "Company size",
       countryRegion: "Country / Region",
-      useCase: "How do you plan to use or collaborate with 鸿翼灵工?",
+      useCase: "How do you plan to use or collaborate with Multica?",
       goals: "Your goals or challenges",
-      goalsHint:
-        "Tell us what you’d like to achieve with 鸿翼灵工 or the challenges you’re facing. The more details you provide, the better we can support you.",
       selectPlaceholder: "Please select",
       submit: "Submit",
       submitting: "Submitting…",
@@ -3362,10 +3564,10 @@ export function createEnDict(allowSignup: boolean): LandingDict {
       { value: "1000+", label: "1,000+ employees" },
     ],
     useCases: [
-      { value: "evaluate", label: "Evaluating 鸿翼灵工 for my team" },
-      { value: "adopt_team", label: "Rolling out 鸿翼灵工 to a team or company" },
+      { value: "evaluate", label: "Evaluating Multica for my team" },
+      { value: "adopt_team", label: "Rolling out Multica to a team or company" },
       { value: "self_host", label: "Self-hosting on our own infrastructure" },
-      { value: "integrate", label: "Integrating 鸿翼灵工 with existing tools" },
+      { value: "integrate", label: "Integrating Multica with existing tools" },
       { value: "partner", label: "Partnership or reseller inquiry" },
       { value: "other", label: "Something else" },
     ],
@@ -3413,22 +3615,22 @@ export function createEnDict(allowSignup: boolean): LandingDict {
     ],
     consent: {
       intro:
-        "鸿翼灵工, Inc. respects your privacy. We’ll use your personal information only to manage your account and deliver the products or services you’ve requested. Occasionally, we’d love to share product updates, best practices, and insights that may be relevant to you. Please let us know below if you’d like to hear from us.",
+        "Multica, Inc. respects your privacy. We’ll use your personal information only to manage your account and deliver the products or services you’ve requested. Occasionally, we’d love to share product updates, best practices, and insights that may be relevant to you. Please let us know below if you’d like to hear from us.",
       outreach:
-        "I’d like to receive one-to-one communication from 鸿翼灵工, Inc., including service updates, support inquiries, and business-related follow-ups.",
+        "I’d like to receive one-to-one communication from Multica, Inc., including service updates, support inquiries, and business-related follow-ups.",
       updates:
-        "I’d like to receive product updates, insights, and event invitations from 鸿翼灵工.",
+        "I’d like to receive product updates, insights, and event invitations from Multica.",
       unsubscribe:
         "You can unsubscribe from our communications at any time. For more details on how we handle your data and privacy rights, please review our",
       submitConsent:
-        "By clicking “Submit,” you consent to allow 鸿翼灵工, Inc. to store and process your information for the purpose of delivering the requested content.",
+        "By clicking “Submit,” you consent to allow Multica, Inc. to store and process your information for the purpose of delivering the requested content.",
       privacyLinkLabel: "Privacy Policy.",
       privacyLinkHref: "/about",
     },
     success: {
       title: "Thanks — we got it.",
       message:
-        "A member of the 鸿翼灵工 team will respond within three business days. In the meantime, feel free to explore the docs or star us on GitHub.",
+        "A member of the Multica team will respond within three business days. In the meantime, feel free to explore the docs or star us on GitHub.",
       cta: "Back to home",
     },
     errors: {

@@ -23,37 +23,36 @@ import { useUpdateNotificationPreferences } from "@/data/mutations/notification-
 const INBOX_GROUPS: {
   key: Exclude<NotificationGroupKey, "system_notifications">;
   label: string;
-  description: string;
+  description?: string;
 }[] = [
   {
     key: "assignments",
-    label: "任务分配",
-    description: "当任务分配给你，或将你从负责人中移除时。",
+    label: "Assignments",
+    description: "Assigned or unassigned.",
   },
   {
     key: "status_changes",
-    label: "状态变更",
-    description: "当任务状态发生变化时。",
+    label: "Status changes",
   },
   {
     key: "comments",
-    label: "评论",
-    description: "当你订阅的任务出现新评论时。",
+    label: "Comments",
+    description: "New comments on issues you're subscribed to.",
   },
   {
     key: "mentions",
-    label: "提及",
-    description: "当有人提及你时，包括 @all 和 @squad。",
+    label: "Mentions",
+    description: "When someone @mentions you, including @all and @squad.",
   },
   {
     key: "updates",
-    label: "任务更新",
-    description: "任务标题、描述、标签、优先级或截止日期发生变化时。",
+    label: "Issue updates",
+    description: "Edits to title, description, labels, priority, or due date.",
   },
   {
     key: "agent_activity",
-    label: "智能体动态",
-    description: "当智能体接取、执行或完成任务时。",
+    label: "Agent activity",
+    description: "When an agent picks up, runs, or completes a task.",
   },
 ];
 
@@ -91,7 +90,7 @@ export default function NotificationsSettingsScreen() {
     return (
       <View className="flex-1 items-center justify-center bg-background px-6">
         <Text className="text-sm text-destructive text-center">
-          通知偏好加载失败。
+          Failed to load notification preferences.
         </Text>
       </View>
     );
@@ -103,8 +102,7 @@ export default function NotificationsSettingsScreen() {
       contentContainerClassName="px-4 py-4 gap-6"
     >
       <Section
-        title="收件箱通知"
-        description="选择哪些事件显示在收件箱中。"
+        title="Inbox notifications"
       >
         {INBOX_GROUPS.map((group, idx) => {
           const enabled = preferences[group.key] !== "muted";
@@ -116,9 +114,11 @@ export default function NotificationsSettingsScreen() {
                   <Text className="text-base font-medium text-foreground">
                     {group.label}
                   </Text>
-                  <Text className="text-xs text-muted-foreground mt-0.5">
-                    {group.description}
-                  </Text>
+                  {group.description ? (
+                    <Text className="text-xs text-muted-foreground mt-0.5">
+                      {group.description}
+                    </Text>
+                  ) : null}
                 </View>
                 <Switch
                   checked={enabled}
@@ -132,16 +132,15 @@ export default function NotificationsSettingsScreen() {
       </Section>
 
       <Section
-        title="系统"
-        description="鸿翼灵工公告和重要账户事件。"
+        title="System"
       >
         <View className="flex-row items-center px-4 py-3 gap-3">
           <View className="flex-1">
             <Text className="text-base font-medium text-foreground">
-              系统通知
+              System notifications
             </Text>
             <Text className="text-xs text-muted-foreground mt-0.5">
-              账户变更、安全提醒和产品更新。
+              Account changes, security alerts, product updates.
             </Text>
           </View>
           <Switch

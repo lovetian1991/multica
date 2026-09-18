@@ -11,18 +11,15 @@
  */
 import { create } from "zustand";
 import type { User } from "@multica/core/types";
-import { getCurrentServerUrl } from "@/lib/server-url";
 import { api, ApiError } from "./api";
-import { queryClient } from "./query-client";
 import { clearToken, getToken, setToken } from "./secure-storage";
-import { restoreServerUrl, saveServerUrl } from "./server-config";
+import { invalidateSessionEpoch } from "./session-epoch";
 import { useWorkspaceStore } from "./workspace-store";
 
 interface AuthState {
   user: User | null;
   isLoading: boolean;
   initialize: () => Promise<void>;
-  configureServer: (serverUrl: string) => Promise<string>;
   sendCode: (email: string) => Promise<void>;
   verifyCode: (email: string, code: string) => Promise<User>;
   logout: () => Promise<void>;
@@ -36,8 +33,6 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: true,
 
   initialize: async () => {
-    await restoreServerUrl();
-
     // Restore the persisted workspace slug alongside the auth token so the
     // entry redirect (app/index.tsx) can route directly to the last-used
     // workspace without flashing /select-workspace.
@@ -56,24 +51,15 @@ export const useAuthStore = create<AuthState>((set) => ({
       // Only clear token on a genuine 401. Network blips / 5xx keep the
       // token so the next launch (or a manual refresh) can retry.
       if (err instanceof ApiError && err.status === 401) {
+        // Synchronous first, before the awaited delete: anything already
+        // in flight has to learn the credential is dead now, not once the
+        // Keychain write lands.
+        invalidateSessionEpoch();
         await clearToken();
         api.setToken(null);
       }
       set({ user: null, isLoading: false });
     }
-  },
-
-  configureServer: async (serverUrl) => {
-    const previousServerUrl = getCurrentServerUrl();
-    const normalized = await saveServerUrl(serverUrl);
-    if (normalized === previousServerUrl) return normalized;
-
-    await clearToken();
-    api.setToken(null);
-    await useWorkspaceStore.getState().clear();
-    queryClient.clear();
-    set({ user: null });
-    return normalized;
   },
 
   sendCode: async (email) => {
@@ -82,6 +68,10 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   verifyCode: async (email, code) => {
     const { token, user } = await api.verifyCode(email, code);
+    // Signing in replaces the credential just as decisively as signing out:
+    // a renewal still in flight for the previous account must not write its
+    // result over this one.
+    invalidateSessionEpoch();
     await setToken(token);
     api.setToken(token);
     set({ user });
@@ -89,6 +79,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
+    // First statement in the function, before any await. The Keychain delete
+    // below is async, so until it lands a concurrent read still returns the
+    // token being removed — the epoch is what makes this instant.
+    invalidateSessionEpoch();
     await clearToken();
     api.setToken(null);
     set({ user: null });

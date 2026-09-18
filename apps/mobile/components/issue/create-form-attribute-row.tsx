@@ -60,7 +60,7 @@ export function CreateFormAttributeRow() {
 
   const { getName } = useActorLookup();
   // The draft can hold a custom status the user picked in the sheet. (MUL-6243)
-  const { categoryOf, colorOf, labelOf } = useIssueStatuses();
+  const { categoryOf, colorOf, labelOf, iconOf } = useIssueStatuses();
   const assigneeLabel = assignee
     ? getName(assignee.type, assignee.id)
     : "负责人";
@@ -83,7 +83,7 @@ export function CreateFormAttributeRow() {
             <StatusIcon
               status={status}
               category={categoryOf(status)}
-              color={colorOf(status)}
+              icon={iconOf(status)} color={colorOf(status)}
               size={12}
             />
           }
