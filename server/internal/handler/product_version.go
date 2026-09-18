@@ -57,19 +57,27 @@ func (h *Handler) ListSystemProductVersions(w http.ResponseWriter, r *http.Reque
 	if !h.requireSystemAdmin(w, r) {
 		return
 	}
-	h.listProductVersions(w, r)
+	h.listProductVersions(w, r, false)
 }
 
 func (h *Handler) ListProductVersions(w http.ResponseWriter, r *http.Request) {
-	h.listProductVersions(w, r)
+	h.listProductVersions(w, r, true)
 }
 
-func (h *Handler) listProductVersions(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) listProductVersions(w http.ResponseWriter, r *http.Request, enabledOnly bool) {
 	productIDUUID, ok := parseUUIDOrBadRequest(w, chi.URLParam(r, "id"), "product id")
 	if !ok {
 		return
 	}
-	versions, err := h.Queries.ListProductVersions(r.Context(), productIDUUID)
+	var (
+		versions []db.ProductVersion
+		err      error
+	)
+	if enabledOnly {
+		versions, err = h.Queries.ListEnabledProductVersions(r.Context(), productIDUUID)
+	} else {
+		versions, err = h.Queries.ListProductVersions(r.Context(), productIDUUID)
+	}
 	if err != nil {
 		slog.Warn("ListProductVersions failed", append(logger.RequestAttrs(r), "error", err)...)
 		writeError(w, http.StatusInternalServerError, "failed to list product versions")
