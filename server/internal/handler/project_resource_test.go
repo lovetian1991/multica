@@ -219,6 +219,8 @@ func TestIsValidGitRepoURL(t *testing.T) {
 		"ssh://git@github.com:22/multica-ai/multica.git",
 		"git@github.com:multica-ai/multica.git",
 		"git@gitlab.example.com:group/sub/repo.git",
+		"git@172.16.0.83:cq.tianyong/opencontent.git",
+		"ssh://git@172.16.0.83/cq.tianyong/opencontent.git",
 	}
 	bad := []string{
 		"",

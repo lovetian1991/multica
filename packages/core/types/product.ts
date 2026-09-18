@@ -1,6 +1,7 @@
 export interface Product {
   id: string;
   name: string;
+  description: string;
   created_at: string;
   updated_at: string;
 }
@@ -19,10 +20,12 @@ export interface ProductVersion {
 
 export interface CreateProductRequest {
   name: string;
+  description?: string;
 }
 
 export interface UpdateProductRequest {
   name: string;
+  description?: string;
 }
 
 export interface CreateProductVersionRequest {

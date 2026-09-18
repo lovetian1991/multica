@@ -1441,6 +1441,7 @@
     "new_product": "新建产品",
     "columns": {
       "name": "产品名称",
+      "description": "描述",
       "directory": "文件夹目录",
       "remark": "备注"
     },
@@ -1457,9 +1458,11 @@
     "product_editor": {
       "create_title": "新建产品",
       "edit_title": "编辑产品",
-      "description": "设置产品名称、文件夹目录和可选备注。",
+      "description": "设置产品名称和描述。描述会注入任务上下文，帮助大模型理解产品任务。",
       "name": "产品名称",
       "name_placeholder": "输入产品名称",
+      "description_label": "描述",
+      "description_placeholder": "这个描述会注入任务上下文，让大模型更好理解产品任务",
       "directory": "文件夹目录",
       "directory_placeholder": "输入文件夹目录",
       "remark": "备注",
@@ -1488,7 +1491,7 @@
       "name": "版本名称",
       "name_placeholder": "输入版本名称",
       "remark": "备注",
-      "remark_placeholder": "添加备注",
+      "remark_placeholder": "这个描述会注入任务上下文，让大模型更好理解该版本",
       "cancel": "取消",
       "save": "保存",
       "saving": "正在保存..."
@@ -1498,6 +1501,7 @@
       "search_placeholder": "搜索版本名称",
       "new_version": "新建版本",
       "columns": {
+        "name": "版本名称",
         "directory": "存放目录",
         "status": "状态"
       },

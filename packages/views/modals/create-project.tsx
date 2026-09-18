@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { CalendarClock, CalendarDays, ChevronRight, FolderOpen, GitBranch, Maximize2, Minimize2, MoreHorizontal, Pencil, Search, X as XIcon, UserMinus } from "lucide-react";
+import { CalendarClock, CalendarDays, ChevronRight, FolderOpen, GitBranch, Maximize2, Minimize2, MoreHorizontal, Package, Pencil, Search, X as XIcon, UserMinus } from "lucide-react";
 
 /**
  * GitHub mark — lucide-react v1 dropped brand icons, so we inline the
@@ -59,6 +59,7 @@ import {
 } from "../projects/components/labels";
 import { ProjectStartDatePicker } from "../projects/components/project-start-date-picker";
 import { ProjectDueDatePicker } from "../projects/components/project-due-date-picker";
+import { ProjectProductVersionPicker } from "../products/components/project-product-version-picker";
 import { PillButton } from "../common/pill-button";
 import { githubShortLabel } from "../common/github-url";
 import {
@@ -157,6 +158,8 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
   const [priority, setPriority] = useState<ProjectPriority>(draft.priority);
   const [leadType, setLeadType] = useState<"member" | "agent" | undefined>(draft.leadType);
   const [leadId, setLeadId] = useState<string | undefined>(draft.leadId);
+  const [productId, setProductId] = useState<string | null>(draft.productId ?? null);
+  const [productVersionId, setProductVersionId] = useState<string | null>(draft.productVersionId ?? null);
   const [icon, setIcon] = useState<string | undefined>(draft.icon);
   const [startDate, setStartDate] = useState<string>(draft.startDate ?? "");
   const [dueDate, setDueDate] = useState<string>(draft.dueDate ?? "");
@@ -305,6 +308,11 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
     setLeadType(type); setLeadId(id);
     setDraft({ leadType: type, leadId: id });
   };
+  const updateProduct = (next: { product_id: string | null; product_version_id: string | null }) => {
+    setProductId(next.product_id);
+    setProductVersionId(next.product_version_id);
+    setDraft({ productId: next.product_id, productVersionId: next.product_version_id });
+  };
   const updateIcon = (v: string | undefined) => { setIcon(v); setDraft({ icon: v }); };
   const updateStartDate = (v: string) => { setStartDate(v); setDraft({ startDate: v || undefined }); };
   const updateDueDate = (v: string) => { setDueDate(v); setDraft({ dueDate: v || undefined }); };
@@ -369,6 +377,8 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
         priority,
         lead_type: leadType,
         lead_id: leadId,
+        product_id: productId,
+        product_version_id: productVersionId,
         start_date: startDate || undefined,
         due_date: dueDate || undefined,
         // Server attaches these in the same transaction as the project.
@@ -654,6 +664,18 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
               </div>
             </PopoverContent>
           </Popover>
+
+          <ProjectProductVersionPicker
+            productId={productId}
+            productVersionId={productVersionId}
+            onChange={updateProduct}
+            renderTrigger={({ label, hasValue }) => (
+              <PillButton>
+                <Package className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <span className={hasValue ? "truncate" : "truncate text-muted-foreground"}>{label}</span>
+              </PillButton>
+            )}
+          />
 
           {/* Start date — collapsed into ⋯ unless it has a value or was just
               opened from the overflow (the calendar anchors on the inline pill). */}

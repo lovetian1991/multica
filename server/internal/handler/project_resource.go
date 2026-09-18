@@ -871,11 +871,13 @@ func parseUUIDLoose(s string) (pgtype.UUID, error) {
 // execenv materializes into .multica/project/resources.json, and the repo list
 // `multica repo checkout` reads.
 type claimProjectContext struct {
-	ProjectID   string
-	Title       string
-	Description string
-	Resources   []ProjectResourceData
-	Repos       []RepoData
+	ProjectID        string
+	Title            string
+	Description      string
+	ProductID        string
+	ProductVersionID string
+	Resources        []ProjectResourceData
+	Repos            []RepoData
 }
 
 // applyTo copies the resolved context onto a claim response. Callers assign the
@@ -889,6 +891,65 @@ func (c claimProjectContext) applyTo(resp *AgentTaskResponse) {
 		resp.ProjectResources = c.Resources
 	}
 	resp.Repos = c.Repos
+}
+
+func inheritClaimProductFromProject(resp *AgentTaskResponse, c claimProjectContext) {
+	if strings.TrimSpace(resp.ProductID) == "" {
+		resp.ProductID = c.ProductID
+	}
+	if strings.TrimSpace(resp.ProductVersionID) == "" {
+		resp.ProductVersionID = c.ProductVersionID
+	}
+}
+
+func (h *Handler) applyProductVersionToClaim(ctx context.Context, taskID string, resp *AgentTaskResponse) {
+	if strings.TrimSpace(resp.ProductVersionID) != "" {
+		id, err := parseUUIDLoose(resp.ProductVersionID)
+		if err != nil {
+			slog.Warn("daemon claim: invalid product version id",
+				"task_id", taskID,
+				"product_version_id", resp.ProductVersionID,
+				"error", err)
+		} else {
+			version, err := h.Queries.GetProductVersion(ctx, id)
+			if err != nil {
+				slog.Warn("daemon claim: load product version failed",
+					"task_id", taskID,
+					"product_version_id", resp.ProductVersionID,
+					"error", err)
+			} else {
+				resp.ProductVersionID = uuidToString(version.ID)
+				resp.ProductVersionName = strings.TrimSpace(version.Name)
+				resp.ProductVersionDescription = strings.TrimSpace(version.Remark)
+				resp.ProductVersionDirectory = strings.TrimSpace(version.Directory)
+				if strings.TrimSpace(resp.ProductID) == "" && version.ProductID.Valid {
+					resp.ProductID = uuidToString(version.ProductID)
+				}
+			}
+		}
+	}
+	if strings.TrimSpace(resp.ProductID) == "" {
+		return
+	}
+	id, err := parseUUIDLoose(resp.ProductID)
+	if err != nil {
+		slog.Warn("daemon claim: invalid product id",
+			"task_id", taskID,
+			"product_id", resp.ProductID,
+			"error", err)
+		return
+	}
+	product, err := h.Queries.GetProduct(ctx, id)
+	if err != nil {
+		slog.Warn("daemon claim: load product failed",
+			"task_id", taskID,
+			"product_id", resp.ProductID,
+			"error", err)
+		return
+	}
+	resp.ProductID = uuidToString(product.ID)
+	resp.ProductName = strings.TrimSpace(product.Name)
+	resp.ProductDescription = strings.TrimSpace(product.Description)
 }
 
 // resolveClaimProjectContext loads the project context for one daemon claim.
@@ -927,6 +988,12 @@ func (h *Handler) resolveClaimProjectContext(ctx context.Context, projectID, wor
 			out.ProjectID = uuidToString(project.ID)
 			out.Title = project.Title
 			out.Description = project.Description.String
+			if project.ProductID.Valid {
+				out.ProductID = uuidToString(project.ProductID)
+			}
+			if project.ProductVersionID.Valid {
+				out.ProductVersionID = uuidToString(project.ProductVersionID)
+			}
 
 			rows, resErr := h.Queries.ListProjectResourcesInWorkspace(ctx, db.ListProjectResourcesInWorkspaceParams{
 				ProjectID:   project.ID,

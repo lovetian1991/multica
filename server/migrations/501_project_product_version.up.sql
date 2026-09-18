@@ -1,0 +1,2 @@
+ALTER TABLE project ADD COLUMN IF NOT EXISTS product_id UUID;
+ALTER TABLE project ADD COLUMN IF NOT EXISTS product_version_id UUID;

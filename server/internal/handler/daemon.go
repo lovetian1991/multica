@@ -2486,27 +2486,9 @@ func (h *Handler) buildClaimedTaskResponse(r *http.Request, task *db.AgentTaskQu
 		}
 		if issue.ProductID.Valid {
 			resp.ProductID = uuidToString(issue.ProductID)
-			product, productErr := h.Queries.GetProduct(r.Context(), issue.ProductID)
-			if productErr != nil {
-				slog.Warn("daemon claim: load product failed",
-					"task_id", uuidToString(task.ID),
-					"product_id", resp.ProductID,
-					"error", productErr)
-			} else {
-				resp.ProductName = strings.TrimSpace(product.Name)
-			}
 		}
 		if issue.ProductVersionID.Valid {
 			resp.ProductVersionID = uuidToString(issue.ProductVersionID)
-			version, versionErr := h.Queries.GetProductVersion(r.Context(), issue.ProductVersionID)
-			if versionErr != nil {
-				slog.Warn("daemon claim: load product version failed",
-					"task_id", uuidToString(task.ID),
-					"product_version_id", resp.ProductVersionID,
-					"error", versionErr)
-			} else {
-				resp.ProductVersionName = strings.TrimSpace(version.Name)
-			}
 		}
 
 		// Issue-state delta (MUL-7344). Every field below already sits on the
@@ -2644,6 +2626,8 @@ func (h *Handler) buildClaimedTaskResponse(r *http.Request, task *db.AgentTaskQu
 			}
 		}
 		projectCtx.applyTo(&resp)
+		inheritClaimProductFromProject(&resp, projectCtx)
+		h.applyProductVersionToClaim(r.Context(), uuidToString(task.ID), &resp)
 
 		// Load every planned input as one chronological, de-duplicated set.
 		// The trigger is included here so the delivery receipt can only contain
@@ -3013,6 +2997,8 @@ func (h *Handler) buildClaimedTaskResponse(r *http.Request, task *db.AgentTaskQu
 			}
 		}
 		projectCtx.applyTo(&resp)
+		inheritClaimProductFromProject(&resp, projectCtx)
+		h.applyProductVersionToClaim(r.Context(), uuidToString(task.ID), &resp)
 		if !task.ForceFreshSession && !task.ChannelContextRevision.Valid {
 			// Resume chat sessions only when the stored pointer was produced
 			// by the same runtime as the claiming task. When the chat_session
@@ -3265,6 +3251,8 @@ func (h *Handler) buildClaimedTaskResponse(r *http.Request, task *db.AgentTaskQu
 			}
 		}
 		projectCtx.applyTo(&resp)
+		inheritClaimProductFromProject(&resp, projectCtx)
+		h.applyProductVersionToClaim(r.Context(), uuidToString(task.ID), &resp)
 	}
 
 	// Quick-create task: no issue / chat / autopilot link — workspace and
@@ -3340,6 +3328,8 @@ func (h *Handler) buildClaimedTaskResponse(r *http.Request, task *db.AgentTaskQu
 				}
 			}
 			projectCtx.applyTo(&resp)
+			inheritClaimProductFromProject(&resp, projectCtx)
+			h.applyProductVersionToClaim(r.Context(), uuidToString(task.ID), &resp)
 
 			// Products are global resources. Unlike the legacy project context,
 			// an explicitly selected product must never be silently discarded:
@@ -3348,7 +3338,7 @@ func (h *Handler) buildClaimedTaskResponse(r *http.Request, task *db.AgentTaskQu
 			if qc.ProductID != "" {
 				productID, productErr := util.ParseUUID(qc.ProductID)
 				if productErr != nil {
-					return resp, deliveredCommentIDs, agentSkillCount, builtinSkillCount, h.failClaimedTaskBeforeLaunch(
+					return resp, deliveredCommentIDs, issueSnapshot, agentSkillCount, builtinSkillCount, h.failClaimedTaskBeforeLaunch(
 						r.Context(), task,
 						"The selected product is invalid. Start quick-create again and choose a valid product.",
 						taskfailure.ReasonAgentUnknown,
@@ -3357,7 +3347,7 @@ func (h *Handler) buildClaimedTaskResponse(r *http.Request, task *db.AgentTaskQu
 				}
 				if _, productErr := h.Queries.GetProduct(r.Context(), productID); productErr != nil {
 					if errors.Is(productErr, pgx.ErrNoRows) {
-						return resp, deliveredCommentIDs, agentSkillCount, builtinSkillCount, h.failClaimedTaskBeforeLaunch(
+						return resp, deliveredCommentIDs, issueSnapshot, agentSkillCount, builtinSkillCount, h.failClaimedTaskBeforeLaunch(
 							r.Context(), task,
 							"The selected product no longer exists. Start quick-create again and choose another product.",
 							taskfailure.ReasonAgentUnknown,
@@ -3368,7 +3358,7 @@ func (h *Handler) buildClaimedTaskResponse(r *http.Request, task *db.AgentTaskQu
 						"task_id", uuidToString(task.ID),
 						"product_id", qc.ProductID,
 						"error", productErr)
-					return resp, deliveredCommentIDs, agentSkillCount, builtinSkillCount, &claimBuildFailure{
+					return resp, deliveredCommentIDs, issueSnapshot, agentSkillCount, builtinSkillCount, &claimBuildFailure{
 						outcome: "error_product_load",
 						status:  http.StatusInternalServerError,
 						message: "failed to load product context",
@@ -3483,7 +3473,7 @@ func (h *Handler) buildClaimedTaskResponse(r *http.Request, task *db.AgentTaskQu
 				"workspace_id", resp.WorkspaceID,
 				"error", keyErr,
 			)
-			return resp, deliveredCommentIDs, agentSkillCount, builtinSkillCount, h.failClaimedTaskBeforeLaunch(
+			return resp, deliveredCommentIDs, issueSnapshot, agentSkillCount, builtinSkillCount, h.failClaimedTaskBeforeLaunch(
 				r.Context(),
 				task,
 				"Workspace OC key could not be loaded. Fix the workspace settings and retry the task.",
@@ -3520,7 +3510,7 @@ func (h *Handler) buildClaimedTaskResponse(r *http.Request, task *db.AgentTaskQu
 			"workspace_id", resp.WorkspaceID,
 			"error", err,
 		)
-		return resp, deliveredCommentIDs, agentSkillCount, builtinSkillCount, &claimBuildFailure{
+		return resp, deliveredCommentIDs, issueSnapshot, agentSkillCount, builtinSkillCount, &claimBuildFailure{
 			outcome: "error_workspace_load",
 			status:  http.StatusInternalServerError,
 			message: "failed to load task workspace",

@@ -1448,6 +1448,7 @@
     "new_product": "New product",
     "columns": {
       "name": "Name",
+      "description": "Description",
       "directory": "Directory",
       "remark": "Remark"
     },
@@ -1464,9 +1465,11 @@
     "product_editor": {
       "create_title": "New product",
       "edit_title": "Edit product",
-      "description": "Define a product name, folder directory, and optional remark.",
+      "description": "Set the product name and description. The description is injected into the task context.",
       "name": "Product name",
       "name_placeholder": "Enter a product name",
+      "description_label": "Description",
+      "description_placeholder": "This description is injected into the task context so the model can understand the product.",
       "directory": "Folder directory",
       "directory_placeholder": "Enter a folder directory",
       "remark": "Remark",
@@ -1495,7 +1498,7 @@
       "name": "Version name",
       "name_placeholder": "Enter a version name",
       "remark": "Remark",
-      "remark_placeholder": "Add a remark",
+      "remark_placeholder": "This description is injected into the task context so the model can understand the version.",
       "cancel": "Cancel",
       "save": "Save",
       "saving": "Saving..."
@@ -1505,6 +1508,7 @@
       "search_placeholder": "Search version names",
       "new_version": "New version",
       "columns": {
+        "name": "Version name",
         "directory": "Directory",
         "status": "Status"
       },

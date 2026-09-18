@@ -268,6 +268,8 @@ const PROJECT: Project = {
   lead_id: null,
   start_date: null,
   due_date: null,
+  product_id: null,
+  product_version_id: null,
   created_at: "2026-06-01T00:00:00Z",
   updated_at: "2026-06-01T00:00:00Z",
   issue_count: 3,

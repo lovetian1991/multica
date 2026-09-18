@@ -50,8 +50,21 @@ export function ProjectRelatedIssues({ projectId }: Props) {
 
   if ((data?.length ?? 0) === 0) {
     return (
-      <View className="px-4 py-6">
+      <View className="px-4 py-6 gap-3">
         <Text className="text-sm text-muted-foreground">暂无任务。</Text>
+        {wsSlug ? (
+          <Button
+            variant="outline"
+            onPress={() =>
+              router.push({
+                pathname: "/[workspace]/new-issue",
+                params: { workspace: wsSlug, projectId },
+              })
+            }
+          >
+            <Text>新建任务</Text>
+          </Button>
+        ) : null}
       </View>
     );
   }

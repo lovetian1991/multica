@@ -3,8 +3,8 @@
  *
  * Web uses a two-column tree. On mobile the same hierarchy is stacked into a
  * native sheet: products and versions are selected above a paged list of the
- * version's first-level folder children. The selected values are committed
- * together so an issue never stores a partial product context.
+ * version's first-level folder children. Product + version can be saved
+ * without a folder so bug-fix tasks can inherit a project's binding.
  */
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, View } from "react-native";
@@ -21,7 +21,7 @@ import { useColorScheme } from "nativewind";
 export interface ProductFolderSelection {
   product: Product;
   productVersion: ProductVersion;
-  kbFolder: KBFolder;
+  kbFolder: KBFolder | null;
 }
 
 interface Props {
@@ -29,7 +29,7 @@ interface Props {
   productVersionId?: string | null;
   folderId?: string | null;
   query: string;
-  onChange: (selection: ProductFolderSelection) => void;
+  onChange: (selection: ProductFolderSelection | null) => void;
 }
 
 const EMPTY_PRODUCTS: Product[] = [];
@@ -148,17 +148,21 @@ export function ProductFolderPickerBody({
     }
   };
 
-  const canConfirm = Boolean(selectedProduct && selectedVersion && selectedFolder);
+  const canConfirm = Boolean(selectedProduct && selectedVersion);
   const confirm = () => {
-    if (selectedProduct && selectedVersion && selectedFolder) {
-      onChange({ product: selectedProduct, productVersion: selectedVersion, kbFolder: selectedFolder });
+    if (selectedProduct && selectedVersion) {
+      onChange({
+        product: selectedProduct,
+        productVersion: selectedVersion,
+        kbFolder: selectedFolder,
+      });
     }
   };
 
   return (
     <View className="flex-1 bg-background">
       <View className="px-4 pt-3 pb-2 gap-1">
-        <Text className="text-sm text-muted-foreground">选择产品版本后，再选择知识库文件夹</Text>
+        <Text className="text-sm text-muted-foreground">选择产品版本即可，知识库文件夹可选</Text>
       </View>
       <FlatList
         data={folders}
@@ -172,7 +176,18 @@ export function ProductFolderPickerBody({
             {productsQuery.isLoading ? (
               <ActivityIndicator className="py-4" />
             ) : (
-              filteredProducts.map((product) => (
+              <>
+              <Pressable
+                onPress={() => onChange(null)}
+                className="flex-row items-center gap-2 rounded-lg px-3 py-2.5 active:bg-secondary"
+              >
+                <Ionicons name="remove-circle-outline" size={18} color={checkColor} />
+                <Text className="flex-1 text-base text-muted-foreground">不绑定产品</Text>
+                {!selectedProductId ? (
+                  <Ionicons name="checkmark" size={18} color={checkColor} />
+                ) : null}
+              </Pressable>
+              {filteredProducts.map((product) => (
                 <View key={product.id}>
                   <Pressable
                     onPress={() => chooseProduct(product)}
@@ -217,7 +232,8 @@ export function ProductFolderPickerBody({
                     </View>
                   ) : null}
                 </View>
-              ))
+              ))}
+              </>
             )}
             <View className="mt-2 border-t border-border px-1 py-3">
               <Text className="text-sm font-medium text-foreground">

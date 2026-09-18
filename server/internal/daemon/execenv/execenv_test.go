@@ -621,6 +621,7 @@ func TestPrepareWithProjectResources(t *testing.T) {
 	for _, want := range []string{
 		"## Project Context",
 		"Agent UX 2026",
+		"The Multica project title is the ZenTao project name",
 		"Always write copy in British English. Ship behind a feature flag.",
 		"GitHub repo",
 		"https://github.com/multica-ai/multica",
@@ -673,6 +674,7 @@ func TestChatProjectContextInjectedIntoRuntimeBrief(t *testing.T) {
 			for _, want := range []string{
 				"## Project Context",
 				"Project Beta",
+				"The Multica project title is the ZenTao project name",
 				"Use the beta repository and follow the beta rollout plan.",
 				"https://github.com/org/beta",
 			} {

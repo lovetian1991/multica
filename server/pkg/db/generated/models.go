@@ -803,6 +803,9 @@ type Issue struct {
 	Properties         []byte             `json:"properties"`
 	Revision           int64              `json:"revision"`
 	LastActivityAt     pgtype.Timestamptz `json:"last_activity_at"`
+	ProductID          pgtype.UUID        `json:"product_id"`
+	ProductVersionID   pgtype.UUID        `json:"product_version_id"`
+	KBFolderID         pgtype.Text        `json:"kb_folder_id"`
 	TriageState        pgtype.Text        `json:"triage_state"`
 }
 
@@ -1194,20 +1197,42 @@ type PluginStorage struct {
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
-type Project struct {
+type Product struct {
 	ID          pgtype.UUID        `json:"id"`
-	WorkspaceID pgtype.UUID        `json:"workspace_id"`
-	Title       string             `json:"title"`
-	Description pgtype.Text        `json:"description"`
-	Icon        pgtype.Text        `json:"icon"`
-	Status      string             `json:"status"`
-	LeadType    pgtype.Text        `json:"lead_type"`
-	LeadID      pgtype.UUID        `json:"lead_id"`
+	Name        string             `json:"name"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	Priority    string             `json:"priority"`
-	StartDate   pgtype.Date        `json:"start_date"`
-	DueDate     pgtype.Date        `json:"due_date"`
+	Description string             `json:"description"`
+}
+
+type ProductVersion struct {
+	ID        pgtype.UUID        `json:"id"`
+	ProductID pgtype.UUID        `json:"product_id"`
+	Name      string             `json:"name"`
+	Directory string             `json:"directory"`
+	Remark    string             `json:"remark"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	FolderID  string             `json:"folder_id"`
+	Enabled   bool               `json:"enabled"`
+}
+
+type Project struct {
+	ID               pgtype.UUID        `json:"id"`
+	WorkspaceID      pgtype.UUID        `json:"workspace_id"`
+	Title            string             `json:"title"`
+	Description      pgtype.Text        `json:"description"`
+	Icon             pgtype.Text        `json:"icon"`
+	Status           string             `json:"status"`
+	LeadType         pgtype.Text        `json:"lead_type"`
+	LeadID           pgtype.UUID        `json:"lead_id"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	Priority         string             `json:"priority"`
+	StartDate        pgtype.Date        `json:"start_date"`
+	DueDate          pgtype.Date        `json:"due_date"`
+	ProductID        pgtype.UUID        `json:"product_id"`
+	ProductVersionID pgtype.UUID        `json:"product_version_id"`
 }
 
 type ProjectResource struct {
@@ -1350,6 +1375,14 @@ type SysCronExecution struct {
 	ErrorMsg     pgtype.Text        `json:"error_msg"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
+type SystemSetting struct {
+	ID                        bool               `json:"id"`
+	KbEnvironmentUrl          string             `json:"kb_environment_url"`
+	KbIntegrationKeyEncrypted string             `json:"kb_integration_key_encrypted"`
+	CreatedAt                 pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                 pgtype.Timestamptz `json:"updated_at"`
 }
 
 type TaskMessage struct {
@@ -1608,31 +1641,4 @@ type WorkspaceShareLink struct {
 	UseCount    int32              `json:"use_count"`
 	IsActive    bool               `json:"is_active"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-}
-
-type Product struct {
-	ID        pgtype.UUID        `json:"id"`
-	Name      string             `json:"name"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
-}
-
-type ProductVersion struct {
-	ID        pgtype.UUID        `json:"id"`
-	ProductID pgtype.UUID        `json:"product_id"`
-	Name      string             `json:"name"`
-	Directory string             `json:"directory"`
-	Remark    string             `json:"remark"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
-	FolderID  string             `json:"folder_id"`
-	Enabled   bool               `json:"enabled"`
-}
-
-type SystemSetting struct {
-	ID                        bool               `json:"id"`
-	KbEnvironmentUrl          string             `json:"kb_environment_url"`
-	KbIntegrationKeyEncrypted string             `json:"kb_integration_key_encrypted"`
-	CreatedAt                 pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt                 pgtype.Timestamptz `json:"updated_at"`
 }

@@ -80,7 +80,8 @@
     "no_issues_yet": "No issues yet",
     "toast_link_copied": "Link copied",
     "toast_project_deleted": "Project deleted",
-    "toast_move_issue_failed": "Failed to move issue"
+    "toast_move_issue_failed": "Failed to move issue",
+    "prop_product": "Product"
   },
   "resources": {
     "section_header": "Resources",
@@ -178,5 +179,15 @@
     "direction_desc": "Descending",
     "section_columns": "Columns",
     "view": "View"
+  },
+  "product": {
+    "none": "No product",
+    "bound": "Product version",
+    "search": "Search products...",
+    "search_version": "Search versions...",
+    "back": "Back",
+    "loading_versions": "Loading versions...",
+    "no_versions": "No enabled versions",
+    "empty": "No products yet"
   }
 }

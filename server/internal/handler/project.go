@@ -33,12 +33,14 @@ type ProjectResponse struct {
 	LeadID      *string `json:"lead_id"`
 	// StartDate / DueDate are calendar days ("YYYY-MM-DD"), no time-of-day or
 	// timezone — same contract as issue.start_date / issue.due_date.
-	StartDate  *string `json:"start_date"`
-	DueDate    *string `json:"due_date"`
-	CreatedAt  string  `json:"created_at"`
-	UpdatedAt  string  `json:"updated_at"`
-	IssueCount int64   `json:"issue_count"`
-	DoneCount  int64   `json:"done_count"`
+	StartDate        *string `json:"start_date"`
+	DueDate          *string `json:"due_date"`
+	ProductID        *string `json:"product_id"`
+	ProductVersionID *string `json:"product_version_id"`
+	CreatedAt        string  `json:"created_at"`
+	UpdatedAt        string  `json:"updated_at"`
+	IssueCount       int64   `json:"issue_count"`
+	DoneCount        int64   `json:"done_count"`
 	// ResourceCount is a breadcrumb pointing at the sub-collection at
 	// /api/projects/{id}/resources. Resources themselves stay out of this
 	// payload to keep parent metadata and child collections separate; clients
@@ -48,19 +50,21 @@ type ProjectResponse struct {
 
 func projectToResponse(p db.Project) ProjectResponse {
 	return ProjectResponse{
-		ID:          uuidToString(p.ID),
-		WorkspaceID: uuidToString(p.WorkspaceID),
-		Title:       p.Title,
-		Description: textToPtr(p.Description),
-		Icon:        textToPtr(p.Icon),
-		Status:      p.Status,
-		Priority:    p.Priority,
-		LeadType:    textToPtr(p.LeadType),
-		LeadID:      uuidToPtr(p.LeadID),
-		StartDate:   dateToPtr(p.StartDate),
-		DueDate:     dateToPtr(p.DueDate),
-		CreatedAt:   timestampToString(p.CreatedAt),
-		UpdatedAt:   timestampToString(p.UpdatedAt),
+		ID:               uuidToString(p.ID),
+		WorkspaceID:      uuidToString(p.WorkspaceID),
+		Title:            p.Title,
+		Description:      textToPtr(p.Description),
+		Icon:             textToPtr(p.Icon),
+		Status:           p.Status,
+		Priority:         p.Priority,
+		LeadType:         textToPtr(p.LeadType),
+		LeadID:           uuidToPtr(p.LeadID),
+		StartDate:        dateToPtr(p.StartDate),
+		DueDate:          dateToPtr(p.DueDate),
+		ProductID:        uuidToPtr(p.ProductID),
+		ProductVersionID: uuidToPtr(p.ProductVersionID),
+		CreatedAt:        timestampToString(p.CreatedAt),
+		UpdatedAt:        timestampToString(p.UpdatedAt),
 	}
 }
 
@@ -99,16 +103,18 @@ func (h *Handler) loadProjectResourceCount(ctx context.Context, projectID pgtype
 }
 
 type CreateProjectRequest struct {
-	Title       string                                `json:"title"`
-	Description *string                               `json:"description"`
-	Icon        *string                               `json:"icon"`
-	Status      string                                `json:"status"`
-	Priority    string                                `json:"priority"`
-	LeadType    *string                               `json:"lead_type"`
-	LeadID      *string                               `json:"lead_id"`
-	StartDate   *string                               `json:"start_date"`
-	DueDate     *string                               `json:"due_date"`
-	Resources   []CreateProjectResourceRequestPayload `json:"resources,omitempty"`
+	Title            string                                `json:"title"`
+	Description      *string                               `json:"description"`
+	Icon             *string                               `json:"icon"`
+	Status           string                                `json:"status"`
+	Priority         string                                `json:"priority"`
+	LeadType         *string                               `json:"lead_type"`
+	LeadID           *string                               `json:"lead_id"`
+	StartDate        *string                               `json:"start_date"`
+	DueDate          *string                               `json:"due_date"`
+	ProductID        *string                               `json:"product_id"`
+	ProductVersionID *string                               `json:"product_version_id"`
+	Resources        []CreateProjectResourceRequestPayload `json:"resources,omitempty"`
 }
 
 // CreateProjectResourceRequestPayload mirrors CreateProjectResourceRequest but
@@ -122,15 +128,17 @@ type CreateProjectResourceRequestPayload struct {
 }
 
 type UpdateProjectRequest struct {
-	Title       *string `json:"title"`
-	Description *string `json:"description"`
-	Icon        *string `json:"icon"`
-	Status      *string `json:"status"`
-	Priority    *string `json:"priority"`
-	LeadType    *string `json:"lead_type"`
-	LeadID      *string `json:"lead_id"`
-	StartDate   *string `json:"start_date"`
-	DueDate     *string `json:"due_date"`
+	Title            *string `json:"title"`
+	Description      *string `json:"description"`
+	Icon             *string `json:"icon"`
+	Status           *string `json:"status"`
+	Priority         *string `json:"priority"`
+	LeadType         *string `json:"lead_type"`
+	LeadID           *string `json:"lead_id"`
+	StartDate        *string `json:"start_date"`
+	DueDate          *string `json:"due_date"`
+	ProductID        *string `json:"product_id"`
+	ProductVersionID *string `json:"product_version_id"`
 }
 
 func (h *Handler) ListProjects(w http.ResponseWriter, r *http.Request) {
@@ -367,17 +375,24 @@ func (h *Handler) CreateProject(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	binding, ok := h.parseProductVersionBinding(w, r, req.ProductID, req.ProductVersionID)
+	if !ok {
+		return
+	}
+
 	createParams := db.CreateProjectParams{
-		WorkspaceID: wsUUID,
-		Title:       req.Title,
-		Description: ptrToText(req.Description),
-		Icon:        ptrToText(req.Icon),
-		Status:      status,
-		LeadType:    leadType,
-		LeadID:      leadID,
-		Priority:    priority,
-		StartDate:   startDate,
-		DueDate:     dueDate,
+		WorkspaceID:      wsUUID,
+		Title:            req.Title,
+		Description:      ptrToText(req.Description),
+		Icon:             ptrToText(req.Icon),
+		Status:           status,
+		LeadType:         leadType,
+		LeadID:           leadID,
+		Priority:         priority,
+		StartDate:        startDate,
+		DueDate:          dueDate,
+		ProductID:        binding.ProductID,
+		ProductVersionID: binding.ProductVersionID,
 	}
 
 	// Without resources, keep the simple non-tx path.
@@ -504,13 +519,15 @@ func (h *Handler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 	json.Unmarshal(bodyBytes, &rawFields)
 
 	params := db.UpdateProjectParams{
-		ID:          prevProject.ID,
-		Description: prevProject.Description,
-		Icon:        prevProject.Icon,
-		LeadType:    prevProject.LeadType,
-		LeadID:      prevProject.LeadID,
-		StartDate:   prevProject.StartDate,
-		DueDate:     prevProject.DueDate,
+		ID:               prevProject.ID,
+		Description:      prevProject.Description,
+		Icon:             prevProject.Icon,
+		LeadType:         prevProject.LeadType,
+		LeadID:           prevProject.LeadID,
+		StartDate:        prevProject.StartDate,
+		DueDate:          prevProject.DueDate,
+		ProductID:        prevProject.ProductID,
+		ProductVersionID: prevProject.ProductVersionID,
 	}
 	if req.Title != nil {
 		params.Title = pgtype.Text{String: *req.Title, Valid: true}
@@ -584,6 +601,37 @@ func (h *Handler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 		} else {
 			params.DueDate = pgtype.Date{Valid: false} // explicit null = clear date
 		}
+	}
+	_, productTouched := rawFields["product_id"]
+	_, versionTouched := rawFields["product_version_id"]
+	if productTouched || versionTouched {
+		productRaw := req.ProductID
+		versionRaw := req.ProductVersionID
+		if !productTouched {
+			productRaw = uuidToPtr(prevProject.ProductID)
+		}
+		if !versionTouched {
+			versionRaw = uuidToPtr(prevProject.ProductVersionID)
+		}
+		if productTouched && unsetOptionalUUIDString(req.ProductID) == nil && !versionTouched {
+			versionRaw = nil
+		}
+		binding, ok := h.parseProductVersionBinding(w, r, productRaw, versionRaw)
+		if !ok {
+			return
+		}
+		if productTouched && unsetOptionalUUIDString(req.ProductID) == nil && !versionTouched {
+			binding.ProductID = pgtype.UUID{}
+			binding.ProductVersionID = pgtype.UUID{}
+		}
+		if productTouched && !versionTouched && binding.ProductVersionID.Valid {
+			version, err := h.Queries.GetProductVersion(r.Context(), binding.ProductVersionID)
+			if err != nil || (binding.ProductID.Valid && version.ProductID != binding.ProductID) {
+				binding.ProductVersionID = pgtype.UUID{}
+			}
+		}
+		params.ProductID = binding.ProductID
+		params.ProductVersionID = binding.ProductVersionID
 	}
 	project, err := h.Queries.UpdateProject(r.Context(), params)
 	if err != nil {
@@ -799,7 +847,7 @@ func buildProjectSearchQuery(phrase string, terms []string, includeClosed bool) 
 
 	query := fmt.Sprintf(`SELECT p.id, p.workspace_id, p.title, p.description, p.icon,
 		p.status, p.priority, p.lead_type, p.lead_id,
-		p.start_date, p.due_date,
+		p.start_date, p.due_date, p.product_id, p.product_version_id,
 		p.created_at, p.updated_at,
 		%s AS match_source
 	FROM project p
@@ -878,6 +926,8 @@ func (h *Handler) SearchProjects(w http.ResponseWriter, r *http.Request) {
 				&row.project.LeadID,
 				&row.project.StartDate,
 				&row.project.DueDate,
+				&row.project.ProductID,
+				&row.project.ProductVersionID,
 				&row.project.CreatedAt,
 				&row.project.UpdatedAt,
 				&row.matchSource,

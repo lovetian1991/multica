@@ -467,6 +467,127 @@ describe("IssuePropertySchema (via ListPropertiesResponseSchema)", () => {
   });
 });
 
+describe("Product schemas", () => {
+  const baseProduct = {
+    id: "33333333-3333-3333-3333-333333333333",
+    name: "Multica",
+    description: "",
+    directory: "G:/aicode/multica",
+    remark: "Main product",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  };
+
+  it("parses a complete product and defaults optional fields", () => {
+    const parsed = ProductSchema.parse({
+      ...baseProduct,
+      directory: undefined,
+      remark: undefined,
+    });
+    expect(parsed.name).toBe("Multica");
+    expect(parsed.description).toBe("");
+    expect(parsed.directory).toBe("");
+    expect(parsed.remark).toBe("");
+  });
+
+  it("parses a valid product list", () => {
+    const parsed = ListProductsResponseSchema.parse({
+      products: [baseProduct],
+      total: 1,
+    });
+    expect(parsed.products).toEqual([baseProduct]);
+    expect(parsed.total).toBe(1);
+  });
+
+  it("falls back safely for malformed product responses", () => {
+    expect(
+      parseWithFallback(
+        { id: 42 },
+        ProductSchema,
+        EMPTY_PRODUCT,
+        { endpoint: "GET /api/products/{id}" },
+      ),
+    ).toEqual(EMPTY_PRODUCT);
+
+    expect(
+      parseWithFallback(
+        { products: [baseProduct, { ...baseProduct, id: 42 }], total: 2 },
+        ListProductsResponseSchema,
+        EMPTY_LIST_PRODUCTS_RESPONSE,
+        { endpoint: "GET /api/products" },
+      ),
+    ).toEqual(EMPTY_LIST_PRODUCTS_RESPONSE);
+
+    expect(
+      parseWithFallback(
+        { products: "not-an-array", total: 1 },
+        ListProductsResponseSchema,
+        EMPTY_LIST_PRODUCTS_RESPONSE,
+        { endpoint: "GET /api/products" },
+      ),
+    ).toEqual(EMPTY_LIST_PRODUCTS_RESPONSE);
+  });
+
+  it("keeps the version folder id used by task folder selection", () => {
+    const parsed = ProductVersionSchema.parse({
+      id: "version-1",
+      product_id: baseProduct.id,
+      name: "2026",
+      directory: "2026",
+      remark: "",
+      folder_id: "12998",
+      created_at: baseProduct.created_at,
+      updated_at: baseProduct.updated_at,
+    });
+    expect(parsed.folder_id).toBe("12998");
+    expect(parsed.enabled).toBe(true);
+  });
+});
+
+describe("System workspace schemas", () => {
+  const workspace = {
+    id: "11111111-1111-1111-1111-111111111111",
+    name: "Operations",
+    slug: "operations",
+    description: null,
+    context: null,
+    settings: {},
+    repos: [{ url: "G:/aicode/multica", description: "Main checkout" }],
+    issue_prefix: "OPS",
+    avatar_url: null,
+    oc_key_configured: false,
+    zentao_password_configured: false,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  };
+
+  it("parses the system workspace directory", () => {
+    expect(SystemWorkspaceListSchema.parse([workspace])).toEqual([workspace]);
+  });
+
+  it("falls back safely for a malformed system workspace directory", () => {
+    expect(
+      parseWithFallback(
+        [{ ...workspace, id: 42 }],
+        SystemWorkspaceListSchema,
+        [],
+        { endpoint: "GET /api/system/workspaces" },
+      ),
+    ).toEqual([]);
+  });
+
+  it("defaults oc_key_configured for older backends", () => {
+    const parsed = SystemWorkspaceListSchema.parse([workspace]);
+    expect(parsed[0]?.oc_key_configured).toBe(false);
+  });
+
+  it("defaults zentao_password_configured for older backends", () => {
+    const { zentao_password_configured: _ignored, ...legacy } = workspace;
+    const parsed = SystemWorkspaceListSchema.parse([legacy]);
+    expect(parsed[0]?.zentao_password_configured).toBe(false);
+  });
+});
+
 // POST /api/issues/preview-trigger feeds this schema through parseWithFallback
 // in client.previewIssueTrigger with fallback { triggers: [], total_count: 0 }
 // (MUL-3375). The four entry points read it to decide "will this start a run",
@@ -1511,6 +1632,8 @@ describe("SearchProjectsResponseSchema date drift", () => {
     expect(parsed.projects).toHaveLength(1);
     expect(parsed.projects[0]?.start_date).toBeNull();
     expect(parsed.projects[0]?.due_date).toBeNull();
+    expect(parsed.projects[0]?.product_id).toBeNull();
+    expect(parsed.projects[0]?.product_version_id).toBeNull();
   });
 });
 
