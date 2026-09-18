@@ -707,6 +707,10 @@
       "no_folders": "子フォルダーがありません",
       "folder_name": "フォルダー",
       "folder_id": "フォルダー ID",
+      "folder_search_placeholder": "フォルダーを検索...",
+      "folder_search_empty": "読み込み済みのページに一致するフォルダーがありません",
+      "folder_search_no_results": "一致するフォルダーがありません",
+      "folder_load_more": "さらに読み込む",
       "cancel": "キャンセル",
       "confirm": "選択を確定"
     },

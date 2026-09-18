@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactElement, type UIEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactElement, type UIEvent } from "react";
 import { Check, ChevronRight, Folder, FolderOpen, Loader2, Package } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@multica/core/api";
@@ -13,6 +13,11 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@multica/ui/components/ui/input";
 import { cn } from "@multica/ui/lib/utils";
 import { useT } from "../../i18n";
+import {
+  filterFoldersByQuery,
+  folderSearchAutoLoadDelayMs,
+  shouldAutoLoadMoreFolders,
+} from "./task-product-folder-search";
 
 export interface TaskProductFolderSelection {
   product: Product;
@@ -41,11 +46,13 @@ export function TaskProductFolderPicker({
   const [selectedVersionId, setSelectedVersionId] = useState(productVersionId ?? null);
   const [selectedFolder, setSelectedFolder] = useState<KBFolder | null>(null);
   const [productQuery, setProductQuery] = useState("");
+  const [folderQuery, setFolderQuery] = useState("");
   const [folderPage, setFolderPage] = useState(0);
   const [folderTotal, setFolderTotal] = useState(0);
   const [folders, setFolders] = useState<KBFolder[]>([]);
   const [foldersLoading, setFoldersLoading] = useState(false);
   const [foldersLoadingMore, setFoldersLoadingMore] = useState(false);
+  const [autoLoadedPages, setAutoLoadedPages] = useState(0);
 
   const { data: products = [], isLoading: productsLoading } = useQuery(productListOptions());
   const selectedProduct = products.find((product) => product.id === selectedProductId) ?? null;
@@ -58,6 +65,20 @@ export function TaskProductFolderPicker({
     const query = productQuery.trim().toLowerCase();
     return query ? products.filter((product) => product.name.toLowerCase().includes(query)) : products;
   }, [products, productQuery]);
+  const filteredFolders = useMemo(
+    () => filterFoldersByQuery(folders, folderQuery),
+    [folders, folderQuery],
+  );
+  const searchActive = folderQuery.trim().length > 0;
+  const hasMoreFolders = folders.length < folderTotal;
+  const willAutoLoadMore = shouldAutoLoadMoreFolders({
+    query: folderQuery,
+    matchCount: filteredFolders.length,
+    loadedCount: folders.length,
+    totalCount: folderTotal,
+    autoLoadedPages,
+    loading: foldersLoading || foldersLoadingMore,
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -67,6 +88,18 @@ export function TaskProductFolderPicker({
       ? { id: folderId, name: "", folderPath: "", parentId: "" }
       : null);
   }, [open, productId, productVersionId, folderId]);
+
+  useEffect(() => {
+    if (!open) {
+      setFolderQuery("");
+      setAutoLoadedPages(0);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    setFolderQuery("");
+    setAutoLoadedPages(0);
+  }, [selectedVersionId]);
 
   useEffect(() => {
     if (!open || !selectedVersion?.folder_id) {
@@ -112,21 +145,35 @@ export function TaskProductFolderPicker({
     setSelectedFolder(null);
   };
 
-  const loadMoreFolders = async () => {
+  const loadMoreFolders = useCallback(async (source: "scroll" | "search" | "manual" = "scroll") => {
     if (!selectedVersion?.folder_id || foldersLoadingMore || folders.length >= folderTotal) return;
     const nextPage = folderPage + 1;
+    if (source === "search") setAutoLoadedPages((current) => current + 1);
     setFoldersLoadingMore(true);
     try {
       const response = await api.getKBFolders(selectedVersion.folder_id, nextPage);
       setFolders((current) => [...current, ...response.folders.filter((folder) => !current.some((item) => item.id === folder.id))]);
       setFolderTotal(response.totalCount);
       setFolderPage(nextPage);
+    } catch {
+      // Keep already-loaded pages. Search auto-load counts the attempt so a
+      // failing extra page cannot retry forever.
     } finally {
       setFoldersLoadingMore(false);
     }
-  };
+  }, [selectedVersion?.folder_id, foldersLoadingMore, folders.length, folderTotal, folderPage]);
+
+  useEffect(() => {
+    if (!willAutoLoadMore) return;
+    const timer = window.setTimeout(() => {
+      void loadMoreFolders("search");
+    }, folderSearchAutoLoadDelayMs(autoLoadedPages));
+    return () => window.clearTimeout(timer);
+    // `folderQuery` retriggers the debounce so each keystroke waits again.
+  }, [willAutoLoadMore, autoLoadedPages, folderQuery, loadMoreFolders]);
 
   const handleFolderScroll = (event: UIEvent<HTMLDivElement>) => {
+    if (searchActive) return;
     const element = event.currentTarget;
     if (element.scrollTop + element.clientHeight >= element.scrollHeight - 48) void loadMoreFolders();
   };
@@ -136,6 +183,13 @@ export function TaskProductFolderPicker({
     onConfirm({ product: selectedProduct, version: selectedVersion, folder: selectedFolder });
     setOpen(false);
   };
+
+  const showSearchEmpty =
+    searchActive &&
+    filteredFolders.length === 0 &&
+    !foldersLoading &&
+    !foldersLoadingMore &&
+    !willAutoLoadMore;
 
   return (
     <>
@@ -185,23 +239,59 @@ export function TaskProductFolderPicker({
             </section>
 
             <section className="flex min-h-0 flex-col overflow-hidden rounded-md border border-surface-border">
-              <div className="shrink-0 border-b border-surface-border px-4 py-3 text-body font-medium">{selectedVersion?.name ?? t(($) => $.pickers.product.choose_version)}</div>
+              <div className="shrink-0 space-y-3 border-b border-surface-border p-3">
+                <div className="px-1 text-body font-medium">{selectedVersion?.name ?? t(($) => $.pickers.product.choose_version)}</div>
+                {selectedVersion?.folder_id ? (
+                  <Input
+                    value={folderQuery}
+                    onChange={(event) => {
+                      setFolderQuery(event.target.value);
+                      setAutoLoadedPages(0);
+                    }}
+                    placeholder={t(($) => $.pickers.product.folder_search_placeholder)}
+                    aria-label={t(($) => $.pickers.product.folder_search_placeholder)}
+                  />
+                ) : null}
+              </div>
               <div className="min-h-0 flex-1 overflow-y-auto" onScroll={handleFolderScroll}>
                 {!selectedVersion ? <div className="flex h-full items-center justify-center px-6 text-center text-body text-muted-foreground">{t(($) => $.pickers.product.choose_version)}</div> : !selectedVersion.folder_id ? <div className="flex h-full items-center justify-center px-6 text-center text-body text-muted-foreground">{t(($) => $.pickers.product.no_folder)}</div> : foldersLoading ? <div className="flex h-full items-center justify-center"><Loader2 className="size-5 animate-spin text-muted-foreground" /></div> : folders.length === 0 ? <div className="flex h-full items-center justify-center px-6 text-center text-body text-muted-foreground">{t(($) => $.pickers.product.no_folders)}</div> : <div className="divide-y divide-surface-border">
-                  <div className="grid grid-cols-[minmax(0,1fr)_8rem] gap-3 border-b border-surface-border bg-muted/20 px-4 py-2 text-caption font-medium text-muted-foreground">
-                    <span>{t(($) => $.pickers.product.folder_name)}</span>
-                    <span>{t(($) => $.pickers.product.folder_id)}</span>
-                  </div>
-                  {folders.map((folder) => {
-                    const selected = selectedFolder?.id === folder.id;
-                    return <label key={folder.id} className={cn("flex cursor-pointer items-center gap-3 px-4 py-3 hover:bg-muted/50", selected && "bg-primary/10")}>
-                      <Checkbox checked={selected} onCheckedChange={(checked) => setSelectedFolder(checked ? folder : null)} />
-                      <FolderOpen className="size-4 shrink-0 text-muted-foreground" />
-                      <span className="min-w-0 flex-1 truncate" title={folder.name}>{folder.name}</span>
-                      <span className="text-caption text-muted-foreground">{folder.id}</span>
-                    </label>;
-                  })}
-                  {foldersLoadingMore && <div className="flex justify-center py-3"><Loader2 className="size-4 animate-spin text-muted-foreground" /></div>}
+                  {filteredFolders.length > 0 ? (
+                    <>
+                      <div className="grid grid-cols-[minmax(0,1fr)_8rem] gap-3 border-b border-surface-border bg-muted/20 px-4 py-2 text-caption font-medium text-muted-foreground">
+                        <span>{t(($) => $.pickers.product.folder_name)}</span>
+                        <span>{t(($) => $.pickers.product.folder_id)}</span>
+                      </div>
+                      {filteredFolders.map((folder) => {
+                        const selected = selectedFolder?.id === folder.id;
+                        return <label key={folder.id} className={cn("flex cursor-pointer items-center gap-3 px-4 py-3 hover:bg-muted/50", selected && "bg-primary/10")}>
+                          <Checkbox checked={selected} onCheckedChange={(checked) => setSelectedFolder(checked ? folder : null)} />
+                          <FolderOpen className="size-4 shrink-0 text-muted-foreground" />
+                          <span className="min-w-0 flex-1 truncate" title={folder.name}>{folder.name}</span>
+                          <span className="text-caption text-muted-foreground">{folder.id}</span>
+                        </label>;
+                      })}
+                    </>
+                  ) : null}
+                  {showSearchEmpty ? (
+                    <div className="flex flex-col items-center justify-center gap-3 px-6 py-12 text-center">
+                      <p className="text-body text-muted-foreground">
+                        {hasMoreFolders
+                          ? t(($) => $.pickers.product.folder_search_empty)
+                          : t(($) => $.pickers.product.folder_search_no_results)}
+                      </p>
+                      {hasMoreFolders ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void loadMoreFolders("manual")}
+                        >
+                          {t(($) => $.pickers.product.folder_load_more)}
+                        </Button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {(foldersLoadingMore || willAutoLoadMore) && <div className="flex justify-center py-3"><Loader2 className="size-4 animate-spin text-muted-foreground" /></div>}
                 </div>}
               </div>
             </section>
