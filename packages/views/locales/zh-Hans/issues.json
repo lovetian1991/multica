@@ -747,6 +747,10 @@
       "no_folders": "暂无子文件夹",
       "folder_name": "文件夹",
       "folder_id": "文件夹 ID",
+      "folder_search_placeholder": "搜索文件夹...",
+      "folder_search_empty": "当前页没有数据",
+      "folder_search_no_results": "没有匹配的文件夹",
+      "folder_load_more": "加载更多",
       "cancel": "取消",
       "confirm": "确认选择"
     },

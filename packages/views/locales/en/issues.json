@@ -778,6 +778,10 @@
       "no_folders": "No child folders",
       "folder_name": "Folder",
       "folder_id": "Folder ID",
+      "folder_search_placeholder": "Search folders...",
+      "folder_search_empty": "No matches on the loaded pages",
+      "folder_search_no_results": "No matching folders",
+      "folder_load_more": "Load more",
       "cancel": "Cancel",
       "confirm": "Confirm selection"
     },
