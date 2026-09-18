@@ -34,13 +34,24 @@ import {
   useRef,
   useState,
 } from "react";
-import { AppState, Platform, type AppStateStatus } from "react-native";
+import { AppState, type AppStateStatus } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
 import { useAuthStore } from "@/data/auth-store";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { getToken } from "@/data/secure-storage";
-import { getCurrentServerUrl, toWebSocketUrl } from "@/lib/server-url";
+import { api } from "@/data/api";
 import { WSClient } from "./ws-client";
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
+
+if (!API_URL) {
+  // ApiClient already throws on this; keeping a defensive check here
+  // avoids a confusing "URL constructor failed" deep in WSClient.
+  throw new Error("EXPO_PUBLIC_API_URL is not set");
+}
+
+// http(s)://host → ws(s)://host/ws
+const WS_URL = `${API_URL.replace(/^http/, "ws")}/ws`;
 
 const RealtimeContext = createContext<WSClient | null>(null);
 
@@ -77,10 +88,13 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       if (cancelled || !token) return;
 
       ws = new WSClient({
-        url: toWebSocketUrl(getCurrentServerUrl()),
+        url: WS_URL,
         token,
+        // Re-read per connection rather than reusing the token captured
+        // above: a session renewed since this effect ran would otherwise keep
+        // reconnecting with a credential on its way to expiring.
+        getToken: () => api.getToken(),
         workspaceSlug: wsSlug,
-        clientOS: Platform.OS,
         clientVersion: "0.1.0",
         logger: console,
       });

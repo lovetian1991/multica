@@ -16,8 +16,6 @@ dist-electron
 # config files (entitlements, icons) — not build output.
 !apps/desktop/build/
 !apps/desktop/build/**
-# scripts/package-cli.sh output
-dist-cli
 
 # env
 .env*
@@ -80,5 +78,5 @@ data/
 # Python (agent tooling)
 __pycache__/
 *.pyc
-
+perf-report/
 deploy/env/

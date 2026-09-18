@@ -8,6 +8,7 @@ import { useLocale } from "../i18n";
 
 export function AboutPageClient() {
   const { t } = useLocale();
+  const n = t.about.nameLine;
 
   return (
     <>
@@ -18,7 +19,25 @@ export function AboutPageClient() {
             {t.about.title}
           </h1>
           <div className="mt-8 space-y-6 text-body-lg leading-[1.8] text-[#0a0d12]/70 sm:text-title-sm">
-            <p className="font-semibold text-[#0a0d12]">{t.about.nameLine}</p>
+            <p>
+              {n.prefix}
+              <strong className="font-semibold text-[#0a0d12]">
+                {n.mult}
+              </strong>
+              {n.iplexed}
+              <strong className="font-semibold text-[#0a0d12]">
+                {n.i}
+              </strong>
+              {n.nformationAnd}
+              <strong className="font-semibold text-[#0a0d12]">
+                {n.c}
+              </strong>
+              {n.omputing}
+              <strong className="font-semibold text-[#0a0d12]">
+                {n.a}
+              </strong>
+              {n.gent}
+            </p>
             {t.about.paragraphs.map((p, i) => (
               <p key={i}>{p}</p>
             ))}
@@ -29,7 +48,7 @@ export function AboutPageClient() {
               href={githubUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-2.5 rounded-[12px] bg-[#0a0d12] px-5 py-3 text-body font-semibold text-white transition-colors hover:bg-[#0a0d12]/88"
+              className="inline-flex items-center gap-2.5 rounded-(--landing-radius-action) bg-[#0a0d12] px-5 py-3 text-body font-semibold text-white transition-colors hover:bg-[#0a0d12]/88"
             >
               <GitHubMark className="size-4" />
               {t.about.cta}

@@ -19,7 +19,9 @@ const workspaceRef = vi.hoisted(() => ({
     context: "",
     issue_prefix: "TES",
     repos: [] as { url: string }[],
+    settings: {} as Record<string, unknown>,
     oc_key_configured: false,
+    zentao_password_configured: false,
   },
 }));
 const membersRef = vi.hoisted(() => ({
@@ -114,7 +116,9 @@ describe("WorkspaceTab — automatic updates", () => {
       context: "",
       issue_prefix: "TES",
       repos: [],
+      settings: {},
       oc_key_configured: false,
+      zentao_password_configured: false,
     };
     membersRef.current = [{ user_id: "user-1", role: "owner" }];
     mockUpdateWorkspace.mockImplementation(
@@ -296,5 +300,74 @@ describe("WorkspaceTab — automatic updates", () => {
     expect(screen.getByLabelText("OC key")).toBeDisabled();
     expect(screen.getByRole("button", { name: "Save key" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Clear key" })).toBeDisabled();
+  });
+
+  it("auto-saves Zentao URL and account", async () => {
+    const user = setupUser();
+    render(<WorkspaceTab />, { wrapper: I18nWrapper });
+    const urlInput = screen.getByLabelText("Zentao URL");
+    const accountInput = screen.getByLabelText("Zentao account");
+
+    await user.type(urlInput, "https://zentao.example.com");
+    await user.type(accountInput, "admin");
+    await user.tab();
+
+    await waitFor(() => {
+      expect(mockUpdateWorkspace).toHaveBeenCalledWith("workspace-1", {
+        zentao_url: "https://zentao.example.com",
+        zentao_account: "admin",
+      });
+    });
+  });
+
+  it("saves the Zentao password without leaving it in the input", async () => {
+    const user = setupUser();
+    render(<WorkspaceTab />, { wrapper: I18nWrapper });
+    const input = screen.getByLabelText("Zentao password");
+
+    await user.type(input, "secret-a");
+    await user.click(screen.getByRole("button", { name: "Save password" }));
+
+    await waitFor(() => {
+      expect(mockUpdateWorkspace).toHaveBeenCalledWith("workspace-1", {
+        zentao_password: "secret-a",
+      });
+    });
+    expect(input).toHaveValue("");
+    expect(mockSetQueryData).toHaveBeenCalled();
+  });
+
+  it("shows only the configured state and supports clearing the Zentao password", async () => {
+    const user = setupUser();
+    workspaceRef.current.zentao_password_configured = true;
+    render(<WorkspaceTab />, { wrapper: I18nWrapper });
+
+    const input = screen.getByLabelText("Zentao password");
+    expect(input).toHaveAttribute("type", "password");
+    expect(input).toHaveValue("");
+    expect(screen.getByText("Configured. Enter a new value to replace it.")).toBeTruthy();
+    expect(screen.queryByDisplayValue("secret-a")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Clear password" }));
+    await screen.findByText("Clear the Zentao password for this workspace?");
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
+
+    await waitFor(() => {
+      expect(mockUpdateWorkspace).toHaveBeenCalledWith("workspace-1", {
+        clear_zentao_password: true,
+      });
+    });
+  });
+
+  it("keeps Zentao controls unavailable to regular members", () => {
+    membersRef.current = [{ user_id: "user-1", role: "member" }];
+    workspaceRef.current.zentao_password_configured = true;
+    render(<WorkspaceTab />, { wrapper: I18nWrapper });
+
+    expect(screen.getByLabelText("Zentao URL")).toBeDisabled();
+    expect(screen.getByLabelText("Zentao account")).toBeDisabled();
+    expect(screen.getByLabelText("Zentao password")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save password" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Clear password" })).toBeDisabled();
   });
 });

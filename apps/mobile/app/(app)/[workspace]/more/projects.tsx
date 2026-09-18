@@ -64,11 +64,11 @@ export default function ProjectsPage() {
       ) : error ? (
         <View className="px-4 gap-3 pt-4">
           <Text className="text-sm text-destructive">
-            项目加载失败：{" "}
-            {error instanceof Error ? error.message : "未知错误"}
+            Failed to load projects:{" "}
+            {error instanceof Error ? error.message : "unknown error"}
           </Text>
           <Button variant="outline" onPress={() => refetch()}>
-            <Text>重试</Text>
+            <Text>Retry</Text>
           </Button>
         </View>
       ) : sorted.length === 0 ? (
@@ -103,7 +103,7 @@ function PlusButton({ onPress }: { onPress: () => void }) {
     <IconButton
       name="add"
       onPress={onPress}
-      accessibilityLabel="新建项目"
+      accessibilityLabel="New project"
     />
   );
 }
@@ -112,13 +112,10 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
     <View className="flex-1 items-center justify-center px-6 gap-4">
       <Text className="text-base font-medium text-foreground">
-        暂无项目
-      </Text>
-      <Text className="text-sm text-muted-foreground text-center">
-        将相关任务归入项目，统一跟踪进度并指定负责人。
+        No projects yet
       </Text>
       <Button variant="default" onPress={onCreate}>
-        <Text>新建项目</Text>
+        <Text>Create project</Text>
       </Button>
     </View>
   );

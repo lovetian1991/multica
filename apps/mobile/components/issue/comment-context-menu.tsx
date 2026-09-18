@@ -22,6 +22,7 @@ import { ActionSheetIOS, Alert } from "react-native";
 import { router } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
+import { useQuery } from "@tanstack/react-query";
 import type { Reaction, TimelineEntry } from "@multica/core/types";
 import { useAuthStore } from "@/data/auth-store";
 import { useWorkspaceStore } from "@/data/workspace-store";
@@ -29,10 +30,12 @@ import { useCommentSelectStore } from "@/data/comment-select-store";
 import { useReplyTargetStore } from "@/data/stores/reply-target-store";
 import { useActorLookup } from "@/data/use-actor-name";
 import {
+  commentDeleteKeepsReplies,
   useDeleteComment,
   useResolveComment,
   useToggleCommentReaction,
 } from "@/data/mutations/issues";
+import { appConfigOptions } from "@/data/queries/billing";
 import { QUICK_EMOJIS } from "@/lib/quick-emojis";
 
 const QUICK_ROW_SIZE = 5;
@@ -49,6 +52,12 @@ export function useCommentLongPress(
   const deleteComment = useDeleteComment(issueId);
   const resolveComment = useResolveComment(issueId);
   const { getName } = useActorLookup();
+  // Same config cache useDeleteComment reads when it runs, so the copy and
+  // the delete route agree.
+  const { data: keepReplies = false } = useQuery({
+    ...appConfigOptions(),
+    select: commentDeleteKeepsReplies,
+  });
 
   const onLongPress = useCallback(() => {
     const isOwn = entry.actor_type === "member" && entry.actor_id === userId;
@@ -79,20 +88,20 @@ export function useCommentLongPress(
       actions.push(action);
     };
 
-    push("回复", { kind: "reply" });
-    push("添加表情", { kind: "react" });
+    push("Reply", { kind: "reply" });
+    push("React…", { kind: "react" });
     if (hasContent) {
-      push("复制", { kind: "copy" });
-      push("选择文本", { kind: "select" });
+      push("Copy", { kind: "copy" });
+      push("Select Text", { kind: "select" });
     }
-    if (canCopyLink) push("复制链接", { kind: "copyLink" });
+    if (canCopyLink) push("Copy Link", { kind: "copyLink" });
     if (isRoot) {
-      push(resolved ? "取消解决" : "标记为已解决", {
+      push(resolved ? "Unresolve Thread" : "Resolve Thread", {
         kind: "resolve",
       });
     }
-    if (isOwn) push("删除", { kind: "delete" });
-    push("取消", { kind: "cancel" });
+    if (isOwn) push("Delete", { kind: "delete" });
+    push("Cancel", { kind: "cancel" });
 
     const cancelButtonIndex = options.length - 1;
     const destructiveButtonIndex = isOwn
@@ -126,7 +135,7 @@ export function useCommentLongPress(
               );
             useReplyTargetStore.getState().setTarget({
               commentId: entry.id,
-              actorName: actorName || "评论",
+              actorName: actorName || "comment",
               preview: entry.content ?? "",
             });
             return;
@@ -176,12 +185,16 @@ export function useCommentLongPress(
             return;
           case "delete":
             Alert.alert(
-              "删除评论？",
-              "此评论将被永久删除，评论下的回复也会一并移除。此操作无法撤销。",
+              "Delete comment?",
+              // Promise kept replies only when the server declares it (#8296);
+              // older servers delete the replies too.
+              keepReplies
+                ? "This comment will be permanently deleted. Any replies to it stay in the thread. This cannot be undone."
+                : "This comment will be permanently deleted. Replies in the thread will also be removed. This cannot be undone.",
               [
-                { text: "取消", style: "cancel" },
+                { text: "Cancel", style: "cancel" },
                 {
-                  text: "删除",
+                  text: "Delete",
                   style: "destructive",
                   onPress: () => deleteComment.mutate(entry.id),
                 },
@@ -201,6 +214,7 @@ export function useCommentLongPress(
     deleteComment,
     resolveComment,
     getName,
+    keepReplies,
   ]);
 
   return { onLongPress, isPressed };
@@ -216,7 +230,7 @@ function presentReactSheet(args: {
 }) {
   const { entry, reactions, userId, wsSlug, issueId, toggle } = args;
   const emojis = QUICK_EMOJIS.slice(0, QUICK_ROW_SIZE);
-  const options = [...emojis, "更多表情...", "取消"];
+  const options = [...emojis, "More reactions…", "Cancel"];
   const cancelButtonIndex = options.length - 1;
 
   ActionSheetIOS.showActionSheetWithOptions(
