@@ -31,7 +31,16 @@ export default function IssueProjectPickerRoute() {
       value={project ?? null}
       query={query}
       onChange={(next) => {
-        updateIssue.mutate({ project_id: next?.id ?? null });
+        const patch: {
+          project_id: string | null;
+          product_id?: string | null;
+          product_version_id?: string | null;
+        } = { project_id: next?.id ?? null };
+        if (!issue?.product_id && next?.product_id && next.product_version_id) {
+          patch.product_id = next.product_id;
+          patch.product_version_id = next.product_version_id;
+        }
+        updateIssue.mutate(patch);
         router.back();
       }}
     />

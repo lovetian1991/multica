@@ -485,6 +485,7 @@ export const EMPTY_LIST_LABELS_RESPONSE: ListLabelsResponse = {
 export const ProductSchema = z.object({
   id: z.string(),
   name: z.string(),
+  description: z.string().optional().default("").catch(""),
   directory: z.string().optional().default(""),
   remark: z.string().optional().default(""),
   created_at: z.string(),
@@ -494,6 +495,7 @@ export const ProductSchema = z.object({
 export const EMPTY_PRODUCT: Product = {
   id: "",
   name: "",
+  description: "",
   created_at: "",
   updated_at: "",
 };
@@ -1508,6 +1510,8 @@ const ProjectSchema = z.object({
   // object — which would degrade a search/list batch to the empty fallback.
   start_date: z.string().nullable().default(null),
   due_date: z.string().nullable().default(null),
+  product_id: z.string().nullable().default(null).catch(null),
+  product_version_id: z.string().nullable().default(null).catch(null),
   created_at: z.string(),
   updated_at: z.string(),
   issue_count: z.number().default(0),

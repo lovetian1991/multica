@@ -615,20 +615,30 @@ func TestTaskMulticaEnvironmentIncludesProductVersion(t *testing.T) {
 	t.Parallel()
 
 	task := Task{
-		ID:                 "task-product",
-		AgentID:            "agent-test",
-		WorkspaceID:        "workspace-test",
-		ProductID:          " product-id ",
-		ProductName:        " AgentProduct ",
-		ProductVersionID:   " version-id ",
-		ProductVersionName: " 8.6.0.0 ",
+		ID:                        "task-product",
+		AgentID:                   "agent-test",
+		WorkspaceID:               "workspace-test",
+		ProjectID:                 " project-id ",
+		ProjectTitle:              " opencontent ",
+		ProductID:                 " product-id ",
+		ProductName:               " AgentProduct ",
+		ProductVersionID:          " version-id ",
+		ProductVersionName:        " 8.6.0.0 ",
+		ProductDescription:        " Repo lives at G:/aicode/multica. ",
+		ProductVersionDescription: " Main line. Watch auth middleware. ",
+		ProductVersionDirectory:   " G:/aicode/multica ",
 	}
 	env := taskMulticaEnvironment(task, "agent-name", "mat_task", "/task/config", "/daemon/workspaces", "https://task.example", 19514, 1, "/task/tmp")
 	want := map[string]string{
-		"MULTICA_PRODUCT_ID":           "product-id",
-		"MULTICA_PRODUCT_NAME":         "AgentProduct",
-		"MULTICA_PRODUCT_VERSION_ID":   "version-id",
-		"MULTICA_PRODUCT_VERSION_NAME": "8.6.0.0",
+		"MULTICA_PROJECT_ID":                  "project-id",
+		"MULTICA_PROJECT_NAME":                "opencontent",
+		"MULTICA_PRODUCT_ID":                  "product-id",
+		"MULTICA_PRODUCT_NAME":                "AgentProduct",
+		"MULTICA_PRODUCT_VERSION_ID":          "version-id",
+		"MULTICA_PRODUCT_VERSION_NAME":        "8.6.0.0",
+		"MULTICA_PRODUCT_DESCRIPTION":         "Repo lives at G:/aicode/multica.",
+		"MULTICA_PRODUCT_VERSION_DESCRIPTION": "Main line. Watch auth middleware.",
+		"MULTICA_PRODUCT_VERSION_DIRECTORY":   "G:/aicode/multica",
 	}
 	for key, value := range want {
 		if got := env[key]; got != value {
@@ -638,10 +648,15 @@ func TestTaskMulticaEnvironmentIncludesProductVersion(t *testing.T) {
 
 	plain := taskMulticaEnvironment(Task{ID: "plain-task"}, "agent-name", "mat_task", "/task/config", "/daemon/workspaces", "https://task.example", 19514, 1, "/task/tmp")
 	for _, key := range []string{
+		"MULTICA_PROJECT_ID",
+		"MULTICA_PROJECT_NAME",
 		"MULTICA_PRODUCT_ID",
 		"MULTICA_PRODUCT_NAME",
 		"MULTICA_PRODUCT_VERSION_ID",
 		"MULTICA_PRODUCT_VERSION_NAME",
+		"MULTICA_PRODUCT_DESCRIPTION",
+		"MULTICA_PRODUCT_VERSION_DESCRIPTION",
+		"MULTICA_PRODUCT_VERSION_DIRECTORY",
 	} {
 		if _, ok := plain[key]; ok {
 			t.Fatalf("plain task unexpectedly injected %s=%q", key, plain[key])

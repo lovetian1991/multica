@@ -69,7 +69,9 @@ var agentGitExcludePatterns = []string{
 	".omp",
 }
 
-const repoCacheGitTimeout = 10 * time.Minute
+// repoCacheGitTimeout is the per-command ceiling for clone, fetch, and other
+// cache Git work. Large internal repos can take well over 10 minutes to clone.
+const repoCacheGitTimeout = time.Hour
 
 func newGitCommand(args ...string) *exec.Cmd {
 	cmd := exec.Command("git", args...)

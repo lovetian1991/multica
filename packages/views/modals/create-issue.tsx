@@ -73,6 +73,7 @@ import {
   type ManualCreateField,
 } from "@multica/core/issues/stores/issue-create-settings-store";
 import { issueDetailOptions, childIssuesOptions } from "@multica/core/issues/queries";
+import { projectListOptions } from "@multica/core/projects/queries";
 import {
   useCreateCommentSubIssue,
   useCreateIssue,
@@ -343,6 +344,10 @@ export function ManualCreatePanel({
     ...childIssuesOptions(wsId, parentIssueId ?? ""),
     enabled: !!parentIssueId,
   });
+  const { data: projects = [] } = useQuery({
+    ...projectListOptions(wsId),
+    enabled: Boolean(wsId),
+  });
 
   // Set the persisted draft's active mode so a later reopen (and any reader of
   // the unified draft) knows which form the user is editing in.
@@ -504,6 +509,15 @@ export function ManualCreatePanel({
       submittedDraftRef.current = useIssueDraftStore.getState().draft;
       try {
       const description = descEditorRef.current?.getMarkdown()?.trim() || undefined;
+      let issueProductId = productId;
+      let issueProductVersionId = productVersionId;
+      if (!issueProductId && !issueProductVersionId && projectId) {
+        const boundProject = projects.find((project) => project.id === projectId);
+        if (boundProject) {
+          issueProductId = boundProject.product_id ?? undefined;
+          issueProductVersionId = boundProject.product_version_id ?? undefined;
+        }
+      }
       const activeAttachmentIds = draftAttachments
         .filter((a) => contentReferencesAttachment(description ?? "", a))
         .map((a) => a.id);
@@ -527,8 +541,8 @@ export function ManualCreatePanel({
               label_ids: labelIds.length > 0 ? labelIds : undefined,
               stage: parentIssueId && stage != null ? stage : undefined,
               project_id: projectId,
-              product_id: productId,
-              product_version_id: productVersionId,
+              product_id: issueProductId,
+              product_version_id: issueProductVersionId,
               kb_folder_id: productFolder?.id,
             },
           },
@@ -554,8 +568,8 @@ export function ManualCreatePanel({
           // Stage is only meaningful for a sub-issue (relative to its siblings).
           stage: parentIssueId && stage != null ? stage : undefined,
           project_id: projectId,
-          product_id: productId,
-          product_version_id: productVersionId,
+          product_id: issueProductId,
+          product_version_id: issueProductVersionId,
           kb_folder_id: productFolder?.id,
         });
       }

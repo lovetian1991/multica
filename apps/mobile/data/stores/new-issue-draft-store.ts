@@ -31,6 +31,7 @@ import type {
   Project,
 } from "@multica/core/types";
 import type { AssigneeValue } from "@/components/issue/pickers/assignee-picker-body";
+import { resolveProjectProductVersion } from "@/lib/resolve-product-version";
 
 interface NewIssueDraftState {
   status: IssueStatus;
@@ -49,7 +50,7 @@ interface NewIssueDraftState {
   setProductSelection: (next: {
     product: Product;
     productVersion: ProductVersion;
-    kbFolder: KBFolder;
+    kbFolder: KBFolder | null;
   } | null) => void;
   reset: () => void;
 }
@@ -91,6 +92,23 @@ export const useNewIssueDraftStore = create<NewIssueDraftState>((set) => ({
     ),
   reset: () => set({ ...INITIAL, ...INITIAL_SELECTION }),
 }));
+
+/** Copy a project's product/version onto the new-issue draft after the project chip is set. */
+export function inheritProductFromProject(project: Project | null | undefined) {
+  if (!project?.product_id || !project.product_version_id) return;
+  const projectId = project.id;
+  void resolveProjectProductVersion(project).then((selection) => {
+    if (!selection) return;
+    const latest = useNewIssueDraftStore.getState();
+    if (latest.project?.id !== projectId) return;
+    latest.setProductSelection({
+      product: selection.product,
+      productVersion: selection.productVersion,
+      kbFolder:
+        latest.product?.id === selection.product.id ? latest.kbFolder : null,
+    });
+  });
+}
 
 /**
  * Clears the new-issue draft store whenever the active workspace id

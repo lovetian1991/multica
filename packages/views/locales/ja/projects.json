@@ -79,7 +79,8 @@
     "no_issues_yet": "タスクはまだありません",
     "toast_link_copied": "リンクをコピーしました",
     "toast_project_deleted": "プロジェクトを削除しました",
-    "toast_move_issue_failed": "タスクを移動できませんでした"
+    "toast_move_issue_failed": "タスクを移動できませんでした",
+    "prop_product": "製品"
   },
   "resources": {
     "section_header": "リソース",
@@ -176,5 +177,15 @@
     "direction_desc": "降順",
     "section_columns": "列",
     "view": "ビュー"
+  },
+  "product": {
+    "none": "製品なし",
+    "bound": "製品バージョン",
+    "search": "製品を検索...",
+    "search_version": "バージョンを検索...",
+    "back": "戻る",
+    "loading_versions": "バージョンを読み込み中...",
+    "no_versions": "有効なバージョンがありません",
+    "empty": "製品はまだありません"
   }
 }

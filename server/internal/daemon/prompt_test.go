@@ -119,22 +119,59 @@ func TestIssuePromptsKeepSourceContextRuleOutOfPerTurnMessage(t *testing.T) {
 	}
 }
 
-func TestIssuePromptsIncludeProductVersion(t *testing.T) {
+func TestIssuePromptsIncludeProjectZentaoScope(t *testing.T) {
 	task := Task{
-		IssueID:            "issue-1",
-		ProductID:          "product-id",
-		ProductName:        "AgentProduct",
-		ProductVersionID:   "version-id",
-		ProductVersionName: "8.6.0.0",
+		IssueID:      "issue-1",
+		ProjectID:    "project-id",
+		ProjectTitle: "opencontent",
 	}
 	assignment := buildPromptBody(task, "claude")
 	comment := buildCommentPrompt(Task{
-		IssueID:            "issue-1",
-		TriggerCommentID:   "comment-1",
-		ProductID:          "product-id",
-		ProductName:        "AgentProduct",
-		ProductVersionID:   "version-id",
-		ProductVersionName: "8.6.0.0",
+		IssueID:          "issue-1",
+		TriggerCommentID: "comment-1",
+		ProjectID:        "project-id",
+		ProjectTitle:     "opencontent",
+	}, "claude")
+	for _, out := range []string{assignment, comment} {
+		for _, want := range []string{
+			"Treat the project title as the ZenTao project name",
+			"Project name: opencontent",
+			"Project ID: project-id",
+			"Do not require a product version before listing bugs",
+			"Do not require a skill-directory .env file",
+		} {
+			if !strings.Contains(out, want) {
+				t.Fatalf("issue prompt missing %q\n%s", want, out)
+			}
+		}
+		if strings.Contains(out, "Treat the product name as the ZenTao product scope") {
+			t.Fatal("project-scoped issue must not treat product as ZenTao bug scope")
+		}
+	}
+}
+
+func TestIssuePromptsIncludeProductVersion(t *testing.T) {
+	task := Task{
+		IssueID:                   "issue-1",
+		ProductID:                 "product-id",
+		ProductName:               "AgentProduct",
+		ProductDescription:        "Repo lives at G:/aicode/multica. Watch auth middleware.",
+		ProductVersionID:          "version-id",
+		ProductVersionName:        "8.6.0.0",
+		ProductVersionDescription: "Main line. Do not touch generated sqlc files.",
+		ProductVersionDirectory:   "G:/aicode/multica",
+	}
+	assignment := buildPromptBody(task, "claude")
+	comment := buildCommentPrompt(Task{
+		IssueID:                   "issue-1",
+		TriggerCommentID:          "comment-1",
+		ProductID:                 "product-id",
+		ProductName:               "AgentProduct",
+		ProductDescription:        "Repo lives at G:/aicode/multica. Watch auth middleware.",
+		ProductVersionID:          "version-id",
+		ProductVersionName:        "8.6.0.0",
+		ProductVersionDescription: "Main line. Do not touch generated sqlc files.",
+		ProductVersionDirectory:   "G:/aicode/multica",
 	}, "claude")
 	quick := buildQuickCreatePrompt(Task{
 		QuickCreatePrompt:  "fix login",
@@ -144,9 +181,12 @@ func TestIssuePromptsIncludeProductVersion(t *testing.T) {
 
 	for _, out := range []string{assignment, comment} {
 		for _, want := range []string{
-			"Treat the product name as the ZenTao product scope",
+			"Product version is optional code-path and resolve --build context",
 			"Product name: AgentProduct",
+			"Product description: Repo lives at G:/aicode/multica. Watch auth middleware.",
 			"Product version: 8.6.0.0",
+			"Product version description: Main line. Do not touch generated sqlc files.",
+			"Product version directory: G:/aicode/multica",
 			"Do not require a skill-directory .env file",
 		} {
 			if !strings.Contains(out, want) {
@@ -154,13 +194,13 @@ func TestIssuePromptsIncludeProductVersion(t *testing.T) {
 			}
 		}
 	}
-	if strings.Contains(quick, "Treat the product name as the ZenTao product scope") {
-		t.Fatal("quick-create prompt must not include issue product-version context")
+	if strings.Contains(quick, "Product version is optional code-path and resolve --build context") {
+		t.Fatal("quick-create prompt must not include issue product/project context")
 	}
 
 	plainAssignment := buildPromptBody(Task{IssueID: "issue-1"}, "claude")
-	if strings.Contains(plainAssignment, "Treat the product name as the ZenTao product scope") {
-		t.Fatal("issue prompt without product version must omit product context")
+	if strings.Contains(plainAssignment, "Product version is optional code-path and resolve --build context") {
+		t.Fatal("issue prompt without product or project must omit ZenTao scope context")
 	}
 }
 

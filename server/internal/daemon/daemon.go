@@ -195,6 +195,12 @@ func taskMulticaEnvironment(task Task, agentName, token, configRoot, workspacesR
 	// Keep the variable present for every task. An empty value means the task
 	// has no issue or quick-create folder association.
 	env["MULTICA_KB_FOLDER_ID"] = folderID
+	if projectID := strings.TrimSpace(task.ProjectID); projectID != "" {
+		env["MULTICA_PROJECT_ID"] = projectID
+	}
+	if projectName := strings.TrimSpace(task.ProjectTitle); projectName != "" {
+		env["MULTICA_PROJECT_NAME"] = projectName
+	}
 	if productID := strings.TrimSpace(task.ProductID); productID != "" {
 		env["MULTICA_PRODUCT_ID"] = productID
 	}
@@ -206,6 +212,15 @@ func taskMulticaEnvironment(task Task, agentName, token, configRoot, workspacesR
 	}
 	if versionName := strings.TrimSpace(task.ProductVersionName); versionName != "" {
 		env["MULTICA_PRODUCT_VERSION_NAME"] = versionName
+	}
+	if desc := strings.TrimSpace(task.ProductDescription); desc != "" {
+		env["MULTICA_PRODUCT_DESCRIPTION"] = desc
+	}
+	if desc := strings.TrimSpace(task.ProductVersionDescription); desc != "" {
+		env["MULTICA_PRODUCT_VERSION_DESCRIPTION"] = desc
+	}
+	if directory := strings.TrimSpace(task.ProductVersionDirectory); directory != "" {
+		env["MULTICA_PRODUCT_VERSION_DIRECTORY"] = directory
 	}
 	// The KB UI lives on its own address, while MULTICA_SERVER_URL is the API
 	// facade that oc.js builds preview links from, so artifact skills need the
@@ -7794,6 +7809,13 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, slot i
 		ProjectTitle:                     task.ProjectTitle,
 		ProjectDescription:               task.ProjectDescription,
 		ProjectResources:                 convertProjectResourcesForEnv(task.ProjectResources),
+		ProductID:                        task.ProductID,
+		ProductName:                      task.ProductName,
+		ProductDescription:               task.ProductDescription,
+		ProductVersionID:                 task.ProductVersionID,
+		ProductVersionName:               task.ProductVersionName,
+		ProductVersionDescription:        task.ProductVersionDescription,
+		ProductVersionDirectory:          task.ProductVersionDirectory,
 		ChatSessionID:                    task.ChatSessionID,
 		ChatChannelType:                  task.ChatChannelType,
 		ChatChannelDeliversFiles:         task.ChatChannelDeliversFiles,

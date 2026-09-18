@@ -445,6 +445,7 @@ func writeProjectContext(b *strings.Builder, ctx TaskContextForEnv) {
 	if ctx.ProjectTitle != "" {
 		fmt.Fprintf(b, "The active project for this task is **%s**.\n\n", ctx.ProjectTitle)
 	}
+	b.WriteString("The Multica project title is the ZenTao project name. Query assigned active bugs with `bugs project` using this title. A product version, if present, is optional code-path and resolve --build context; it must not block bug processing.\n\n")
 	if desc := strings.TrimSpace(ctx.ProjectDescription); desc != "" {
 		b.WriteString("Project description — durable context the project owner set for work in this project:\n\n")
 		b.WriteString(desc)
@@ -459,6 +460,41 @@ func writeProjectContext(b *strings.Builder, ctx TaskContextForEnv) {
 		b.WriteString("For `github_repo` resources, use `multica repo checkout <url>` to fetch the code. Add `--ref <branch-or-sha>` when a task or handoff names an exact revision.\n\n")
 	} else {
 		b.WriteString("This project has no resources attached yet.\n\n")
+	}
+}
+
+// writeProductContext emits product and product-version descriptions so the
+// agent can stay inside the bound product's code path and notes.
+func writeProductContext(b *strings.Builder, ctx TaskContextForEnv) {
+	productID := strings.TrimSpace(ctx.ProductID)
+	productName := strings.TrimSpace(ctx.ProductName)
+	productDesc := strings.TrimSpace(ctx.ProductDescription)
+	versionID := strings.TrimSpace(ctx.ProductVersionID)
+	versionName := strings.TrimSpace(ctx.ProductVersionName)
+	versionDesc := strings.TrimSpace(ctx.ProductVersionDescription)
+	versionDir := strings.TrimSpace(ctx.ProductVersionDirectory)
+	if productID == "" && productName == "" && productDesc == "" && versionID == "" && versionName == "" && versionDesc == "" && versionDir == "" {
+		return
+	}
+	b.WriteString("## Product Context\n\n")
+	if productName != "" {
+		fmt.Fprintf(b, "The active product for this task is **%s**. Use it as optional code-path context, not as the ZenTao bug query scope.\n\n", productName)
+	}
+	if productDesc != "" {
+		b.WriteString("Product description:\n\n")
+		b.WriteString(productDesc)
+		b.WriteString("\n\n")
+	}
+	if versionName != "" {
+		fmt.Fprintf(b, "Product version: **%s**.\n\n", versionName)
+	}
+	if versionDesc != "" {
+		b.WriteString("Product version description:\n\n")
+		b.WriteString(versionDesc)
+		b.WriteString("\n\n")
+	}
+	if versionDir != "" {
+		fmt.Fprintf(b, "Product version directory: `%s`\n\n", versionDir)
 	}
 }
 
@@ -1015,6 +1051,7 @@ func buildMetaSkillContentSlim(provider string, ctx TaskContextForEnv) string {
 	}
 
 	writeProjectContext(&b, ctx)
+	writeProductContext(&b, ctx)
 
 	if kind == kindIssue {
 		writeInstructionPrecedence(&b)

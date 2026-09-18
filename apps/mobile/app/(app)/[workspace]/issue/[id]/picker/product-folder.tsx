@@ -20,11 +20,19 @@ export default function IssueProductFolderPickerRoute() {
       folderId={issue?.kb_folder_id}
       query={query}
       onChange={(selection) => {
-        updateIssue.mutate({
-          product_id: selection.product.id,
-          product_version_id: selection.productVersion.id,
-          kb_folder_id: selection.kbFolder.id,
-        });
+        updateIssue.mutate(
+          selection
+            ? {
+                product_id: selection.product.id,
+                product_version_id: selection.productVersion.id,
+                kb_folder_id: selection.kbFolder?.id ?? null,
+              }
+            : {
+                product_id: null,
+                product_version_id: null,
+                kb_folder_id: null,
+              },
+        );
         router.back();
       }}
     />

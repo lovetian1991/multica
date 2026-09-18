@@ -9,13 +9,14 @@ FROM product
 WHERE id = $1;
 
 -- name: CreateProduct :one
-INSERT INTO product (name)
-VALUES ($1)
+INSERT INTO product (name, description)
+VALUES ($1, $2)
 RETURNING *;
 
 -- name: UpdateProduct :one
 UPDATE product
 SET name = $2,
+    description = $3,
     updated_at = now()
 WHERE id = $1
 RETURNING *;

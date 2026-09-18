@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/multica-ai/multica/server/internal/logger"
 	db "github.com/multica-ai/multica/server/pkg/db/generated"
 )
@@ -22,22 +23,30 @@ const (
 )
 
 type ProductResponse struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	CreatedAt   string `json:"created_at"`
+	UpdatedAt   string `json:"updated_at"`
 }
 
 type ProductRequest struct {
-	Name string `json:"name"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+type productVersionBinding struct {
+	ProductID        pgtype.UUID
+	ProductVersionID pgtype.UUID
 }
 
 func productToResponse(product db.Product) ProductResponse {
 	return ProductResponse{
-		ID:        uuidToString(product.ID),
-		Name:      product.Name,
-		CreatedAt: timestampToString(product.CreatedAt),
-		UpdatedAt: timestampToString(product.UpdatedAt),
+		ID:          uuidToString(product.ID),
+		Name:        product.Name,
+		Description: product.Description,
+		CreatedAt:   timestampToString(product.CreatedAt),
+		UpdatedAt:   timestampToString(product.UpdatedAt),
 	}
 }
 
@@ -55,6 +64,62 @@ func validateProductField(field, raw string, maxLength int, required bool) (stri
 		return "", errors.New(field + " is too long")
 	}
 	return value, nil
+}
+
+func unsetOptionalUUIDString(raw *string) *string {
+	if raw == nil {
+		return nil
+	}
+	if strings.TrimSpace(*raw) == "" {
+		return nil
+	}
+	return raw
+}
+
+func (h *Handler) parseProductVersionBinding(w http.ResponseWriter, r *http.Request, productRaw, versionRaw *string) (productVersionBinding, bool) {
+	var out productVersionBinding
+	productRaw = unsetOptionalUUIDString(productRaw)
+	versionRaw = unsetOptionalUUIDString(versionRaw)
+	if productRaw != nil {
+		id, ok := parseUUIDOrBadRequest(w, *productRaw, "product_id")
+		if !ok {
+			return out, false
+		}
+		if _, err := h.Queries.GetProduct(r.Context(), id); err != nil {
+			if isNotFound(err) {
+				writeError(w, http.StatusBadRequest, "product not found")
+				return out, false
+			}
+			slog.Error("validate product", append(logger.RequestAttrs(r), "product_id", uuidToString(id), "error", err)...)
+			writeError(w, http.StatusInternalServerError, "failed to validate product")
+			return out, false
+		}
+		out.ProductID = id
+	}
+	if versionRaw != nil {
+		id, ok := parseUUIDOrBadRequest(w, *versionRaw, "product_version_id")
+		if !ok {
+			return out, false
+		}
+		version, err := h.Queries.GetProductVersion(r.Context(), id)
+		if err != nil {
+			if isNotFound(err) {
+				writeError(w, http.StatusBadRequest, "product version not found")
+				return out, false
+			}
+			writeError(w, http.StatusInternalServerError, "failed to validate product version")
+			return out, false
+		}
+		if out.ProductID.Valid && version.ProductID != out.ProductID {
+			writeError(w, http.StatusBadRequest, "product version does not belong to product")
+			return out, false
+		}
+		if !out.ProductID.Valid {
+			out.ProductID = version.ProductID
+		}
+		out.ProductVersionID = id
+	}
+	return out, true
 }
 
 func (h *Handler) ListSystemProducts(w http.ResponseWriter, r *http.Request) {
@@ -128,7 +193,14 @@ func (h *Handler) CreateSystemProduct(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	product, err := h.Queries.CreateProduct(r.Context(), name)
+	description, err := validateProductField("description", request.Description, maxProductRemarkLength, false)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	product, err := h.Queries.CreateProduct(r.Context(), db.CreateProductParams{
+		Name: name, Description: description,
+	})
 	if err != nil {
 		slog.Warn("CreateSystemProduct failed", append(logger.RequestAttrs(r), "error", err)...)
 		writeError(w, http.StatusInternalServerError, "failed to create product")
@@ -155,8 +227,13 @@ func (h *Handler) UpdateSystemProduct(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	description, err := validateProductField("description", request.Description, maxProductRemarkLength, false)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	product, err := h.Queries.UpdateProduct(r.Context(), db.UpdateProductParams{
-		ID: idUUID, Name: name,
+		ID: idUUID, Name: name, Description: description,
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		writeError(w, http.StatusNotFound, "product not found")

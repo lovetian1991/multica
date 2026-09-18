@@ -28,6 +28,7 @@ import { PriorityIcon } from "../../issues/components/priority-icon";
 import { ProjectResourcesSection } from "./project-resources-section";
 import { ProjectStartDatePicker } from "./project-start-date-picker";
 import { ProjectDueDatePicker } from "./project-due-date-picker";
+import { ProjectProductVersionPicker } from "../../products/components/project-product-version-picker";
 import { IssueSurface } from "../../issues/surface/issue-surface";
 import { Skeleton } from "@multica/ui/components/ui/skeleton";
 import { Button } from "@multica/ui/components/ui/button";
@@ -405,6 +406,18 @@ export function ProjectDetail({ projectId }: { projectId: string }) {
                 </div>
               </PopoverContent>
             </Popover>
+          </PropRow>
+          <PropRow label={t(($) => $.detail.prop_product)}>
+            <ProjectProductVersionPicker
+              productId={project.product_id}
+              productVersionId={project.product_version_id}
+              onChange={(next) => handleUpdateField(next)}
+              renderTrigger={({ label, hasValue }) => (
+                <button type="button" className="inline-flex min-w-0 items-center gap-1.5 text-caption hover:text-foreground transition-colors">
+                  <span className={hasValue ? "truncate" : "truncate text-muted-foreground"}>{label}</span>
+                </button>
+              )}
+            />
           </PropRow>
           <PropRow label={t(($) => $.detail.prop_start_date)}>
             <ProjectStartDatePicker startDate={project.start_date} onUpdate={handleUpdateField} />

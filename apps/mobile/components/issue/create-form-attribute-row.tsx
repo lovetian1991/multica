@@ -144,10 +144,12 @@ export function CreateFormAttributeRow() {
         />
         <AttributeChip
           icon={<Ionicons name="library-outline" size={14} color={product ? undefined : "#a1a1aa"} />}
-          label={product && productVersion && kbFolder
-            ? `${product.name} / ${productVersion.name} / ${kbFolder.name}`
+          label={product
+            ? [product.name, productVersion?.name, kbFolder?.name]
+                .filter(Boolean)
+                .join(" / ")
             : "产品版本"}
-          variant={product && productVersion && kbFolder ? "filled" : "dimmed"}
+          variant={product ? "filled" : "dimmed"}
           onPress={() => open("product-folder")}
         />
       </View>

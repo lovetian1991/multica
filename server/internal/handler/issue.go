@@ -59,18 +59,18 @@ type IssueResponse struct {
 	// field at all: with omitempty a built-in fixture hides it from BOTH
 	// renderings, and the drift guard goes green on a payload that has drifted.
 	// (MUL-6749)
-	StatusName    string  `json:"status_name"`
-	Priority      string  `json:"priority"`
-	AssigneeType  *string `json:"assignee_type"`
-	AssigneeID    *string `json:"assignee_id"`
-	CreatorType   string  `json:"creator_type"`
-	CreatorID     string  `json:"creator_id"`
-	ParentIssueID *string `json:"parent_issue_id"`
-	ProjectID     *string `json:"project_id"`
-	ProductID     *string `json:"product_id"`
+	StatusName       string  `json:"status_name"`
+	Priority         string  `json:"priority"`
+	AssigneeType     *string `json:"assignee_type"`
+	AssigneeID       *string `json:"assignee_id"`
+	CreatorType      string  `json:"creator_type"`
+	CreatorID        string  `json:"creator_id"`
+	ParentIssueID    *string `json:"parent_issue_id"`
+	ProjectID        *string `json:"project_id"`
+	ProductID        *string `json:"product_id"`
 	ProductVersionID *string `json:"product_version_id"`
-	KBFolderID    *string `json:"kb_folder_id"`
-	Position      float64 `json:"position"`
+	KBFolderID       *string `json:"kb_folder_id"`
+	Position         float64 `json:"position"`
 	// Stage groups sub-issues under the same parent into ordered barrier
 	// groups (null = unstaged). See issue_child_done.go for how a closed
 	// stage gates the child-done -> parent wake.
@@ -335,34 +335,34 @@ func issueToResponse(i db.Issue, issuePrefix string) IssueResponse {
 		statusCategory = i.Status
 	}
 	return IssueResponse{
-		ID:             uuidToString(i.ID),
-		WorkspaceID:    uuidToString(i.WorkspaceID),
-		Number:         i.Number,
-		Identifier:     identifier,
-		Title:          i.Title,
-		Description:    textToPtr(i.Description),
-		Status:         i.Status,
-		StatusCategory: statusCategory,
-		Priority:       i.Priority,
-		AssigneeType:   textToPtr(i.AssigneeType),
-		AssigneeID:     uuidToPtr(i.AssigneeID),
-		CreatorType:    i.CreatorType,
-		CreatorID:      uuidToString(i.CreatorID),
-		ParentIssueID:  uuidToPtr(i.ParentIssueID),
-		ProjectID:      uuidToPtr(i.ProjectID),
-		ProductID:      uuidToPtr(i.ProductID),
+		ID:               uuidToString(i.ID),
+		WorkspaceID:      uuidToString(i.WorkspaceID),
+		Number:           i.Number,
+		Identifier:       identifier,
+		Title:            i.Title,
+		Description:      textToPtr(i.Description),
+		Status:           i.Status,
+		StatusCategory:   statusCategory,
+		Priority:         i.Priority,
+		AssigneeType:     textToPtr(i.AssigneeType),
+		AssigneeID:       uuidToPtr(i.AssigneeID),
+		CreatorType:      i.CreatorType,
+		CreatorID:        uuidToString(i.CreatorID),
+		ParentIssueID:    uuidToPtr(i.ParentIssueID),
+		ProjectID:        uuidToPtr(i.ProjectID),
+		ProductID:        uuidToPtr(i.ProductID),
 		ProductVersionID: uuidToPtr(i.ProductVersionID),
-		KBFolderID:      textToPtr(i.KBFolderID),
-		Position:       i.Position,
-		Stage:          int4ToPtr(i.Stage),
-		StartDate:      dateToPtr(i.StartDate),
-		DueDate:        dateToPtr(i.DueDate),
-		CreatedAt:      timestampToString(i.CreatedAt),
-		UpdatedAt:      timestampToString(i.UpdatedAt),
-		Revision:       i.Revision,
-		LastActivityAt: timestampToNanoPtr(i.LastActivityAt),
-		Metadata:       parseIssueMetadata(i.Metadata),
-		Properties:     parseIssueProperties(i.Properties),
+		KBFolderID:       textToPtr(i.KBFolderID),
+		Position:         i.Position,
+		Stage:            int4ToPtr(i.Stage),
+		StartDate:        dateToPtr(i.StartDate),
+		DueDate:          dateToPtr(i.DueDate),
+		CreatedAt:        timestampToString(i.CreatedAt),
+		UpdatedAt:        timestampToString(i.UpdatedAt),
+		Revision:         i.Revision,
+		LastActivityAt:   timestampToNanoPtr(i.LastActivityAt),
+		Metadata:         parseIssueMetadata(i.Metadata),
+		Properties:       parseIssueProperties(i.Properties),
 	}
 }
 
@@ -375,34 +375,34 @@ func issueListRowToResponse(i db.ListIssuesRow, issuePrefix string) IssueRespons
 	}
 	identifier := issuePrefix + "-" + strconv.Itoa(int(i.Number))
 	return IssueResponse{
-		ID:             uuidToString(i.ID),
-		WorkspaceID:    uuidToString(i.WorkspaceID),
-		Number:         i.Number,
-		Identifier:     identifier,
-		Title:          i.Title,
-		Description:    textToPtr(i.Description),
-		Status:         i.Status,
-		StatusCategory: statusCategory,
-		Priority:       i.Priority,
-		AssigneeType:   textToPtr(i.AssigneeType),
-		AssigneeID:     uuidToPtr(i.AssigneeID),
-		CreatorType:    i.CreatorType,
-		CreatorID:      uuidToString(i.CreatorID),
-		ParentIssueID:  uuidToPtr(i.ParentIssueID),
-		ProjectID:      uuidToPtr(i.ProjectID),
-		ProductID:      uuidToPtr(i.ProductID),
+		ID:               uuidToString(i.ID),
+		WorkspaceID:      uuidToString(i.WorkspaceID),
+		Number:           i.Number,
+		Identifier:       identifier,
+		Title:            i.Title,
+		Description:      textToPtr(i.Description),
+		Status:           i.Status,
+		StatusCategory:   statusCategory,
+		Priority:         i.Priority,
+		AssigneeType:     textToPtr(i.AssigneeType),
+		AssigneeID:       uuidToPtr(i.AssigneeID),
+		CreatorType:      i.CreatorType,
+		CreatorID:        uuidToString(i.CreatorID),
+		ParentIssueID:    uuidToPtr(i.ParentIssueID),
+		ProjectID:        uuidToPtr(i.ProjectID),
+		ProductID:        uuidToPtr(i.ProductID),
 		ProductVersionID: uuidToPtr(i.ProductVersionID),
-		KBFolderID:      textToPtr(i.KBFolderID),
-		Position:       i.Position,
-		Stage:          int4ToPtr(i.Stage),
-		StartDate:      dateToPtr(i.StartDate),
-		DueDate:        dateToPtr(i.DueDate),
-		CreatedAt:      timestampToString(i.CreatedAt),
-		UpdatedAt:      timestampToString(i.UpdatedAt),
-		Revision:       i.Revision,
-		LastActivityAt: timestampToNanoPtr(i.LastActivityAt),
-		Metadata:       parseIssueMetadata(i.Metadata),
-		Properties:     parseIssueProperties(i.Properties),
+		KBFolderID:       textToPtr(i.KBFolderID),
+		Position:         i.Position,
+		Stage:            int4ToPtr(i.Stage),
+		StartDate:        dateToPtr(i.StartDate),
+		DueDate:          dateToPtr(i.DueDate),
+		CreatedAt:        timestampToString(i.CreatedAt),
+		UpdatedAt:        timestampToString(i.UpdatedAt),
+		Revision:         i.Revision,
+		LastActivityAt:   timestampToNanoPtr(i.LastActivityAt),
+		Metadata:         parseIssueMetadata(i.Metadata),
+		Properties:       parseIssueProperties(i.Properties),
 	}
 }
 
@@ -447,34 +447,34 @@ func openIssueRowToResponse(i db.ListOpenIssuesRow, issuePrefix string) IssueRes
 	}
 	identifier := issuePrefix + "-" + strconv.Itoa(int(i.Number))
 	return IssueResponse{
-		ID:             uuidToString(i.ID),
-		WorkspaceID:    uuidToString(i.WorkspaceID),
-		Number:         i.Number,
-		Identifier:     identifier,
-		Title:          i.Title,
-		Description:    textToPtr(i.Description),
-		Status:         i.Status,
-		StatusCategory: statusCategory,
-		Priority:       i.Priority,
-		AssigneeType:   textToPtr(i.AssigneeType),
-		AssigneeID:     uuidToPtr(i.AssigneeID),
-		CreatorType:    i.CreatorType,
-		CreatorID:      uuidToString(i.CreatorID),
-		ParentIssueID:  uuidToPtr(i.ParentIssueID),
-		ProjectID:      uuidToPtr(i.ProjectID),
-		ProductID:      uuidToPtr(i.ProductID),
+		ID:               uuidToString(i.ID),
+		WorkspaceID:      uuidToString(i.WorkspaceID),
+		Number:           i.Number,
+		Identifier:       identifier,
+		Title:            i.Title,
+		Description:      textToPtr(i.Description),
+		Status:           i.Status,
+		StatusCategory:   statusCategory,
+		Priority:         i.Priority,
+		AssigneeType:     textToPtr(i.AssigneeType),
+		AssigneeID:       uuidToPtr(i.AssigneeID),
+		CreatorType:      i.CreatorType,
+		CreatorID:        uuidToString(i.CreatorID),
+		ParentIssueID:    uuidToPtr(i.ParentIssueID),
+		ProjectID:        uuidToPtr(i.ProjectID),
+		ProductID:        uuidToPtr(i.ProductID),
 		ProductVersionID: uuidToPtr(i.ProductVersionID),
-		KBFolderID:      textToPtr(i.KBFolderID),
-		Position:       i.Position,
-		Stage:          int4ToPtr(i.Stage),
-		StartDate:      dateToPtr(i.StartDate),
-		DueDate:        dateToPtr(i.DueDate),
-		CreatedAt:      timestampToString(i.CreatedAt),
-		UpdatedAt:      timestampToString(i.UpdatedAt),
-		Revision:       i.Revision,
-		LastActivityAt: timestampToNanoPtr(i.LastActivityAt),
-		Metadata:       parseIssueMetadata(i.Metadata),
-		Properties:     parseIssueProperties(i.Properties),
+		KBFolderID:       textToPtr(i.KBFolderID),
+		Position:         i.Position,
+		Stage:            int4ToPtr(i.Stage),
+		StartDate:        dateToPtr(i.StartDate),
+		DueDate:          dateToPtr(i.DueDate),
+		CreatedAt:        timestampToString(i.CreatedAt),
+		UpdatedAt:        timestampToString(i.UpdatedAt),
+		Revision:         i.Revision,
+		LastActivityAt:   timestampToNanoPtr(i.LastActivityAt),
+		Metadata:         parseIssueMetadata(i.Metadata),
+		Properties:       parseIssueProperties(i.Properties),
 	}
 }
 
@@ -2899,21 +2899,21 @@ func readRuntimeCLIVersion(metadata []byte) string {
 }
 
 type CreateIssueRequest struct {
-	Title         string   `json:"title"`
-	Description   *string  `json:"description"`
-	Status        string   `json:"status"`
-	Priority      string   `json:"priority"`
-	AssigneeType  *string  `json:"assignee_type"`
-	AssigneeID    *string  `json:"assignee_id"`
-	ParentIssueID *string  `json:"parent_issue_id"`
-	ProjectID     *string  `json:"project_id"`
-	ProductID     *string  `json:"product_id"`
-	ProductVersionID *string `json:"product_version_id"`
-	KBFolderID    *string  `json:"kb_folder_id"`
-	Stage         *int32   `json:"stage,omitempty"`
-	StartDate     *string  `json:"start_date"`
-	DueDate       *string  `json:"due_date"`
-	AttachmentIDs []string `json:"attachment_ids,omitempty"`
+	Title            string   `json:"title"`
+	Description      *string  `json:"description"`
+	Status           string   `json:"status"`
+	Priority         string   `json:"priority"`
+	AssigneeType     *string  `json:"assignee_type"`
+	AssigneeID       *string  `json:"assignee_id"`
+	ParentIssueID    *string  `json:"parent_issue_id"`
+	ProjectID        *string  `json:"project_id"`
+	ProductID        *string  `json:"product_id"`
+	ProductVersionID *string  `json:"product_version_id"`
+	KBFolderID       *string  `json:"kb_folder_id"`
+	Stage            *int32   `json:"stage,omitempty"`
+	StartDate        *string  `json:"start_date"`
+	DueDate          *string  `json:"due_date"`
+	AttachmentIDs    []string `json:"attachment_ids,omitempty"`
 	// LabelIDs are issue-scoped labels to attach to the new issue in the same
 	// transaction as the create. Unknown or non-issue ids are rejected with
 	// 400 (service.ErrIssueLabelNotFound) rather than silently dropped.
@@ -3030,42 +3030,21 @@ func (h *Handler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 		}
 		projectID = id
 	}
-	if req.ProductID != nil {
-		id, ok := parseUUIDOrBadRequest(w, *req.ProductID, "product_id")
-		if !ok {
-			return
-		}
-		if _, err := h.Queries.GetProduct(r.Context(), id); err != nil {
-			if !isNotFound(err) {
-				slog.Error("create issue: validate product",
-					append(logger.RequestAttrs(r), "product_id", uuidToString(id), "error", err)...)
-				writeError(w, http.StatusInternalServerError, "failed to validate product")
-				return
-			}
-			writeError(w, http.StatusBadRequest, "product not found")
-			return
-		}
-		productID = id
+	binding, ok := h.parseProductVersionBinding(w, r, req.ProductID, req.ProductVersionID)
+	if !ok {
+		return
 	}
-	if req.ProductVersionID != nil {
-		id, ok := parseUUIDOrBadRequest(w, *req.ProductVersionID, "product_version_id")
-		if !ok {
-			return
+	productID = binding.ProductID
+	productVersionID = binding.ProductVersionID
+	if !productID.Valid && !productVersionID.Valid && projectID.Valid {
+		project, err := h.Queries.GetProjectInWorkspace(r.Context(), db.GetProjectInWorkspaceParams{
+			ID:          projectID,
+			WorkspaceID: wsUUID,
+		})
+		if err == nil {
+			productID = project.ProductID
+			productVersionID = project.ProductVersionID
 		}
-		version, err := h.Queries.GetProductVersion(r.Context(), id)
-		if err != nil {
-			if isNotFound(err) {
-				writeError(w, http.StatusBadRequest, "product version not found")
-			} else {
-				writeError(w, http.StatusInternalServerError, "failed to validate product version")
-			}
-			return
-		}
-		if productID.Valid && version.ProductID != productID {
-			writeError(w, http.StatusBadRequest, "product version does not belong to product")
-			return
-		}
-		productVersionID = id
 	}
 	if req.KBFolderID != nil {
 		value := strings.TrimSpace(*req.KBFolderID)
@@ -3195,28 +3174,28 @@ func (h *Handler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res, err := h.IssueService.Create(r.Context(), service.IssueCreateParams{
-		WorkspaceID:    wsUUID,
-		Title:          req.Title,
-		Description:    ptrToText(req.Description),
-		Status:         status,
-		Priority:       priority,
-		AssigneeType:   assigneeType,
-		AssigneeID:     assigneeID,
-		CreatorType:    creatorType,
-		CreatorID:      parseUUID(actualCreatorID),
-		ParentIssueID:  parentIssueID,
-		ProjectID:      projectID,
-		ProductID:      productID,
+		WorkspaceID:      wsUUID,
+		Title:            req.Title,
+		Description:      ptrToText(req.Description),
+		Status:           status,
+		Priority:         priority,
+		AssigneeType:     assigneeType,
+		AssigneeID:       assigneeID,
+		CreatorType:      creatorType,
+		CreatorID:        parseUUID(actualCreatorID),
+		ParentIssueID:    parentIssueID,
+		ProjectID:        projectID,
+		ProductID:        productID,
 		ProductVersionID: productVersionID,
-		KBFolderID:     kbFolderID,
-		StartDate:      startDate,
-		DueDate:        dueDate,
-		OriginType:     originType,
-		OriginID:       originID,
-		Stage:          ptrToInt4(req.Stage),
-		AttachmentIDs:  attachmentIDs,
-		LabelIDs:       labelIDs,
-		AllowDuplicate: req.AllowDuplicate,
+		KBFolderID:       kbFolderID,
+		StartDate:        startDate,
+		DueDate:          dueDate,
+		OriginType:       originType,
+		OriginID:         originID,
+		Stage:            ptrToInt4(req.Stage),
+		AttachmentIDs:    attachmentIDs,
+		LabelIDs:         labelIDs,
+		AllowDuplicate:   req.AllowDuplicate,
 	}, service.IssueCreateOpts{
 		ActorID:          actualCreatorID,
 		AnalyticsAgentID: analyticsAgentID,
@@ -3307,20 +3286,20 @@ type UpdateIssueRequest struct {
 	// that landed asynchronously after that base without making media already
 	// present in the base impossible for the user to delete. Older clients omit
 	// it and receive conservative channel-media preservation.
-	DescriptionBase *string  `json:"description_base,omitempty"`
-	Status          *string  `json:"status"`
-	Priority        *string  `json:"priority"`
-	AssigneeType    *string  `json:"assignee_type"`
-	AssigneeID      *string  `json:"assignee_id"`
-	Position        *float64 `json:"position"`
-	StartDate       *string  `json:"start_date"`
-	DueDate         *string  `json:"due_date"`
-	ParentIssueID   *string  `json:"parent_issue_id"`
-	ProjectID       *string  `json:"project_id"`
-	ProductID       *string  `json:"product_id"`
-	ProductVersionID *string `json:"product_version_id"`
-	KBFolderID      *string  `json:"kb_folder_id"`
-	Stage           *int32   `json:"stage"`
+	DescriptionBase  *string  `json:"description_base,omitempty"`
+	Status           *string  `json:"status"`
+	Priority         *string  `json:"priority"`
+	AssigneeType     *string  `json:"assignee_type"`
+	AssigneeID       *string  `json:"assignee_id"`
+	Position         *float64 `json:"position"`
+	StartDate        *string  `json:"start_date"`
+	DueDate          *string  `json:"due_date"`
+	ParentIssueID    *string  `json:"parent_issue_id"`
+	ProjectID        *string  `json:"project_id"`
+	ProductID        *string  `json:"product_id"`
+	ProductVersionID *string  `json:"product_version_id"`
+	KBFolderID       *string  `json:"kb_folder_id"`
+	Stage            *int32   `json:"stage"`
 	// AttachmentIDs lets the description editor bind newly uploaded files to
 	// this issue so they surface in `GET /api/issues/:id/attachments` and the
 	// editor's preview Eye keeps working past a refresh. Existing bindings
@@ -3566,17 +3545,17 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 
 	// Pre-fill nullable fields (bare sqlc.narg) with current values
 	params := db.UpdateIssueParams{
-		ID:            prevIssue.ID,
-		AssigneeType:  prevIssue.AssigneeType,
-		AssigneeID:    prevIssue.AssigneeID,
-		StartDate:     prevIssue.StartDate,
-		DueDate:       prevIssue.DueDate,
-		ParentIssueID: prevIssue.ParentIssueID,
-		ProjectID:     prevIssue.ProjectID,
-		ProductID:     prevIssue.ProductID,
+		ID:               prevIssue.ID,
+		AssigneeType:     prevIssue.AssigneeType,
+		AssigneeID:       prevIssue.AssigneeID,
+		StartDate:        prevIssue.StartDate,
+		DueDate:          prevIssue.DueDate,
+		ParentIssueID:    prevIssue.ParentIssueID,
+		ProjectID:        prevIssue.ProjectID,
+		ProductID:        prevIssue.ProductID,
 		ProductVersionID: prevIssue.ProductVersionID,
-		KBFolderID:    prevIssue.KBFolderID,
-		Stage:         prevIssue.Stage,
+		KBFolderID:       prevIssue.KBFolderID,
+		Stage:            prevIssue.Stage,
 	}
 	if req.ExpectedRevision != nil {
 		if *req.ExpectedRevision < 1 {
@@ -4466,14 +4445,14 @@ func (h *Handler) BatchUpdateIssues(w http.ResponseWriter, r *http.Request) {
 		}
 
 		params := db.UpdateIssueParams{
-			ID:            prevIssue.ID,
-			AssigneeType:  prevIssue.AssigneeType,
-			AssigneeID:    prevIssue.AssigneeID,
-			StartDate:     prevIssue.StartDate,
-			DueDate:       prevIssue.DueDate,
-			ParentIssueID: prevIssue.ParentIssueID,
-			ProjectID:     prevIssue.ProjectID,
-			ProductID:     prevIssue.ProductID,
+			ID:               prevIssue.ID,
+			AssigneeType:     prevIssue.AssigneeType,
+			AssigneeID:       prevIssue.AssigneeID,
+			StartDate:        prevIssue.StartDate,
+			DueDate:          prevIssue.DueDate,
+			ParentIssueID:    prevIssue.ParentIssueID,
+			ProjectID:        prevIssue.ProjectID,
+			ProductID:        prevIssue.ProductID,
 			ProductVersionID: prevIssue.ProductVersionID,
 			KBFolderID:       prevIssue.KBFolderID,
 			Stage:            prevIssue.Stage,

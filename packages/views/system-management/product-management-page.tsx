@@ -24,6 +24,7 @@ import { Button } from "@multica/ui/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@multica/ui/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@multica/ui/components/ui/dropdown-menu";
 import { Input } from "@multica/ui/components/ui/input";
+import { Textarea } from "@multica/ui/components/ui/textarea";
 import { Label as FieldLabel } from "@multica/ui/components/ui/label";
 import { CollapsedNavTrigger } from "../layout/page-header";
 import { useT } from "../i18n";
@@ -31,10 +32,12 @@ import { SystemManagementLayout } from "./system-management-layout";
 
 interface ProductDraft {
   name: string;
+  description: string;
 }
 
 const EMPTY_DRAFT: ProductDraft = {
   name: "",
+  description: "",
 };
 
 export function ProductManagementPage() {
@@ -58,7 +61,8 @@ export function ProductManagementPage() {
     const normalized = query.trim().toLowerCase();
     if (!normalized) return products;
     return products.filter((product) =>
-      product.name.toLowerCase().includes(normalized),
+      product.name.toLowerCase().includes(normalized) ||
+      (product.description ?? "").toLowerCase().includes(normalized),
     );
   }, [products, query]);
 
@@ -107,10 +111,9 @@ export function ProductManagementPage() {
         </div>
 
         <div className="overflow-hidden rounded-lg border border-surface-border bg-card">
-            <div className="hidden grid-cols-[minmax(10rem,1fr)_minmax(12rem,1.2fr)_minmax(10rem,1fr)_2rem] gap-4 border-b border-surface-border bg-muted/20 px-4 py-2.5 text-caption font-medium text-muted-foreground md:grid">
+            <div className="hidden grid-cols-[minmax(10rem,1fr)_minmax(16rem,1.6fr)_2rem] gap-4 border-b border-surface-border bg-muted/20 px-4 py-2.5 text-caption font-medium text-muted-foreground md:grid">
               <span>{t(($) => $.products.columns.name)}</span>
-              <span>{t(($) => $.products.columns.directory)}</span>
-              <span>{t(($) => $.products.columns.remark)}</span>
+              <span>{t(($) => $.products.columns.description)}</span>
               <span />
             </div>
 
@@ -136,12 +139,15 @@ export function ProductManagementPage() {
                 {filteredProducts.map((product) => (
                   <div
                     key={product.id}
-                    className="grid gap-2 px-4 py-3 md:grid-cols-[minmax(10rem,1fr)_2rem] md:items-center md:gap-4"
+                    className="grid gap-2 px-4 py-3 md:grid-cols-[minmax(10rem,1fr)_minmax(16rem,1.6fr)_2rem] md:items-center md:gap-4"
                   >
                     <div className="flex min-w-0 items-center gap-3">
                       <Package className="size-4 shrink-0 text-muted-foreground" />
                       <span className="truncate text-body font-medium">{product.name}</span>
                     </div>
+                    <span className="hidden truncate text-body text-muted-foreground md:block">
+                      {product.description?.trim() ? product.description : t(($) => $.products.not_set)}
+                    </span>
                     <DropdownMenu>
                       <DropdownMenuTrigger
                         render={
@@ -245,6 +251,7 @@ function ProductEditorDialog({
       product
         ? {
             name: product.name,
+            description: product.description ?? "",
           }
         : EMPTY_DRAFT,
     );
@@ -255,6 +262,7 @@ function ProductEditorDialog({
     if (!name) return;
     const data = {
       name,
+      description: draft.description.trim(),
     };
     const options = {
       onSuccess: () => onOpenChange(false),
@@ -300,6 +308,19 @@ function ProductEditorDialog({
               value={draft.name}
               onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
               placeholder={t(($) => $.products.product_editor.name_placeholder)}
+            />
+          </div>
+          <div className="space-y-2">
+            <FieldLabel htmlFor="system-product-description">
+              {t(($) => $.products.product_editor.description_label)}
+            </FieldLabel>
+            <Textarea
+              id="system-product-description"
+              rows={4}
+              maxLength={2000}
+              value={draft.description}
+              onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))}
+              placeholder={t(($) => $.products.product_editor.description_placeholder)}
             />
           </div>
         </div>

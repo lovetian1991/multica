@@ -249,6 +249,14 @@ export default function WorkspaceLayout() {
           options={SHEET_OPTIONS}
         />
         <Stack.Screen
+          name="project/[id]/picker/product"
+          options={{
+            ...SHEET_OPTIONS,
+            headerShown: true,
+            title: "产品版本",
+          }}
+        />
+        <Stack.Screen
           name="project/[id]/add-resource"
           options={SHEET_OPTIONS}
         />
@@ -297,6 +305,14 @@ export default function WorkspaceLayout() {
         <Stack.Screen
           name="new-project-picker/priority"
           options={SHEET_OPTIONS}
+        />
+        <Stack.Screen
+          name="new-project-picker/product"
+          options={{
+            ...SHEET_OPTIONS,
+            headerShown: true,
+            title: "产品版本",
+          }}
         />
         {/* Shared filter sheet for My Issues and the workspace Issues page —
             chooses the right view-store via `?scope=my|all` URL param. */}

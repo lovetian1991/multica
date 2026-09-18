@@ -199,25 +199,52 @@ func BuildPrompt(task Task, provider string, options ...PromptOption) string {
 }
 
 func appendIssueProductContext(b *strings.Builder, task Task) {
+	projectID := strings.TrimSpace(task.ProjectID)
+	projectTitle := strings.TrimSpace(task.ProjectTitle)
 	productID := strings.TrimSpace(task.ProductID)
 	productName := strings.TrimSpace(task.ProductName)
+	productDesc := strings.TrimSpace(task.ProductDescription)
 	versionID := strings.TrimSpace(task.ProductVersionID)
 	versionName := strings.TrimSpace(task.ProductVersionName)
-	if productID == "" && productName == "" && versionID == "" && versionName == "" {
+	versionDesc := strings.TrimSpace(task.ProductVersionDescription)
+	versionDir := strings.TrimSpace(task.ProductVersionDirectory)
+	hasProject := projectID != "" || projectTitle != ""
+	hasProduct := productID != "" || productName != "" || productDesc != "" || versionID != "" || versionName != "" || versionDesc != "" || versionDir != ""
+	if !hasProject && !hasProduct {
 		return
 	}
-	b.WriteString("This issue is bound to a Multica product version. Treat the product name as the ZenTao product scope for assigned active bugs. Do not ask for a ZenTao project name.\n")
-	if productName != "" {
-		fmt.Fprintf(b, "- Product name: %s\n", productName)
+	if hasProject {
+		b.WriteString("This issue is bound to a Multica project. Treat the project title as the ZenTao project name and query assigned active bugs with that project scope. Do not require a product version before listing bugs.\n")
+		if projectTitle != "" {
+			fmt.Fprintf(b, "- Project name: %s\n", projectTitle)
+		}
+		if projectID != "" {
+			fmt.Fprintf(b, "- Project ID: %s\n", projectID)
+		}
 	}
-	if productID != "" {
-		fmt.Fprintf(b, "- Product ID: %s\n", productID)
-	}
-	if versionName != "" {
-		fmt.Fprintf(b, "- Product version: %s\n", versionName)
-	}
-	if versionID != "" {
-		fmt.Fprintf(b, "- Product version ID: %s\n", versionID)
+	if hasProduct {
+		b.WriteString("Product version is optional code-path and resolve --build context. Do not use the product name as the ZenTao bug query scope.\n")
+		if productName != "" {
+			fmt.Fprintf(b, "- Product name: %s\n", productName)
+		}
+		if productID != "" {
+			fmt.Fprintf(b, "- Product ID: %s\n", productID)
+		}
+		if productDesc != "" {
+			fmt.Fprintf(b, "- Product description: %s\n", productDesc)
+		}
+		if versionName != "" {
+			fmt.Fprintf(b, "- Product version: %s\n", versionName)
+		}
+		if versionID != "" {
+			fmt.Fprintf(b, "- Product version ID: %s\n", versionID)
+		}
+		if versionDesc != "" {
+			fmt.Fprintf(b, "- Product version description: %s\n", versionDesc)
+		}
+		if versionDir != "" {
+			fmt.Fprintf(b, "- Product version directory: %s\n", versionDir)
+		}
 	}
 	b.WriteString("Credentials come from the injected ZENTAO_* environment variables. Do not require a skill-directory .env file.\n\n")
 }

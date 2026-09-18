@@ -79,7 +79,8 @@
     "no_issues_yet": "目前还没有任务",
     "toast_link_copied": "已复制链接",
     "toast_project_deleted": "已删除项目",
-    "toast_move_issue_failed": "移动任务失败"
+    "toast_move_issue_failed": "移动任务失败",
+    "prop_product": "产品"
   },
   "resources": {
     "section_header": "资源",
@@ -176,5 +177,15 @@
     "direction_desc": "降序",
     "section_columns": "列",
     "view": "视图"
+  },
+  "product": {
+    "none": "未关联产品",
+    "bound": "已关联产品版本",
+    "search": "搜索产品...",
+    "search_version": "搜索版本...",
+    "back": "返回",
+    "loading_versions": "正在加载版本...",
+    "no_versions": "没有可用版本",
+    "empty": "暂无产品"
   }
 }

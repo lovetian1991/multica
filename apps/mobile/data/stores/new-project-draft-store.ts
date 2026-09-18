@@ -21,25 +21,46 @@
  */
 import { useEffect, useRef } from "react";
 import { create } from "zustand";
-import type { ProjectPriority, ProjectStatus } from "@multica/core/types";
+import type {
+  Product,
+  ProductVersion,
+  ProjectPriority,
+  ProjectStatus,
+} from "@multica/core/types";
 
 interface NewProjectDraftState {
   status: ProjectStatus;
   priority: ProjectPriority;
+  product: Product | null;
+  productVersion: ProductVersion | null;
   setStatus: (next: ProjectStatus) => void;
   setPriority: (next: ProjectPriority) => void;
+  setProductSelection: (
+    next: { product: Product; productVersion: ProductVersion } | null,
+  ) => void;
   reset: () => void;
 }
 
-const INITIAL: Pick<NewProjectDraftState, "status" | "priority"> = {
+const INITIAL: Pick<
+  NewProjectDraftState,
+  "status" | "priority" | "product" | "productVersion"
+> = {
   status: "planned",
   priority: "none",
+  product: null,
+  productVersion: null,
 };
 
 export const useNewProjectDraftStore = create<NewProjectDraftState>((set) => ({
   ...INITIAL,
   setStatus: (next) => set({ status: next }),
   setPriority: (next) => set({ priority: next }),
+  setProductSelection: (next) =>
+    set(
+      next
+        ? { product: next.product, productVersion: next.productVersion }
+        : { product: null, productVersion: null },
+    ),
   reset: () => set({ ...INITIAL }),
 }));
 

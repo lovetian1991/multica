@@ -161,7 +161,14 @@ type TaskContextForEnv struct {
 	ProjectTitle                  string                  // human-readable project title
 	ProjectDescription            string                  // durable project-level context, rendered into the brief's Project Context section
 	ProjectResources              []ProjectResourceForEnv // resources attached to the project
-	ChatSessionID                 string                  // non-empty for chat tasks
+	ProductID                     string
+	ProductName                   string
+	ProductDescription            string
+	ProductVersionID              string
+	ProductVersionName            string
+	ProductVersionDescription     string
+	ProductVersionDirectory       string
+	ChatSessionID                 string // non-empty for chat tasks
 	// ChatChannelType is the IM platform behind a chat session ("slack",
 	// "feishu", "wecom"); empty for a web/mobile chat. It names the surface in
 	// the brief's copy; what that surface can DELIVER is the separate field

@@ -2,7 +2,7 @@
  * Project detail screen. Single column, scrolling:
  *
  *   Header card (icon + title + description, tap → edit)
- *   Properties section (Status / Priority / Lead — tap chip → picker)
+ *   Properties section (Status / Priority / Lead / Product — tap chip → picker)
  *   Resources section (read-only by default, "Add" button → resource form)
  *   Related issues (Open / Done bucketed list)
  *
@@ -129,6 +129,12 @@ export default function ProjectDetail() {
         case "edit":
           router.push(`/${wsSlug}/project/${id}/edit`);
           break;
+        case "new-issue":
+          router.push({
+            pathname: "/[workspace]/new-issue",
+            params: { workspace: wsSlug, projectId: project.id },
+          });
+          break;
         case "open-web":
           if (projectLink) void Linking.openURL(projectLink);
           break;
@@ -221,6 +227,13 @@ export default function ProjectDetail() {
                   params: { workspace: wsSlug, id },
                 });
             }}
+            onPressProduct={() => {
+              if (wsSlug)
+                router.push({
+                  pathname: "/[workspace]/project/[id]/picker/product",
+                  params: { workspace: wsSlug, id },
+                });
+            }}
           />
           <ProjectResourcesSection
             projectId={id}
@@ -240,7 +253,7 @@ export default function ProjectDetail() {
   );
 }
 
-type ProjectAction = "pin" | "unpin" | "edit" | "open-web" | "delete";
+type ProjectAction = "pin" | "unpin" | "edit" | "new-issue" | "open-web" | "delete";
 
 function ProjectActionsMenu({
   isPinned,
@@ -270,6 +283,9 @@ function ProjectActionsMenu({
           onPress={() => onSelect(isPinned ? "unpin" : "pin")}
         >
           <Text>{isPinned ? "取消置顶" : "置顶"}</Text>
+        </DropdownMenuItem>
+        <DropdownMenuItem onPress={() => onSelect("new-issue")}>
+          <Text>新建任务</Text>
         </DropdownMenuItem>
         <DropdownMenuItem onPress={() => onSelect("edit")}>
           <Text>编辑详情</Text>

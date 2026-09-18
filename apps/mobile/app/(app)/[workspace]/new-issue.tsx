@@ -14,7 +14,7 @@
  * — both surfaces produce canonical `[@name](mention://type/id)` markdown
  * recognised by util.ParseMentions on the server.
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -22,24 +22,41 @@ import {
   ScrollView,
   TextInput,
 } from "react-native";
-import { Stack, router } from "expo-router";
+import { Stack, router, useLocalSearchParams } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
 import { SubmitIssueButton } from "@/components/issue/submit-issue-button";
 import { CreateFormAttributeRow } from "@/components/issue/create-form-attribute-row";
 import { MentionSuggestionBar } from "@/components/issue/mention-suggestion-bar";
 import { DescriptionField } from "@/components/issue/description-field";
 import { MOBILE_PLACEHOLDER_COLOR } from "@/components/ui/input-tokens";
 import { useCreateIssue } from "@/data/mutations/issues";
-import { useNewIssueDraftStore } from "@/data/stores/new-issue-draft-store";
+import { projectDetailOptions } from "@/data/queries/projects";
+import {
+  inheritProductFromProject,
+  useNewIssueDraftStore,
+} from "@/data/stores/new-issue-draft-store";
+import { useWorkspaceStore } from "@/data/workspace-store";
 import { useMentionInput } from "@/lib/use-mention-input";
 
 export default function NewIssueModal() {
   const [title, setTitle] = useState("");
   const description = useMentionInput();
-  // Attribute chips (status / priority / assignee / due date / project)
+  const { projectId: seedProjectId } = useLocalSearchParams<{
+    projectId?: string | string[];
+  }>();
+  const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
+  const { data: seedProject } = useQuery(
+    projectDetailOptions(
+      wsId,
+      Array.isArray(seedProjectId) ? (seedProjectId[0] ?? "") : (seedProjectId ?? ""),
+    ),
+  );
+  // Attribute chips (status / priority / assignee / due date / project / product)
   // live in `useNewIssueDraftStore` so the new-issue-picker/* formSheet
   // routes can read and write the same values without a parent-child
   // React relationship. The store is reset on mount + on unmount so
-  // re-opening the new-issue modal starts clean.
+  // re-opening the new-issue modal starts clean. `?projectId=` then reseeds
+  // the project (and its product version) after reset.
   const status = useNewIssueDraftStore((s) => s.status);
   const priority = useNewIssueDraftStore((s) => s.priority);
   const assignee = useNewIssueDraftStore((s) => s.assignee);
@@ -50,12 +67,24 @@ export default function NewIssueModal() {
   const kbFolder = useNewIssueDraftStore((s) => s.kbFolder);
   const resetDraft = useNewIssueDraftStore((s) => s.reset);
 
+  const seededProjectIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     resetDraft();
+    seededProjectIdRef.current = null;
     return () => {
       resetDraft();
     };
   }, [resetDraft]);
+
+  useEffect(() => {
+    if (!seedProject || seedProject.id === "") return;
+    if (seededProjectIdRef.current === seedProject.id) return;
+    seededProjectIdRef.current = seedProject.id;
+    const store = useNewIssueDraftStore.getState();
+    store.setProject(seedProject);
+    inheritProductFromProject(seedProject);
+  }, [seedProject]);
 
   const createIssue = useCreateIssue();
   const isSubmitting = createIssue.isPending;
@@ -66,6 +95,12 @@ export default function NewIssueModal() {
     const trimmedTitle = title.trim();
     if (trimmedTitle.length === 0) return;
     const finalDescription = description.serialize().trim();
+    let issueProductId = product?.id;
+    let issueProductVersionId = productVersion?.id;
+    if (!issueProductId && !issueProductVersionId && project) {
+      issueProductId = project.product_id ?? undefined;
+      issueProductVersionId = project.product_version_id ?? undefined;
+    }
     try {
       await createIssue.mutateAsync({
         title: trimmedTitle,
@@ -77,8 +112,10 @@ export default function NewIssueModal() {
           : {}),
         ...(dueDate ? { due_date: dueDate } : {}),
         ...(project ? { project_id: project.id } : {}),
-        ...(product ? { product_id: product.id } : {}),
-        ...(productVersion ? { product_version_id: productVersion.id } : {}),
+        ...(issueProductId ? { product_id: issueProductId } : {}),
+        ...(issueProductVersionId
+          ? { product_version_id: issueProductVersionId }
+          : {}),
         ...(kbFolder ? { kb_folder_id: kbFolder.id } : {}),
       });
       router.back();

@@ -54,6 +54,7 @@ import {
 
 interface ProductDraft {
   name: string;
+  description: string;
 }
 
 interface ProductVersionDraft {
@@ -66,6 +67,7 @@ interface ProductVersionDraft {
 
 const EMPTY_PRODUCT_DRAFT: ProductDraft = {
   name: "",
+  description: "",
 };
 
 const EMPTY_VERSION_DRAFT: ProductVersionDraft = {
@@ -329,7 +331,7 @@ export function ProductVersionManagementPage() {
 
                 <div className="overflow-hidden rounded-lg border border-surface-border bg-card">
                   <div className="hidden grid-cols-[minmax(8rem,0.8fr)_minmax(10rem,1fr)_minmax(8rem,0.8fr)_5rem_2rem] gap-4 border-b border-surface-border bg-muted/20 px-4 py-2.5 text-caption font-medium text-muted-foreground md:grid">
-                    <span>{t(($) => $.products.columns.name)}</span>
+                    <span>{t(($) => $.products.versions.columns.name)}</span>
                     <span>{t(($) => $.products.versions.columns.directory)}</span>
                     <span>{t(($) => $.products.columns.remark)}</span>
                     <span>{t(($) => $.products.versions.columns.status)}</span>
@@ -510,6 +512,7 @@ function ProductEditorDialog({
       product
         ? {
             name: product.name,
+            description: product.description ?? "",
           }
         : EMPTY_PRODUCT_DRAFT,
     );
@@ -520,8 +523,7 @@ function ProductEditorDialog({
     if (!name) return;
     const data = {
       name,
-      directory: "",
-      remark: "",
+      description: draft.description.trim(),
     };
     const options = {
       onSuccess: () => onOpenChange(false),
@@ -567,6 +569,19 @@ function ProductEditorDialog({
               value={draft.name}
               onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
               placeholder={t(($) => $.products.product_editor.name_placeholder)}
+            />
+          </div>
+          <div className="space-y-2">
+            <FieldLabel htmlFor="system-product-description">
+              {t(($) => $.products.product_editor.description_label)}
+            </FieldLabel>
+            <Textarea
+              id="system-product-description"
+              rows={4}
+              maxLength={2000}
+              value={draft.description}
+              onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))}
+              placeholder={t(($) => $.products.product_editor.description_placeholder)}
             />
           </div>
         </div>

@@ -569,6 +569,8 @@ describe("ChatInput project context", () => {
     lead_id: null,
     start_date: null,
     due_date: null,
+  product_id: null,
+  product_version_id: null,
     created_at: new Date(0).toISOString(),
     updated_at: new Date(0).toISOString(),
     issue_count: 0,

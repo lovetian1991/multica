@@ -64,6 +64,10 @@ var (
 	repoCheckoutFresh bool
 )
 
+// repoCheckoutTimeout covers clone + fetch of large repos. Keep this aligned
+// with repocache.repoCacheGitTimeout so the CLI does not cancel first.
+const repoCheckoutTimeout = time.Hour
+
 func init() {
 	repoListCmd.Flags().String("output", "table", "Output format: table or json")
 
@@ -383,7 +387,7 @@ func runRepoCheckout(cmd *cobra.Command, args []string) error {
 	if parentCtx == nil {
 		parentCtx = context.Background()
 	}
-	ctx, cancel := context.WithTimeout(parentCtx, 5*time.Minute)
+	ctx, cancel := context.WithTimeout(parentCtx, repoCheckoutTimeout)
 	defer cancel()
 	client := &http.Client{}
 	checkoutURL := fmt.Sprintf("http://127.0.0.1:%s/repo/checkout", daemonPort)

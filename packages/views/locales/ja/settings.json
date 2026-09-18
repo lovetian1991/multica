@@ -1441,6 +1441,7 @@
     "new_product": "新しい製品",
     "columns": {
       "name": "製品名",
+      "description": "説明",
       "directory": "フォルダーパス",
       "remark": "備考"
     },
@@ -1457,9 +1458,11 @@
     "product_editor": {
       "create_title": "新しい製品",
       "edit_title": "製品を編集",
-      "description": "製品名、フォルダーパス、任意の備考を設定します。",
+      "description": "製品名と説明を設定します。説明はタスクコンテキストに注入されます。",
       "name": "製品名",
       "name_placeholder": "製品名を入力",
+      "description_label": "説明",
+      "description_placeholder": "この説明はタスクコンテキストに注入され、モデルが製品を理解しやすくします",
       "directory": "フォルダーパス",
       "directory_placeholder": "フォルダーパスを入力",
       "remark": "備考",
@@ -1488,7 +1491,7 @@
       "name": "バージョン名",
       "name_placeholder": "バージョン名を入力",
       "remark": "備考",
-      "remark_placeholder": "備考を入力",
+      "remark_placeholder": "この説明はタスクコンテキストに注入され、モデルがバージョンを理解しやすくします",
       "cancel": "キャンセル",
       "save": "保存",
       "saving": "保存中..."
@@ -1498,6 +1501,7 @@
       "search_placeholder": "バージョン名を検索",
       "new_version": "新しいバージョン",
       "columns": {
+        "name": "バージョン名",
         "directory": "保存先フォルダー",
         "status": "ステータス"
       },

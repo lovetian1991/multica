@@ -360,12 +360,21 @@ type AgentTaskResponse struct {
 	CancelledByCommentChange bool                   `json:"cancelled_by_comment_change,omitempty"`
 	CancelledBy              *TaskCancellationActor `json:"cancelled_by,omitempty"`
 
-	ID                   string                 `json:"id"`
-	AgentID              string                 `json:"agent_id"`
-	RuntimeID            string                 `json:"runtime_id"`
-	IssueID              string                 `json:"issue_id"`
-	WorkspaceID          string                 `json:"workspace_id"`
-	WorkspaceSlug        string                 `json:"workspace_slug,omitempty"`
+	ID             string `json:"id"`
+	AgentID        string `json:"agent_id"`
+	RuntimeID      string `json:"runtime_id"`
+	IssueID        string `json:"issue_id"`
+	WorkspaceID    string `json:"workspace_id"`
+	WorkspaceSlug  string `json:"workspace_slug,omitempty"`
+	OCKey          string `json:"oc_key,omitempty"` // daemon-claim only: current workspace key for this task
+	ZentaoURL      string `json:"zentao_url,omitempty"`
+	ZentaoAccount  string `json:"zentao_account,omitempty"`
+	ZentaoPassword string `json:"zentao_password,omitempty"` // daemon-claim only: current workspace Zentao credentials for this task
+	// KBEnvironmentURL is the deployment-wide KB platform address from system
+	// settings. It travels to the daemon so artifact skills can build
+	// browser-facing links; the Multica facade address they use for API calls is
+	// not the KB UI address, and a task token cannot read system settings.
+	KBEnvironmentURL     string                 `json:"kb_environment_url,omitempty"`
 	IssueIdentifier      string                 `json:"issue_identifier,omitempty"`
 	RemoteMCPConnections []remotemcp.Connection `json:"remote_mcp_connections,omitempty"`
 	// PluginHookTools are the workspace's agent-trigger plugin hooks, which the
@@ -414,7 +423,7 @@ type AgentTaskResponse struct {
 	ConnectedApps        []ConnectedAppData    `json:"connected_apps,omitempty"` // daemon-claim only: per-run app capabilities mounted through runtime MCP overlays
 	Repos                []RepoData            `json:"repos,omitempty"`
 	ProjectID            string                `json:"project_id,omitempty"`          // issue's project, when present
-	ProjectTitle         string                `json:"project_title,omitempty"`       // for surfacing in agent context
+	ProjectTitle         string                `json:"project_title,omitempty"`       // Multica project title; used as the ZenTao project name
 	ProjectDescription   string                `json:"project_description,omitempty"` // durable project-level context injected into the brief
 	ProjectResources     []ProjectResourceData `json:"project_resources,omitempty"`   // resources attached to the project
 	CreatedAt            string                `json:"created_at"`
@@ -482,42 +491,45 @@ type AgentTaskResponse struct {
 	// old server — and a daemon must then keep telling the agent to read the
 	// issue. An empty IssueChangedFields is only "unchanged" alongside this
 	// flag; on its own it is indistinguishable from "nobody looked" (MUL-7344).
-	IssueStateDeltaKnown     bool                 `json:"issue_state_delta_known,omitempty"`
-	IssueChangedFields       []string             `json:"issue_changed_fields,omitempty"`        // subset of title,description in that order; empty alongside IssueStateDeltaKnown means unchanged. Fields outside that set (status, assignee, priority, labels, parent, due date, stage, project, metadata) are NOT compared and must never be reported as checked. Status and assignee are out because IssueStatus / IssueAssigneeType / IssueAssigneeID ship their current values on every claim, so no comparison is needed to learn them; priority is out because it does not change what the agent does
-	IssueStatus              string               `json:"issue_status,omitempty"`                // the issue's status key at claim time. Sent whether or not the delta is known: the agent needs it to decide workflow step 3 ("already in progress?") without a read
-	IssueAssigneeType        string               `json:"issue_assignee_type,omitempty"`         // "agent", "member" or "squad" at claim time; empty when unassigned. With IssueAssigneeID, lets the agent tell "mine" from "someone else's" without a read
-	IssueAssigneeID          string               `json:"issue_assignee_id,omitempty"`           // assignee UUID at claim time; empty when unassigned
-	ChatSessionID            string               `json:"chat_session_id,omitempty"`             // non-empty for chat tasks
-	ChatChannelType          string               `json:"chat_channel_type,omitempty"`           // "slack" when the chat session is backed by an IM channel; empty for a web-only chat. Makes the agent channel-aware (read history from the channel, not Multica)
-	ChatChannelDeliversFiles bool                 `json:"chat_channel_delivers_files,omitempty"` // server capability: THIS deployment can put a file the agent produced into THIS conversation — the adapter goes back for the bound attachment AND object storage exists to go back to. Absent/false on a server predating it, which is the safe reading: the agent is told to describe its file in words. Never inferred daemon-side from chat_channel_type; see handler.Handler.channelDeliversFiles
-	ChatType                 string               `json:"chat_type,omitempty"`                   // channel_chat_session_binding.chat_type — "group" for a shared room, "p2p" for a 1:1 with the bot. Lets the per-turn prompt tell the agent who else can read its replies; empty for a web-only chat
-	ChatInThread             bool                 `json:"chat_in_thread,omitempty"`              // true when the latest @mention was a thread reply; tells the agent to start with `multica chat thread` vs `multica chat history`
-	ChatMessage              string               `json:"chat_message,omitempty"`                // user message for chat tasks
-	ChatMessageAttachments   []ChatAttachmentMeta `json:"chat_message_attachments,omitempty"`    // attachments on the user message — agent calls `multica attachment download <id>` per entry
-	ChatIntro                bool                 `json:"chat_intro,omitempty"`                  // legacy compatibility for historical is_agent_intro sessions; new agent creation no longer creates these chats
-	AutopilotRunID           string               `json:"autopilot_run_id,omitempty"`            // non-empty for autopilot-spawned tasks
-	AutopilotID              string               `json:"autopilot_id,omitempty"`                // autopilot that spawned this task
-	AutopilotTitle           string               `json:"autopilot_title,omitempty"`             // autopilot title used as task context
-	AutopilotDescription     string               `json:"autopilot_description,omitempty"`       // autopilot description used as task prompt
-	AutopilotSource          string               `json:"autopilot_source,omitempty"`            // manual, schedule, webhook, or api
-	AutopilotTriggerPayload  json.RawMessage      `json:"autopilot_trigger_payload,omitempty"`   // optional trigger payload for webhook/api runs
-	QuickCreatePrompt        string               `json:"quick_create_prompt,omitempty"`         // user's natural-language input for quick-create tasks
-	QuickCreatePriority      string               `json:"quick_create_priority,omitempty"`       // explicit priority selected in quick-create
-	QuickCreateDueDate       string               `json:"quick_create_due_date,omitempty"`       // explicit calendar due date selected in quick-create
-	QuickCreateProductID     string                 `json:"quick_create_product_id,omitempty"`     // globally scoped product selected in quick-create
-	QuickCreateKBFolderID    string                 `json:"quick_create_kb_folder_id,omitempty"`   // KB folder selected in quick-create
-	KBFolderID               string                 `json:"kb_folder_id,omitempty"`                // folder associated with the claimed task's issue or quick-create context
-	ProductID                string                 `json:"product_id,omitempty"`                  // issue product UUID when the claimed task is bound to a product version
-	ProductName              string                 `json:"product_name,omitempty"`                // issue product name, used as the ZenTao product selector
-	ProductVersionID         string                 `json:"product_version_id,omitempty"`          // issue product version UUID
-	ProductVersionName       string                 `json:"product_version_name,omitempty"`        // issue product version name, used as ZenTao resolve --build
-	QuickCreateAttachmentIDs []string             `json:"quick_create_attachment_ids,omitempty"` // attachment ids uploaded in the quick-create prompt and bound on issue create
-	QuickCreateSourceContext json.RawMessage      `json:"quick_create_source_context,omitempty"` // immutable historical context for source-context quick-create
-	HandoffNote              string               `json:"handoff_note,omitempty"`                // legacy assignment handoff instruction retained for installed clients; rendered by the daemon only in the per-turn prompt
-	SquadID                  string               `json:"squad_id,omitempty"`                    // for quick-create tasks where the picker was a squad; Agent is still the resolved leader
-	SquadName                string               `json:"squad_name,omitempty"`                  // display name for the picker squad
-	ParentIssueID            string               `json:"parent_issue_id,omitempty"`             // for quick-create tasks opened from "Add sub issue" — UUID of the parent issue the new issue should be filed under
-	ParentIssueIdentifier    string               `json:"parent_issue_identifier,omitempty"`     // human-readable identifier (e.g. MUL-123) of the quick-create parent issue, resolved on claim for prompt context
+	IssueStateDeltaKnown      bool                 `json:"issue_state_delta_known,omitempty"`
+	IssueChangedFields        []string             `json:"issue_changed_fields,omitempty"`        // subset of title,description in that order; empty alongside IssueStateDeltaKnown means unchanged. Fields outside that set (status, assignee, priority, labels, parent, due date, stage, project, metadata) are NOT compared and must never be reported as checked. Status and assignee are out because IssueStatus / IssueAssigneeType / IssueAssigneeID ship their current values on every claim, so no comparison is needed to learn them; priority is out because it does not change what the agent does
+	IssueStatus               string               `json:"issue_status,omitempty"`                // the issue's status key at claim time. Sent whether or not the delta is known: the agent needs it to decide workflow step 3 ("already in progress?") without a read
+	IssueAssigneeType         string               `json:"issue_assignee_type,omitempty"`         // "agent", "member" or "squad" at claim time; empty when unassigned. With IssueAssigneeID, lets the agent tell "mine" from "someone else's" without a read
+	IssueAssigneeID           string               `json:"issue_assignee_id,omitempty"`           // assignee UUID at claim time; empty when unassigned
+	ChatSessionID             string               `json:"chat_session_id,omitempty"`             // non-empty for chat tasks
+	ChatChannelType           string               `json:"chat_channel_type,omitempty"`           // "slack" when the chat session is backed by an IM channel; empty for a web-only chat. Makes the agent channel-aware (read history from the channel, not Multica)
+	ChatChannelDeliversFiles  bool                 `json:"chat_channel_delivers_files,omitempty"` // server capability: THIS deployment can put a file the agent produced into THIS conversation — the adapter goes back for the bound attachment AND object storage exists to go back to. Absent/false on a server predating it, which is the safe reading: the agent is told to describe its file in words. Never inferred daemon-side from chat_channel_type; see handler.Handler.channelDeliversFiles
+	ChatType                  string               `json:"chat_type,omitempty"`                   // channel_chat_session_binding.chat_type — "group" for a shared room, "p2p" for a 1:1 with the bot. Lets the per-turn prompt tell the agent who else can read its replies; empty for a web-only chat
+	ChatInThread              bool                 `json:"chat_in_thread,omitempty"`              // true when the latest @mention was a thread reply; tells the agent to start with `multica chat thread` vs `multica chat history`
+	ChatMessage               string               `json:"chat_message,omitempty"`                // user message for chat tasks
+	ChatMessageAttachments    []ChatAttachmentMeta `json:"chat_message_attachments,omitempty"`    // attachments on the user message — agent calls `multica attachment download <id>` per entry
+	ChatIntro                 bool                 `json:"chat_intro,omitempty"`                  // legacy compatibility for historical is_agent_intro sessions; new agent creation no longer creates these chats
+	AutopilotRunID            string               `json:"autopilot_run_id,omitempty"`            // non-empty for autopilot-spawned tasks
+	AutopilotID               string               `json:"autopilot_id,omitempty"`                // autopilot that spawned this task
+	AutopilotTitle            string               `json:"autopilot_title,omitempty"`             // autopilot title used as task context
+	AutopilotDescription      string               `json:"autopilot_description,omitempty"`       // autopilot description used as task prompt
+	AutopilotSource           string               `json:"autopilot_source,omitempty"`            // manual, schedule, webhook, or api
+	AutopilotTriggerPayload   json.RawMessage      `json:"autopilot_trigger_payload,omitempty"`   // optional trigger payload for webhook/api runs
+	QuickCreatePrompt         string               `json:"quick_create_prompt,omitempty"`         // user's natural-language input for quick-create tasks
+	QuickCreatePriority       string               `json:"quick_create_priority,omitempty"`       // explicit priority selected in quick-create
+	QuickCreateDueDate        string               `json:"quick_create_due_date,omitempty"`       // explicit calendar due date selected in quick-create
+	QuickCreateProductID      string               `json:"quick_create_product_id,omitempty"`     // globally scoped product selected in quick-create
+	QuickCreateKBFolderID     string               `json:"quick_create_kb_folder_id,omitempty"`   // KB folder selected in quick-create
+	KBFolderID                string               `json:"kb_folder_id,omitempty"`                // folder associated with the claimed task's issue or quick-create context
+	ProductID                 string               `json:"product_id,omitempty"`                  // product UUID bound to the claimed task
+	ProductName               string               `json:"product_name,omitempty"`                // optional product name; not the ZenTao bug query scope
+	ProductDescription        string               `json:"product_description,omitempty"`         // product description injected into task context
+	ProductVersionID          string               `json:"product_version_id,omitempty"`          // product version UUID
+	ProductVersionName        string               `json:"product_version_name,omitempty"`        // product version name, used as ZenTao resolve --build
+	ProductVersionDescription string               `json:"product_version_description,omitempty"` // product version remark injected into task context
+	ProductVersionDirectory   string               `json:"product_version_directory,omitempty"`   // product version directory / code path
+	QuickCreateAttachmentIDs  []string             `json:"quick_create_attachment_ids,omitempty"` // attachment ids uploaded in the quick-create prompt and bound on issue create
+	QuickCreateSourceContext  json.RawMessage      `json:"quick_create_source_context,omitempty"` // immutable historical context for source-context quick-create
+	HandoffNote               string               `json:"handoff_note,omitempty"`                // assignment handoff instruction; rendered into the run's opening prompt + issue_context.md (omitempty so old daemons ignore it)
+	SquadID                   string               `json:"squad_id,omitempty"`                    // for quick-create tasks where the picker was a squad; Agent is still the resolved leader
+	SquadName                 string               `json:"squad_name,omitempty"`                  // display name for the picker squad
+	ParentIssueID             string               `json:"parent_issue_id,omitempty"`             // for quick-create tasks opened from "Add sub issue" — UUID of the parent issue the new issue should be filed under
+	ParentIssueIdentifier     string               `json:"parent_issue_identifier,omitempty"`     // human-readable identifier (e.g. MUL-123) of the quick-create parent issue, resolved on claim for prompt context
 	// RequestingUserName + RequestingUserProfileDescription mirror the user
 	// the agent is acting on behalf of (see daemon/types.go). v1 sources them
 	// from the runtime owner so they're populated for daemon runtimes and

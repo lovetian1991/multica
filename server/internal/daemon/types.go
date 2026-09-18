@@ -77,7 +77,7 @@ type Task struct {
 	OCKey                string                 `json:"oc_key,omitempty"` // claim-only workspace key, injected into this task process
 	ZentaoURL            string                 `json:"zentao_url,omitempty"`
 	ZentaoAccount        string                 `json:"zentao_account,omitempty"`
-	ZentaoPassword       string                 `json:"zentao_password,omitempty"` // claim-only workspace Zentao credentials, injected into this task process
+	ZentaoPassword       string                 `json:"zentao_password,omitempty"`    // claim-only workspace Zentao credentials, injected into this task process
 	KBEnvironmentURL     string                 `json:"kb_environment_url,omitempty"` // claim-only KB platform address, injected as OPENCONTENT_WEB_URL
 	IssueIdentifier      string                 `json:"issue_identifier,omitempty"`
 	RemoteMCPConnections []remotemcp.Connection `json:"remote_mcp_connections,omitempty"`
@@ -105,7 +105,7 @@ type Task struct {
 	ConnectedApps                 []ConnectedAppData     `json:"connected_apps,omitempty"` // per-run app capabilities mounted through runtime MCP overlays
 	Repos                         []RepoData             `json:"repos,omitempty"`
 	ProjectID                     string                 `json:"project_id,omitempty"`                       // active project for this task, when present
-	ProjectTitle                  string                 `json:"project_title,omitempty"`                    // human-readable project title for context injection
+	ProjectTitle                  string                 `json:"project_title,omitempty"`                    // Multica project title; used as the ZenTao project name
 	ProjectDescription            string                 `json:"project_description,omitempty"`              // durable project-level context injected into the brief
 	ProjectResources              []ProjectResourceData  `json:"project_resources,omitempty"`                // project-scoped resources to expose to the agent
 	IsLeaderTask                  bool                   `json:"is_leader_task,omitempty"`                   // true when executing in the squad-leader coordinator role
@@ -149,10 +149,13 @@ type Task struct {
 	QuickCreateProductID          string                 `json:"quick_create_product_id,omitempty"`          // globally scoped product selected in quick-create
 	QuickCreateKBFolderID         string                 `json:"quick_create_kb_folder_id,omitempty"`        // KB folder selected in quick-create
 	KBFolderID                    string                 `json:"kb_folder_id,omitempty"`                     // folder associated with the claimed task's issue or quick-create context
-	ProductID                     string                 `json:"product_id,omitempty"`                       // issue product UUID when the claimed task is bound to a product version
-	ProductName                   string                 `json:"product_name,omitempty"`                     // issue product name, used as the ZenTao product selector
-	ProductVersionID              string                 `json:"product_version_id,omitempty"`               // issue product version UUID
-	ProductVersionName            string                 `json:"product_version_name,omitempty"`             // issue product version name, used as ZenTao resolve --build
+	ProductID                     string                 `json:"product_id,omitempty"`                       // product UUID bound to the claimed task
+	ProductName                   string                 `json:"product_name,omitempty"`                     // optional product name; not the ZenTao bug query scope
+	ProductDescription            string                 `json:"product_description,omitempty"`              // product description injected into task context
+	ProductVersionID              string                 `json:"product_version_id,omitempty"`               // product version UUID
+	ProductVersionName            string                 `json:"product_version_name,omitempty"`             // product version name, used as ZenTao resolve --build
+	ProductVersionDescription     string                 `json:"product_version_description,omitempty"`      // product version remark injected into task context
+	ProductVersionDirectory       string                 `json:"product_version_directory,omitempty"`        // product version directory / code path
 	QuickCreateAttachmentIDs      []string               `json:"quick_create_attachment_ids,omitempty"`      // attachments uploaded in the quick-create prompt and bound by issue create
 	QuickCreateSourceContext      json.RawMessage        `json:"quick_create_source_context,omitempty"`      // immutable historical context, separate from the new instruction
 	HandoffNote                   string                 `json:"handoff_note,omitempty"`                     // legacy assignment handoff instruction; rendered only in the per-turn prompt

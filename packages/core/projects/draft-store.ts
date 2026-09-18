@@ -12,6 +12,8 @@ interface ProjectDraft {
   // Calendar days ("YYYY-MM-DD"); empty/undefined means unset.
   startDate?: string;
   dueDate?: string;
+  productId?: string | null;
+  productVersionId?: string | null;
 }
 
 const EMPTY_DRAFT: ProjectDraft = {
@@ -24,6 +26,8 @@ const EMPTY_DRAFT: ProjectDraft = {
   icon: undefined,
   startDate: undefined,
   dueDate: undefined,
+  productId: undefined,
+  productVersionId: undefined,
 };
 
 export const useProjectDraftStore = createDraftStore<ProjectDraft>({

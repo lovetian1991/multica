@@ -8,7 +8,7 @@
  * project from a "I need to track this stream of work" intent and figure
  * out who's leading it later. The picker lives on the detail screen.
  *
- * Status / priority cross-route through `useNewProjectDraftStore` so the
+ * Status / priority / product version cross-route through `useNewProjectDraftStore` so the
  * formSheet picker routes can read/write them — same pattern as
  * new-issue.tsx + new-issue-picker/* (see new-project-draft-store.ts).
  *
@@ -27,6 +27,7 @@ import {
   View,
 } from "react-native";
 import { Stack, router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { Text } from "@/components/ui/text";
 import { AutosizeTextArea } from "@/components/ui/autosize-textarea";
 import {
@@ -48,10 +49,11 @@ import { useWorkspaceStore } from "@/data/workspace-store";
  * compile-checked rather than depending on free-form template strings —
  * same approach as `create-form-attribute-row.tsx`.
  */
-type NewProjectPickerField = "status" | "priority";
+type NewProjectPickerField = "status" | "priority" | "product";
 const NEW_PROJECT_PICKER_PATHNAMES = {
   status: "/[workspace]/new-project-picker/status",
   priority: "/[workspace]/new-project-picker/priority",
+  product: "/[workspace]/new-project-picker/product",
 } as const satisfies Record<NewProjectPickerField, string>;
 
 export default function NewProject() {
@@ -63,6 +65,8 @@ export default function NewProject() {
   const [description, setDescription] = useState("");
   const status = useNewProjectDraftStore((s) => s.status);
   const priority = useNewProjectDraftStore((s) => s.priority);
+  const product = useNewProjectDraftStore((s) => s.product);
+  const productVersion = useNewProjectDraftStore((s) => s.productVersion);
   const resetDraft = useNewProjectDraftStore((s) => s.reset);
 
   const dirty =
@@ -70,7 +74,8 @@ export default function NewProject() {
     icon.length > 0 ||
     description.length > 0 ||
     status !== "planned" ||
-    priority !== "none";
+    priority !== "none" ||
+    product !== null;
 
   const canCreate = title.trim().length > 0 && !create.isPending;
 
@@ -117,6 +122,8 @@ export default function NewProject() {
         icon: icon.trim() || undefined,
         status,
         priority,
+        product_id: product?.id ?? null,
+        product_version_id: productVersion?.id ?? null,
       },
       {
         onSuccess: (project) => {
@@ -147,6 +154,8 @@ export default function NewProject() {
     icon,
     status,
     priority,
+    product,
+    productVersion,
     wsSlug,
     resetDraft,
   ]);
@@ -216,6 +225,31 @@ export default function NewProject() {
               className="bg-secondary/50 rounded-md px-3 py-2"
               minHeight={MIN_BODY_INPUT_HEIGHT_PX}
             />
+          </Field>
+
+          <Field label="产品版本">
+            <Pressable
+              onPress={() => openPicker("product")}
+              className="flex-row items-center gap-2 bg-secondary/50 rounded-md px-3 py-2.5"
+            >
+              <Ionicons
+                name="cube-outline"
+                size={16}
+                color={product ? "#3f3f46" : "#a1a1aa"}
+              />
+              <Text
+                className={
+                  product
+                    ? "text-sm text-foreground flex-1"
+                    : "text-sm text-muted-foreground flex-1"
+                }
+                numberOfLines={1}
+              >
+                {product
+                  ? [product.name, productVersion?.name].filter(Boolean).join(" / ")
+                  : "未绑定"}
+              </Text>
+            </Pressable>
           </Field>
 
           <View className="flex-row gap-2">
