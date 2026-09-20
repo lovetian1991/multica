@@ -391,7 +391,8 @@
       "plugins": "Plugins",
       "mcp": "MCP",
       "billing": "Billing",
-      "products": "Products"
+      "products": "Products",
+      "process_templates": "Process templates"
     },
     "groups": {
       "personal": "Personal",
@@ -1533,6 +1534,7 @@
     "catalog": "Catalog management",
     "configuration": "System configuration",
     "products": "Products",
+    "process_templates": "Process templates",
     "workspaces": "Workspaces",
     "users": "Users & permissions",
     "settings": "System settings",
@@ -1559,5 +1561,80 @@
       "integration_key_hint": "The key is encrypted before it is stored.",
       "integration_key_saved_hint": "An integration key is configured. It is never displayed."
     }
+  },
+  "process_templates": {
+    "title": "Process templates",
+    "system_description": "Upload versioned zip packages of agents, squads, and skills. Workspaces apply or upgrade by name. Push updates with POST /api/system/process-templates/push.",
+    "workspace_description": "Apply a process template to this workspace, or upgrade an installed template to the latest version.",
+    "workspace_hint": "Apply and upgrade match squad, agent, and skill names. Extra items already in this workspace are left in place.",
+    "catalog_title": "Available templates",
+    "system_admin_required": "System administrator access is required.",
+    "unauthorized": "Authentication is required. Please sign in.",
+    "load_failed": "Couldn't load process templates.",
+    "search_placeholder": "Search templates",
+    "new_template": "New template",
+    "columns": {
+      "name": "Name",
+      "description": "Description",
+      "version": "Version",
+      "zip": "Package"
+    },
+    "loading": "Loading process templates...",
+    "empty": "No process templates yet",
+    "empty_workspace": "No process templates yet",
+    "no_results": "No matching templates",
+    "not_set": "Not set",
+    "zip_unnamed": "package.zip",
+    "zip_required": "Upload a zip package to create a template.",
+    "zip_too_large": "The zip package must be 20 MB or smaller.",
+    "save_failed": "Couldn't save process template",
+    "download_failed": "Couldn't download the package",
+    "actions": {
+      "open": "Actions for {{name}}",
+      "download": "Download",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "editor": {
+      "create_title": "New process template",
+      "edit_title": "Edit process template",
+      "description": "The zip is the source of truth. Uploading a new zip creates a new version.",
+      "name": "Template name",
+      "name_placeholder": "Enter a template name",
+      "description_label": "Description",
+      "description_placeholder": "Describe the agents, squads, and skills this template installs.",
+      "zip": "Zip package",
+      "zip_placeholder": "Choose a .zip file",
+      "choose_zip": "Choose file",
+      "zip_optional": "Leave empty to update the name or description without creating a new version.",
+      "zip_hint": "Package layout must match templates: agents/, squad/, and skills/. Put mapping.json under agents/ and squad/ so upgrades can match display names.",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving...",
+      "slug": "Slug",
+      "slug_placeholder": "zh-cn-best-practices",
+      "slug_hint": "Stable ID for API push. Use ASCII letters, numbers, and hyphens. Required when the name cannot be slugified."
+    },
+    "delete_dialog": {
+      "title": "Delete process template?",
+      "description": "\"{{name}}\" and all of its versions will be permanently deleted.",
+      "cancel": "Cancel",
+      "confirm": "Delete",
+      "deleting": "Deleting...",
+      "failed": "Couldn't delete process template"
+    },
+    "apply": "Apply",
+    "applying": "Applying...",
+    "apply_failed": "Couldn't apply the process template",
+    "apply_success": "Applied {{name}}",
+    "upgrade": "Upgrade",
+    "upgrading": "Upgrading...",
+    "upgrade_failed": "Couldn't upgrade the process template",
+    "upgrade_success": "Upgraded {{name}}",
+    "installed": "Installed",
+    "not_installed": "Not installed",
+    "can_upgrade": "Upgrade available",
+    "version_summary": "Latest {{latest}} · Installed {{installed}}",
+    "read_only_note": "Only workspace owners and admins can apply or upgrade process templates."
   }
 }
