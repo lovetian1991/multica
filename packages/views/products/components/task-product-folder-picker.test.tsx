@@ -37,13 +37,13 @@ const PAGE_TWO = [folder("1413943", "help文档需要鉴权"), folder("1413947",
 const PAGE_THREE = [folder("1413944", "SDK APIKEY安全性")];
 const PAGE_FOUR = [folder("1413928", "markdown1M以上文件卡顿")];
 
-const getKBFolders = vi.hoisted(() => vi.fn());
+const listProductVersionFolders = vi.hoisted(() => vi.fn());
 
 vi.mock("@multica/core/api", () => ({
   api: {
     listProducts: vi.fn(),
     listSystemProductVersions: vi.fn(),
-    getKBFolders: (...args: unknown[]) => getKBFolders(...args),
+    listProductVersionFolders: (...args: unknown[]) => listProductVersionFolders(...args),
   },
 }));
 
@@ -95,8 +95,8 @@ afterEach(() => {
 });
 
 beforeEach(() => {
-  getKBFolders.mockReset();
-  getKBFolders.mockImplementation((_folderId: string, pageIndex = 1) => {
+  listProductVersionFolders.mockReset();
+  listProductVersionFolders.mockImplementation((_productId: string, _versionId: string, pageIndex = 1) => {
     if (pageIndex === 1) return Promise.resolve(pageResponse(PAGE_ONE, 7));
     if (pageIndex === 2) return Promise.resolve(pageResponse(PAGE_TWO, 7));
     if (pageIndex === 3) return Promise.resolve(pageResponse(PAGE_THREE, 7));
@@ -105,15 +105,25 @@ beforeEach(() => {
 });
 
 describe("TaskProductFolderPicker folder search", () => {
+  // Regression: the folder list used to come from the system administrator
+  // endpoint, so an ordinary member got an empty list where the server had
+  // answered 403.
+  it("reads folders through the product version, not the admin endpoint", async () => {
+    await openPicker();
+
+    expect(listProductVersionFolders).toHaveBeenCalledTimes(1);
+    expect(listProductVersionFolders).toHaveBeenCalledWith(PRODUCT.id, VERSION.id, 1);
+  });
+
   it("filters the loaded folders on the client without fetching", async () => {
     await openPicker();
-    expect(getKBFolders).toHaveBeenCalledTimes(1);
+    expect(listProductVersionFolders).toHaveBeenCalledTimes(1);
 
     await userEvent.type(screen.getByLabelText("Search folders..."), "CAD");
 
     expect(screen.getByText("CAD专业图纸")).toBeTruthy();
     expect(screen.queryByText("base增加元数据类别管理")).toBeNull();
-    expect(getKBFolders).toHaveBeenCalledTimes(1);
+    expect(listProductVersionFolders).toHaveBeenCalledTimes(1);
   });
 
   it("auto-loads up to two extra pages when the loaded pages have no match", async () => {
@@ -124,7 +134,7 @@ describe("TaskProductFolderPicker folder search", () => {
     });
 
     await screen.findByText("SDK APIKEY安全性");
-    expect(getKBFolders.mock.calls.map((call) => call[1])).toEqual([1, 2, 3]);
+    expect(listProductVersionFolders.mock.calls.map((call) => call[2])).toEqual([1, 2, 3]);
   });
 
   it("stops after two extra pages and lets the user load more by hand", async () => {
@@ -135,15 +145,15 @@ describe("TaskProductFolderPicker folder search", () => {
     });
 
     expect(await screen.findByText("No matches on the loaded pages")).toBeTruthy();
-    await waitFor(() => expect(getKBFolders).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(listProductVersionFolders).toHaveBeenCalledTimes(3));
 
     fireEvent.click(screen.getByRole("button", { name: "Load more" }));
     await screen.findByText("markdown1M以上文件卡顿");
-    expect(getKBFolders).toHaveBeenCalledTimes(4);
+    expect(listProductVersionFolders).toHaveBeenCalledTimes(4);
   });
 
   it("does not offer load more when every page is already loaded", async () => {
-    getKBFolders.mockImplementation((_folderId: string, pageIndex = 1) => {
+    listProductVersionFolders.mockImplementation((_productId: string, _versionId: string, pageIndex = 1) => {
       if (pageIndex === 1) return Promise.resolve(pageResponse(PAGE_ONE, 2));
       return Promise.resolve(pageResponse([], 2));
     });
@@ -155,6 +165,6 @@ describe("TaskProductFolderPicker folder search", () => {
 
     expect(await screen.findByText("No matching folders")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
-    expect(getKBFolders).toHaveBeenCalledTimes(1);
+    expect(listProductVersionFolders).toHaveBeenCalledTimes(1);
   });
 });

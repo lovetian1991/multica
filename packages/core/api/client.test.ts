@@ -2686,6 +2686,45 @@ describe("ApiClient KB folder listing", () => {
       currentFolder: null,
     });
   });
+
+  it("reads picker folders through the product version", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      total_count: 1,
+      folders: [{ id: "1413914", name: "base", folder_path: "/base", parent_id: "1413913" }],
+      current_folder: { id: "1413913", name: "root", folder_path: "/root", parent_id: "1" },
+    }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await new ApiClient("https://api.example.test").listProductVersionFolders(
+      "product-1",
+      "version-1",
+      2,
+    );
+    expect(result.folders.map((folder) => folder.id)).toEqual(["1413914"]);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "https://api.example.test/api/products/product-1/versions/version-1/folders?page_index=2",
+    );
+  });
+
+  it("falls back when a version folder response is malformed", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      folders: [{ id: 42 }],
+    }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = new ApiClient("https://api.example.test");
+    await expect(client.listProductVersionFolders("product-1", "version-1")).resolves.toEqual({
+      folders: [],
+      totalCount: 0,
+      currentFolder: null,
+    });
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "https://api.example.test/api/products/product-1/versions/version-1/folders",
+    );
+  });
 });
 
 describe("ApiClient response logging", () => {

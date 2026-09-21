@@ -58,6 +58,8 @@ export function ProductFolderPickerBody({
   const versions = versionsQuery.data ?? [];
   const selectedProduct = products.find((item) => item.id === selectedProductId) ?? null;
   const selectedVersion = versions.find((item) => item.id === selectedVersionId) ?? null;
+  const folderVersionId = selectedVersion?.id ?? null;
+  const folderRootId = selectedVersion?.folder_id ?? null;
   const filteredProducts = useMemo(() => {
     const value = query.trim().toLowerCase();
     return value
@@ -72,7 +74,7 @@ export function ProductFolderPickerBody({
   }, [productId, productVersionId]);
 
   useEffect(() => {
-    if (!selectedVersion?.folder_id) {
+    if (!selectedProductId || !folderVersionId || !folderRootId) {
       setFolders([]);
       setFolderPage(0);
       setFolderTotal(0);
@@ -86,7 +88,7 @@ export function ProductFolderPickerBody({
     setFoldersLoading(true);
     setFoldersLoadingMore(false);
     void api
-      .getKBFolders(selectedVersion.folder_id, 1)
+      .listProductVersionFolders(selectedProductId, folderVersionId, 1)
       .then((response) => {
         if (cancelled) return;
         setFolders(response.folders);
@@ -112,7 +114,7 @@ export function ProductFolderPickerBody({
     return () => {
       cancelled = true;
     };
-  }, [selectedVersion?.folder_id, folderId]);
+  }, [selectedProductId, folderVersionId, folderRootId, folderId]);
 
   const chooseProduct = (product: Product) => {
     setSelectedProductId(product.id);
@@ -127,7 +129,9 @@ export function ProductFolderPickerBody({
 
   const loadMoreFolders = async () => {
     if (
-      !selectedVersion?.folder_id ||
+      !selectedProductId ||
+      !folderVersionId ||
+      !folderRootId ||
       foldersLoadingMore ||
       folders.length >= folderTotal
     ) {
@@ -136,7 +140,7 @@ export function ProductFolderPickerBody({
     const nextPage = folderPage + 1;
     setFoldersLoadingMore(true);
     try {
-      const response = await api.getKBFolders(selectedVersion.folder_id, nextPage);
+      const response = await api.listProductVersionFolders(selectedProductId, folderVersionId, nextPage);
       setFolders((current) => [
         ...current,
         ...response.folders.filter((folder) => !current.some((item) => item.id === folder.id)),

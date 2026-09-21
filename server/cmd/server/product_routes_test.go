@@ -16,6 +16,9 @@ func TestProductRoutesAreGlobalAndCanonical(t *testing.T) {
 	for _, path := range []string{
 		"/api/products",
 		"/api/products/",
+		// Picker-facing folder reads hang off the version path, so a typo there
+		// would 404 instead of reaching auth.
+		"/api/products/p/versions/v/folders",
 		"/api/system/products",
 		"/api/system/products/",
 	} {

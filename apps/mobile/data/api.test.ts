@@ -38,3 +38,39 @@ describe("api.deleteComment", () => {
     expect(fetchMock).toHaveBeenCalledWith(url, expect.objectContaining({ method: "DELETE" }));
   });
 });
+
+describe("api.listProductVersionFolders", () => {
+  const requestedUrls: string[] = [];
+  const fetchMock = vi.fn(async (url: string) => {
+    requestedUrls.push(url);
+    return new Response(JSON.stringify({ folders: [], total_count: 0, current_folder: null }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  });
+
+  beforeEach(() => {
+    fetchMock.mockClear();
+    requestedUrls.length = 0;
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  // Issue pickers read the version's subtree instead of the
+  // system-administrator-only /api/system/kb/folders, which answered 403 to
+  // ordinary members and left the folder list empty.
+  it.each([
+    [undefined, "https://api.example.test/api/products/product-1/versions/version-1/folders"],
+    [3, "https://api.example.test/api/products/product-1/versions/version-1/folders?page_index=3"],
+  ])("with page index %s requests %s", async (pageIndex, url) => {
+    await api.listProductVersionFolders("product-1", "version-1", pageIndex);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(requestedUrls).toEqual([url]);
+  });
+});

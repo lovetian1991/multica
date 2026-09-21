@@ -4002,6 +4002,32 @@ export class ApiClient {
     });
   }
 
+  /**
+   * Knowledge-base folders under a product version's configured root folder.
+   *
+   * Pickers call this instead of `getKBFolders`: the server derives the parent
+   * folder from the version, so an ordinary signed-in user can browse the
+   * subtree they are choosing from without the system administrator access
+   * `/api/system/kb/folders` requires.
+   */
+  async listProductVersionFolders(
+    productId: string,
+    versionId: string,
+    pageIndex?: number,
+  ): Promise<GetKBFoldersResponse> {
+    const params = new URLSearchParams();
+    if (pageIndex !== undefined && pageIndex > 0) {
+      params.append("page_index", pageIndex.toString());
+    }
+    const query = params.toString();
+    const raw = await this.fetch<unknown>(
+      `/api/products/${productId}/versions/${versionId}/folders${query ? `?${query}` : ""}`,
+    );
+    return parseWithFallback(raw, GetKBFoldersResponseSchema, EMPTY_KB_FOLDERS_RESPONSE, {
+      endpoint: "GET /api/products/{id}/versions/{versionId}/folders",
+    });
+  }
+
   async listSystemProductVersions(productId: string): Promise<ListProductVersionsResponse> {
     const raw = await this.fetch<unknown>(`/api/system/products/${productId}/versions`);
     return parseWithFallback(

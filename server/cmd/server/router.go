@@ -1600,6 +1600,11 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 		r.Get("/api/products/{id}", h.GetProduct)
 		r.Get("/api/products/{id}/versions", h.ListProductVersions)
 		r.Get("/api/products/{id}/versions/{versionId}", h.GetProductVersion)
+		// Picker-facing reads of a version's knowledge-base folders. The version
+		// supplies the parent folder server-side, so a signed-in human can list
+		// it without the whole-tree access /api/system/kb/folders grants.
+		r.With(handler.RequireHumanActor).
+			Get("/api/products/{id}/versions/{versionId}/folders", h.ListProductVersionFolders)
 
 		// System management is deployment-scoped rather than workspace-scoped.
 		// Keep it outside the workspace member group so an allowlisted system

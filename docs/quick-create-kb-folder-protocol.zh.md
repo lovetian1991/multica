@@ -167,6 +167,15 @@ const folderId = process.env.MULTICA_KB_FOLDER_ID;
 GET /api/system/kb/folders?folder_id=12998&page_index=1
 ```
 
+```http
+# Issue/task pickers use the version-scoped route below instead. The parent
+# folder comes from product_version.folder_id, so the request carries no
+# folder_id, page_index is the only input, and any signed-in human may call it.
+# The route above stays system-administrator-only and also serves disabled
+# versions, which is why it is not what a picker should use.
+GET /api/products/{productId}/versions/{versionId}/folders?page_index=1
+```
+
 调用链：
 
 ```text
