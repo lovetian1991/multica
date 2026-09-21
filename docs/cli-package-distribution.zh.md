@@ -92,8 +92,9 @@ sh ./install.sh
 4. 按输入分两条路：
    - **粘了 token** → `multica config set server_url/app_url` + `multica login --token <token>`，全程不弹浏览器
    - **直接回车** → 同样先写配置，再用 `multica login` 走浏览器流程（Linux 下调 `xdg-open`；无图形界面或 SSH 场景，CLI 会打印一个登录 URL 让你在别的机器的浏览器里打开）
-5. `multica daemon stop`（忽略失败）→ `multica daemon start`
-6. 打印摘要；如果登录失败，摘要末尾会额外警告这台机器还不能跑 agent
+5. 决定 daemon 的工作区根目录（`workspaces_root`）并写进配置：`MULTICA_WORKSPACES_ROOT` 优先，机器上已有该配置就沿用；否则挑**可用空间最大的固定磁盘**，打印出来让用户回车确认或另填一个目录（非交互环境不询问，直接采用）
+6. `multica daemon stop`（忽略失败）→ `multica daemon start`
+7. 打印摘要；如果登录失败，摘要末尾会额外警告这台机器还不能跑 agent
 
 第 3 步的提示长这样：
 
@@ -107,11 +108,19 @@ sh ./install.sh
   Access token (optional):
 ```
 
+第 5 步的确认提示长这样（回车即采用）：
+
+```text
+  Workspaces: C:\multica_workspaces (largest fixed drive, 307.2 GB free)
+  Press Enter to accept, or paste another directory.
+  Workspace root:
+```
+
 macOS/Linux 版本逻辑相同，只是安装目录为 `/usr/local/bin`，不可写时退回 `~/.local/bin`，并把目录写进 `~/.bashrc` / `~/.zshrc`。
 
 如果目标机器**已经配置过**同一个 server，脚本会问一句是否重新配置，直接回车就保留原配置（包括原 token），不会覆盖。
 
-**非交互环境**（计划任务、CI）下不会卡在输入提示上：脚本检测到 stdin 不是终端时，自动退回浏览器登录，或者用 `MULTICA_TOKEN` 直接跳过输入。这一点用 `[Environment]::UserInteractive` 判断是不可靠的——它在没有控制台的进程里照样返回 `True`，所以 PowerShell 版用的是 `[Console]::IsInputRedirected`，bash 版用的是 `[ -t 0 ]`。
+**非交互环境**（计划任务、CI）下不会卡在输入提示上：脚本检测到 stdin 不是终端时，自动退回浏览器登录、直接采用第 5 步自动挑出的工作区根目录，或者用 `MULTICA_TOKEN` / `MULTICA_WORKSPACES_ROOT` 跳过对应的问题。这一点用 `[Environment]::UserInteractive` 判断是不可靠的——它在没有控制台的进程里照样返回 `True`，所以 PowerShell 版用的是 `[Console]::IsInputRedirected`，bash 版用的是 `[ -t 0 ]`。
 
 ## 内置服务器地址
 
@@ -145,6 +154,7 @@ token 申请页地址由 app URL 推导，不用单独配。
 | `MULTICA_BIN_DIR` | 安装目录（Windows 默认 `%USERPROFILE%\.multica\bin`；macOS/Linux 默认 `/usr/local/bin`） |
 | `MULTICA_SKIP_PATH_UPDATE=1` | 不修改 PATH |
 | `MULTICA_SKIP_SETUP=1` | 只装二进制，跳过配置 / 登录 / daemon |
+| `MULTICA_WORKSPACES_ROOT` | daemon 的工作区根目录；会被写进 `config.json`，并跳过第 5 步的确认询问。不设时由脚本自动挑可用空间最大的固定磁盘 |
 
 打包时可用环境变量：
 
