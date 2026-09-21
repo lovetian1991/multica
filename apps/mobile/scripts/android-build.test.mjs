@@ -23,6 +23,8 @@ import {
   findJavaHome,
   getCorepackCommand,
   getGradleArguments,
+  getCmakeBuildStagingDirectory,
+  withCmakeObjectPathMax,
   getProcessInvocation,
   getWindowsVirtualStoreDir,
   prepareWindowsDependencies,
@@ -316,6 +318,27 @@ describe("Android fast build", () => {
     const args = getGradleArguments({ clean: false, universal: true });
     expect(args).not.toContain("-PreactNativeArchitectures=arm64-v8a");
     expect(args).not.toContain("--configuration-cache");
+  });
+
+  it("injects CMAKE_OBJECT_PATH_MAX for Windows universal native builds", () => {
+    const original = `
+    defaultConfig {
+        versionName "0.1.0"
+        buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "stable"
+    }
+`;
+    const patched = withCmakeObjectPathMax(original);
+    const staging = getCmakeBuildStagingDirectory().replaceAll("\\", "/");
+    expect(patched).toContain('arguments "-DCMAKE_OBJECT_PATH_MAX:STRING=250"');
+    expect(patched).toContain(`buildStagingDirectory "${staging}"`);
+    expect(withCmakeObjectPathMax(patched)).toBe(patched);
+    const legacy = patched.replace(
+      'arguments "-DCMAKE_OBJECT_PATH_MAX:STRING=250"',
+      'arguments "-DCMAKE_OBJECT_PATH_MAX=180"',
+    );
+    expect(withCmakeObjectPathMax(legacy)).toContain(
+      'arguments "-DCMAKE_OBJECT_PATH_MAX:STRING=250"',
+    );
   });
 
   it("runs Windows command scripts through cmd without shell mode", () => {

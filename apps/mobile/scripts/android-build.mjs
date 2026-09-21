@@ -141,6 +141,98 @@ export function getGradleArguments({ clean, universal }) {
   return [...tasks, ...architectureArgs, "--build-cache", "--parallel"];
 }
 
+
+const cmakeObjectPathMax = 250;
+const cmakeObjectPathMaxArgument = `-DCMAKE_OBJECT_PATH_MAX:STRING=${cmakeObjectPathMax}`;
+
+export function getCmakeBuildStagingDirectory(repoRoot = defaultRepoRoot) {
+  return path.join(path.parse(path.resolve(repoRoot)).root, "c", "hy");
+}
+
+function toGradlePath(filesystemPath) {
+  return filesystemPath.replaceAll("\\", "/");
+}
+
+export function withCmakeObjectPathMax(
+  gradleContents,
+  { stagingDirectory = getCmakeBuildStagingDirectory() } = {},
+) {
+  const staging = toGradlePath(stagingDirectory);
+  let next = gradleContents.replace(
+    /arguments\s+"-DCMAKE_OBJECT_PATH_MAX(?::STRING)?=\d+"/g,
+    `arguments "${cmakeObjectPathMaxArgument}"`,
+  );
+  if (!next.includes("CMAKE_OBJECT_PATH_MAX")) {
+    const needle =
+      'buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL"';
+    const insertAt = next.indexOf(needle);
+    if (insertAt < 0) {
+      throw new Error(
+        "Unable to inject CMAKE_OBJECT_PATH_MAX into android/app/build.gradle",
+      );
+    }
+
+    const lineEnd = next.indexOf("\n", insertAt);
+    const before = next.slice(0, lineEnd + 1);
+    const after = next.slice(lineEnd + 1);
+    next = `${before}
+        externalNativeBuild {
+            cmake {
+                arguments "${cmakeObjectPathMaxArgument}"
+            }
+        }
+${after}`;
+  }
+
+  if (/buildStagingDirectory\s+"[^"]+"/.test(next)) {
+    next = next.replace(
+      /buildStagingDirectory\s+"[^"]+"/g,
+      `buildStagingDirectory "${staging}"`,
+    );
+  } else if (next.includes('path "src/main/jni/CMakeLists.txt"')) {
+    next = next.replace(
+      /path "src\/main\/jni\/CMakeLists.txt"/,
+      `path "src/main/jni/CMakeLists.txt"\n            buildStagingDirectory "${staging}"`,
+    );
+  } else {
+    next += `
+android {
+    externalNativeBuild {
+        cmake {
+            path "src/main/jni/CMakeLists.txt"
+            buildStagingDirectory "${staging}"
+        }
+    }
+}
+`;
+  }
+
+  return next;
+}
+
+export async function ensureCmakeObjectPathMax(androidDir) {
+  const gradlePath = path.join(androidDir, "app", "build.gradle");
+  const jniDir = path.join(androidDir, "app", "src", "main", "jni");
+  const templateDir = path.join(scriptDir, "jni-cmake");
+  const stagingDirectory = getCmakeBuildStagingDirectory();
+  await mkdir(jniDir, { recursive: true });
+  await mkdir(stagingDirectory, { recursive: true });
+  await copyFile(
+    path.join(templateDir, "CMakeLists.txt"),
+    path.join(jniDir, "CMakeLists.txt"),
+  );
+  await copyFile(
+    path.join(templateDir, "OnLoad.cpp"),
+    path.join(jniDir, "OnLoad.cpp"),
+  );
+  if (!(await pathExists(gradlePath))) return { patched: false, gradlePath };
+  const original = await readFile(gradlePath, "utf8");
+  const patched = withCmakeObjectPathMax(original, { stagingDirectory });
+  if (patched === original) return { patched: false, gradlePath };
+  await writeFile(gradlePath, patched, "utf8");
+  return { patched: true, gradlePath };
+}
+
 export function getWindowsVirtualStoreDir(repoRoot) {
   const normalizedRoot = path.resolve(repoRoot).toLowerCase();
   const workspaceId = createHash("sha256")
@@ -610,6 +702,11 @@ export async function buildAndroid({
   } else {
     log("[android] 原生配置未变化，跳过 Expo prebuild");
     timings.prebuild = 0;
+  }
+
+  const cmakePathPatch = await ensureCmakeObjectPathMax(androidDir);
+  if (cmakePathPatch.patched) {
+    log("[android] 已注入 CMAKE_OBJECT_PATH_MAX，避免 Windows 四架构 CMake 路径超长");
   }
 
   const gradleWrapper = path.join(
