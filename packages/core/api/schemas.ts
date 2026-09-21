@@ -94,6 +94,10 @@ import type {
   ProductVersion,
   ListProductsResponse,
   ListProductVersionsResponse,
+  ProcessTemplate,
+  ProcessTemplateVersion,
+  ListProcessTemplatesResponse,
+  ListProcessTemplateVersionsResponse,
   SystemSettings,
   KBFolder,
   GetKBFoldersResponse,
@@ -540,6 +544,72 @@ export const ListProductVersionsResponseSchema = z.object({
 }).loose();
 
 export const EMPTY_LIST_PRODUCT_VERSIONS_RESPONSE: ListProductVersionsResponse = {
+  versions: [],
+  total: 0,
+};
+
+export const ProcessTemplateVersionSchema = z.object({
+  id: z.string(),
+  version: z.number(),
+  checksum: z.string().optional().default(""),
+  file_name: z.string().optional().default(""),
+  file_size: z.number().optional().default(0),
+  manifest: z.unknown().optional(),
+  created_by: z.string().optional().default(""),
+  created_at: z.string().optional().default(""),
+}).loose();
+
+export const EMPTY_PROCESS_TEMPLATE_VERSION: ProcessTemplateVersion = {
+  id: "",
+  version: 0,
+  checksum: "",
+  file_name: "",
+  file_size: 0,
+  created_at: "",
+};
+
+export const ProcessTemplateSchema = z.object({
+  id: z.string(),
+  slug: z.string().optional().default(""),
+  name: z.string(),
+  description: z.string().optional().default("").catch(""),
+  created_by: z.string().optional().default(""),
+  created_at: z.string(),
+  updated_at: z.string(),
+  latest_version: ProcessTemplateVersionSchema.nullish(),
+  installed: z.boolean().optional().default(false).catch(false),
+  installed_version: ProcessTemplateVersionSchema.nullish(),
+  applied_at: z.string().optional().default(""),
+  applied_by: z.string().optional().default(""),
+  can_upgrade: z.boolean().optional().default(false).catch(false),
+}).loose();
+
+export const EMPTY_PROCESS_TEMPLATE: ProcessTemplate = {
+  id: "",
+  slug: "",
+  name: "",
+  description: "",
+  created_at: "",
+  updated_at: "",
+  can_upgrade: false,
+};
+
+export const ListProcessTemplatesResponseSchema = z.object({
+  templates: z.array(ProcessTemplateSchema).default([]),
+  total: z.number().default(0),
+}).loose();
+
+export const EMPTY_LIST_PROCESS_TEMPLATES_RESPONSE: ListProcessTemplatesResponse = {
+  templates: [],
+  total: 0,
+};
+
+export const ListProcessTemplateVersionsResponseSchema = z.object({
+  versions: z.array(ProcessTemplateVersionSchema).default([]),
+  total: z.number().default(0),
+}).loose();
+
+export const EMPTY_LIST_PROCESS_TEMPLATE_VERSIONS_RESPONSE: ListProcessTemplateVersionsResponse = {
   versions: [],
   total: 0,
 };

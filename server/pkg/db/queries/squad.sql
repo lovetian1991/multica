@@ -78,6 +78,11 @@ UPDATE squad SET archived_at = now(), archived_by = $2, updated_at = now()
 WHERE id = $1
 RETURNING *;
 
+-- name: RestoreSquad :one
+UPDATE squad SET archived_at = NULL, archived_by = NULL, updated_at = now()
+WHERE id = $1
+RETURNING *;
+
 -- name: AddSquadMember :one
 INSERT INTO squad_member (squad_id, member_type, member_id, role)
 VALUES ($1, $2, $3, $4)

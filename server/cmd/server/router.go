@@ -1628,6 +1628,19 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 				})
 			})
 		})
+		r.Route("/api/system/process-templates", func(r chi.Router) {
+			r.Use(handler.RequireHumanActor)
+			r.Get("/", h.ListSystemProcessTemplates)
+			r.Post("/", h.CreateSystemProcessTemplate)
+			r.Post("/push", h.PushSystemProcessTemplate)
+			r.Route("/{id}", func(r chi.Router) {
+				r.Get("/", h.GetSystemProcessTemplate)
+				r.Put("/", h.UpdateSystemProcessTemplate)
+				r.Delete("/", h.DeleteSystemProcessTemplate)
+				r.Get("/versions", h.ListSystemProcessTemplateVersions)
+				r.Get("/versions/{versionId}/download", h.DownloadSystemProcessTemplateVersion)
+			})
+		})
 		r.Route("/api/system/settings", func(r chi.Router) {
 			r.Use(handler.RequireHumanActor)
 			r.Get("/", h.GetSystemSettings)
@@ -2093,6 +2106,12 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 					r.Delete("/members", h.RemoveSquadMember)
 					r.Patch("/members/role", h.UpdateSquadMemberRole)
 				})
+			})
+
+			r.Route("/api/process-templates", func(r chi.Router) {
+				r.Get("/", h.ListWorkspaceProcessTemplates)
+				r.Post("/{id}/apply", h.ApplyWorkspaceProcessTemplate)
+				r.Post("/{id}/upgrade", h.UpgradeWorkspaceProcessTemplate)
 			})
 
 			// Squad leader evaluation (writes to activity_log)

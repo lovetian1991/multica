@@ -78,6 +78,7 @@ export const paths = {
   system: {
     root: () => "/system",
     products: () => "/system/products",
+    processTemplates: () => "/system/process-templates",
     settings: () => "/system/settings",
   },
   login: () => "/login",

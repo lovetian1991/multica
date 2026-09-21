@@ -127,6 +127,10 @@ import type {
   CreateProductVersionRequest,
   UpdateProductVersionRequest,
   ListProductVersionsResponse,
+  ProcessTemplate,
+  ListProcessTemplatesResponse,
+  ListProcessTemplateVersionsResponse,
+  UpsertProcessTemplateInput,
   SystemSettings,
   GetKBFoldersResponse,
   UpdateSystemSettingsRequest,
@@ -429,6 +433,12 @@ import {
   EMPTY_PRODUCT_VERSION,
   EMPTY_LIST_PRODUCTS_RESPONSE,
   EMPTY_LIST_PRODUCT_VERSIONS_RESPONSE,
+  ProcessTemplateSchema,
+  ListProcessTemplatesResponseSchema,
+  ListProcessTemplateVersionsResponseSchema,
+  EMPTY_PROCESS_TEMPLATE,
+  EMPTY_LIST_PROCESS_TEMPLATES_RESPONSE,
+  EMPTY_LIST_PROCESS_TEMPLATE_VERSIONS_RESPONSE,
   SystemSettingsSchema,
   EMPTY_SYSTEM_SETTINGS,
   GetKBFoldersResponseSchema,
@@ -4075,6 +4085,141 @@ export class ApiClient {
     });
   }
 
+  async listSystemProcessTemplates(): Promise<ListProcessTemplatesResponse> {
+    const raw = await this.fetch<unknown>("/api/system/process-templates");
+    return parseWithFallback(
+      raw,
+      ListProcessTemplatesResponseSchema,
+      EMPTY_LIST_PROCESS_TEMPLATES_RESPONSE,
+      { endpoint: "GET /api/system/process-templates" },
+    );
+  }
+
+  async getSystemProcessTemplate(id: string): Promise<ProcessTemplate> {
+    const raw = await this.fetch<unknown>(`/api/system/process-templates/${id}`);
+    return parseWithFallback(raw, ProcessTemplateSchema, { ...EMPTY_PROCESS_TEMPLATE, id }, {
+      endpoint: "GET /api/system/process-templates/{id}",
+    });
+  }
+
+  async createSystemProcessTemplate(data: UpsertProcessTemplateInput): Promise<ProcessTemplate> {
+    const raw = await this.submitProcessTemplateForm("/api/system/process-templates", "POST", data);
+    return parseWithFallback(raw, ProcessTemplateSchema, EMPTY_PROCESS_TEMPLATE, {
+      endpoint: "POST /api/system/process-templates",
+    });
+  }
+
+  async pushSystemProcessTemplate(data: UpsertProcessTemplateInput): Promise<ProcessTemplate> {
+    const raw = await this.submitProcessTemplateForm("/api/system/process-templates/push", "POST", data);
+    return parseWithFallback(raw, ProcessTemplateSchema, EMPTY_PROCESS_TEMPLATE, {
+      endpoint: "POST /api/system/process-templates/push",
+    });
+  }
+
+  async updateSystemProcessTemplate(
+    id: string,
+    data: UpsertProcessTemplateInput,
+  ): Promise<ProcessTemplate> {
+    if (data.file) {
+      const raw = await this.submitProcessTemplateForm(
+        `/api/system/process-templates/${id}`,
+        "PUT",
+        data,
+      );
+      return parseWithFallback(raw, ProcessTemplateSchema, { ...EMPTY_PROCESS_TEMPLATE, id }, {
+        endpoint: "PUT /api/system/process-templates/{id}",
+      });
+    }
+    const raw = await this.fetch<unknown>(`/api/system/process-templates/${id}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        name: data.name,
+        description: data.description ?? "",
+        slug: data.slug,
+      }),
+    });
+    return parseWithFallback(raw, ProcessTemplateSchema, { ...EMPTY_PROCESS_TEMPLATE, id }, {
+      endpoint: "PUT /api/system/process-templates/{id}",
+    });
+  }
+
+  async deleteSystemProcessTemplate(id: string): Promise<void> {
+    await this.fetch(`/api/system/process-templates/${id}`, { method: "DELETE" });
+  }
+
+  async listSystemProcessTemplateVersions(
+    id: string,
+  ): Promise<ListProcessTemplateVersionsResponse> {
+    const raw = await this.fetch<unknown>(`/api/system/process-templates/${id}/versions`);
+    return parseWithFallback(
+      raw,
+      ListProcessTemplateVersionsResponseSchema,
+      EMPTY_LIST_PROCESS_TEMPLATE_VERSIONS_RESPONSE,
+      { endpoint: "GET /api/system/process-templates/{id}/versions" },
+    );
+  }
+
+  async downloadSystemProcessTemplateVersion(
+    templateId: string,
+    versionId: string,
+  ): Promise<{ blob: Blob; fileName: string }> {
+    const res = await this.fetchRaw(
+      `/api/system/process-templates/${templateId}/versions/${versionId}/download`,
+    );
+    const blob = await res.blob();
+    return {
+      blob,
+      fileName: fileNameFromDisposition(
+        res.headers.get("Content-Disposition"),
+        "process-template.zip",
+      ),
+    };
+  }
+
+  async listWorkspaceProcessTemplates(): Promise<ListProcessTemplatesResponse> {
+    const raw = await this.fetch<unknown>("/api/process-templates");
+    return parseWithFallback(
+      raw,
+      ListProcessTemplatesResponseSchema,
+      EMPTY_LIST_PROCESS_TEMPLATES_RESPONSE,
+      { endpoint: "GET /api/process-templates" },
+    );
+  }
+
+  async applyWorkspaceProcessTemplate(id: string): Promise<ProcessTemplate> {
+    const raw = await this.fetch<unknown>(`/api/process-templates/${id}/apply`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    return parseWithFallback(raw, ProcessTemplateSchema, { ...EMPTY_PROCESS_TEMPLATE, id }, {
+      endpoint: "POST /api/process-templates/{id}/apply",
+    });
+  }
+
+  async upgradeWorkspaceProcessTemplate(id: string): Promise<ProcessTemplate> {
+    const raw = await this.fetch<unknown>(`/api/process-templates/${id}/upgrade`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    return parseWithFallback(raw, ProcessTemplateSchema, { ...EMPTY_PROCESS_TEMPLATE, id }, {
+      endpoint: "POST /api/process-templates/{id}/upgrade",
+    });
+  }
+
+  private async submitProcessTemplateForm(
+    path: string,
+    method: "POST" | "PUT",
+    data: UpsertProcessTemplateInput,
+  ): Promise<unknown> {
+    const formData = new FormData();
+    formData.append("name", data.name);
+    formData.append("description", data.description ?? "");
+    if (data.slug) formData.append("slug", data.slug);
+    if (data.file) formData.append("file", data.file);
+    const res = await this.fetchRaw(path, { method, body: formData });
+    return (await res.json()) as unknown;
+  }
+
 
   async getSystemSettings(): Promise<SystemSettings> {
     const raw = await this.fetch<unknown>("/api/system/settings");
@@ -5181,4 +5326,21 @@ export class ApiClient {
       { endpoint: "POST /api/telegram/binding/redeem" },
     );
   }
+}
+
+function fileNameFromDisposition(header: string | null, fallback: string): string {
+  if (!header) return fallback;
+  const utf8 = /filename\*=(?:UTF-8''|utf-8'')([^;]+)/i.exec(header);
+  if (utf8?.[1]) {
+    try {
+      return decodeURIComponent(utf8[1].trim().replace(/^"+|"+$/g, ""));
+    } catch {
+      // Fall through to the ASCII filename attribute.
+    }
+  }
+  const quoted = /filename="([^"]*)"/i.exec(header);
+  if (quoted?.[1]) return quoted[1];
+  const plain = /filename=([^;]+)/i.exec(header);
+  if (plain?.[1]) return plain[1].trim().replace(/^"+|"+$/g, "");
+  return fallback;
 }

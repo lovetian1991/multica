@@ -118,6 +118,14 @@ export type { NotificationGroupKey, NotificationGroupValue, NotificationPreferen
 export type { Comment, CommentType, CommentAuthorType, CommentTriggerPreview, CommentTriggerPreviewAgent, CommentTriggerSource, CommentTriggerOutcome, CommentTriggerStatus, Reaction } from "./comment";
 export type { Label, LabelResourceType, CreateLabelRequest, UpdateLabelRequest, ListLabelsResponse, IssueLabelsResponse, ResourceLabelsResponse } from "./label";
 export type { Product, ProductVersion, CreateProductRequest, UpdateProductRequest, ListProductsResponse, CreateProductVersionRequest, UpdateProductVersionRequest, ListProductVersionsResponse } from "./product";
+export type {
+  ProcessTemplate,
+  ProcessTemplateVersion,
+  ProcessTemplateManifest,
+  ListProcessTemplatesResponse,
+  ListProcessTemplateVersionsResponse,
+  UpsertProcessTemplateInput,
+} from "./process-template";
 export type { SystemSettings, UpdateSystemSettingsRequest, KBFolder, GetKBFoldersResponse } from "./system-settings";
 export type { IssueProperty, IssuePropertyType, ScalarIssuePropertyType, IssuePropertyOption, IssuePropertyConfig, IssuePropertyValue, IssuePropertyValues, CreatePropertyRequest, UpdatePropertyRequest, ListPropertiesResponse, IssuePropertiesResponse, IssuePropertyActorKind, IssuePropertyActorRef, PropertyFilterOp, PropertyOperatorFilter, PropertyFilterValue } from "./property";
 export { ISSUE_PROPERTY_TYPES, isKnownPropertyType, ISSUE_PROPERTY_ACTOR_KINDS, MAX_ISSUE_PROPERTY_ACTOR_VALUES, isActorPropertyType, isFilterablePropertyType, isScalarPropertyType, formatActorRef, parseActorRef, actorRefsFromValue, actorRefValuesFromValue, hasUnknownActorRef, isPropertyOperatorFilter, isKnownPropertyFilterOp, propertyFilterValueKey, PROPERTY_FILTER_OP_SYMBOLS, PROPERTY_FILTER_OPS_BY_TYPE } from "./property";

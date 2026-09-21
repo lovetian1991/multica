@@ -1197,6 +1197,29 @@ type PluginStorage struct {
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
+type ProcessTemplate struct {
+	ID          pgtype.UUID        `json:"id"`
+	Slug        string             `json:"slug"`
+	Name        string             `json:"name"`
+	Description string             `json:"description"`
+	CreatedBy   pgtype.UUID        `json:"created_by"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ProcessTemplateVersion struct {
+	ID         pgtype.UUID        `json:"id"`
+	TemplateID pgtype.UUID        `json:"template_id"`
+	Version    int32              `json:"version"`
+	Checksum   string             `json:"checksum"`
+	FileName   string             `json:"file_name"`
+	FileSize   int64              `json:"file_size"`
+	ZipData    []byte             `json:"zip_data"`
+	Manifest   []byte             `json:"manifest"`
+	CreatedBy  pgtype.UUID        `json:"created_by"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+}
+
 type Product struct {
 	ID          pgtype.UUID        `json:"id"`
 	Name        string             `json:"name"`
@@ -1628,6 +1651,14 @@ type WorkspaceMcpServer struct {
 	CreatedBy   pgtype.UUID        `json:"created_by"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type WorkspaceProcessTemplate struct {
+	WorkspaceID       pgtype.UUID        `json:"workspace_id"`
+	TemplateID        pgtype.UUID        `json:"template_id"`
+	TemplateVersionID pgtype.UUID        `json:"template_version_id"`
+	AppliedAt         pgtype.Timestamptz `json:"applied_at"`
+	AppliedBy         pgtype.UUID        `json:"applied_by"`
 }
 
 type WorkspaceShareLink struct {

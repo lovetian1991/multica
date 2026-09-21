@@ -391,7 +391,8 @@
       "plugins": "Plugins",
       "mcp": "MCP",
       "billing": "账单与套餐",
-      "products": "产品管理"
+      "products": "产品管理",
+      "process_templates": "流程模板"
     },
     "groups": {
       "personal": "个人设置",
@@ -1528,6 +1529,7 @@
     "catalog": "目录管理",
     "configuration": "系统配置",
     "products": "产品管理",
+    "process_templates": "流程模板",
     "workspaces": "工作区管理",
     "users": "用户与权限",
     "settings": "系统设置",
@@ -1554,5 +1556,80 @@
       "integration_key_hint": "密钥加密后保存。",
       "integration_key_saved_hint": "已配置集成密钥，系统不会显示原密钥。"
     }
+  },
+  "process_templates": {
+    "title": "流程模板",
+    "system_description": "上传带版本的智能体、小队和技能 zip 包。工作区按小队、智能体和技能名称应用或升级。也可通过 POST /api/system/process-templates/push 按 slug 推送更新。",
+    "workspace_description": "将流程模板应用到当前工作区，或把已安装的模板升级到最新版本。",
+    "workspace_hint": "应用和升级按小队、智能体和技能名称匹配。工作区里已有的额外内容会保留。",
+    "catalog_title": "可用模板",
+    "system_admin_required": "需要系统管理员权限。",
+    "unauthorized": "需要登录后才能继续。",
+    "load_failed": "无法加载流程模板。",
+    "search_placeholder": "搜索模板",
+    "new_template": "新建模板",
+    "columns": {
+      "name": "名称",
+      "description": "描述",
+      "version": "版本",
+      "zip": "安装包"
+    },
+    "loading": "正在加载流程模板...",
+    "empty": "还没有流程模板",
+    "empty_workspace": "还没有流程模板",
+    "no_results": "没有匹配的模板",
+    "not_set": "未设置",
+    "zip_unnamed": "package.zip",
+    "zip_required": "创建模板时必须上传 zip 包。",
+    "zip_too_large": "zip 包不能超过 20 MB。",
+    "save_failed": "无法保存流程模板",
+    "download_failed": "无法下载安装包",
+    "actions": {
+      "open": "{{name}} 的操作",
+      "download": "下载",
+      "edit": "编辑",
+      "delete": "删除"
+    },
+    "editor": {
+      "create_title": "新建流程模板",
+      "edit_title": "编辑流程模板",
+      "description": "zip 包是模板的真实来源。上传新的 zip 会生成新版本。",
+      "name": "模板名称",
+      "name_placeholder": "输入模板名称",
+      "description_label": "描述",
+      "description_placeholder": "说明这个模板会安装哪些智能体、小队和技能。",
+      "zip": "Zip 安装包",
+      "zip_placeholder": "选择 .zip 文件",
+      "choose_zip": "选择文件",
+      "zip_optional": "留空则只更新名称或描述，不会创建新版本。",
+      "zip_hint": "安装包目录应与 templates 一致：agents、squad、skills。请在 agents 和 squad 下提供 mapping.json，升级时按中文名称匹配。",
+      "cancel": "取消",
+      "save": "保存",
+      "saving": "正在保存...",
+      "slug": "Slug",
+      "slug_placeholder": "zh-cn-best-practices",
+      "slug_hint": "对外推送用的稳定标识，请用英文、数字和连字符。中文名称无法自动生成 slug 时必填。"
+    },
+    "delete_dialog": {
+      "title": "删除流程模板？",
+      "description": "“{{name}}”及其所有版本将被永久删除。",
+      "cancel": "取消",
+      "confirm": "删除",
+      "deleting": "正在删除...",
+      "failed": "无法删除流程模板"
+    },
+    "apply": "应用",
+    "applying": "正在应用...",
+    "apply_failed": "无法应用流程模板",
+    "apply_success": "已应用 {{name}}",
+    "upgrade": "升级",
+    "upgrading": "正在升级...",
+    "upgrade_failed": "无法升级流程模板",
+    "upgrade_success": "已升级 {{name}}",
+    "installed": "已安装",
+    "not_installed": "未安装",
+    "can_upgrade": "可升级",
+    "version_summary": "最新 {{latest}} · 已安装 {{installed}}",
+    "read_only_note": "只有工作区所有者和管理员可以应用或升级流程模板。"
   }
 }

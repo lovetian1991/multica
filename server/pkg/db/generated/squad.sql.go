@@ -653,6 +653,32 @@ func (q *Queries) RemoveSquadMember(ctx context.Context, arg RemoveSquadMemberPa
 	return result.RowsAffected(), nil
 }
 
+const restoreSquad = `-- name: RestoreSquad :one
+UPDATE squad SET archived_at = NULL, archived_by = NULL, updated_at = now()
+WHERE id = $1
+RETURNING id, workspace_id, name, description, leader_id, creator_id, created_at, updated_at, archived_at, archived_by, avatar_url, instructions
+`
+
+func (q *Queries) RestoreSquad(ctx context.Context, id pgtype.UUID) (Squad, error) {
+	row := q.db.QueryRow(ctx, restoreSquad, id)
+	var i Squad
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Name,
+		&i.Description,
+		&i.LeaderID,
+		&i.CreatorID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ArchivedAt,
+		&i.ArchivedBy,
+		&i.AvatarUrl,
+		&i.Instructions,
+	)
+	return i, err
+}
+
 const transferSquadAssignees = `-- name: TransferSquadAssignees :exec
 UPDATE issue SET assignee_type = 'agent', assignee_id = $2, revision = revision + 1, updated_at = now()
 WHERE assignee_type = 'squad' AND assignee_id = $1

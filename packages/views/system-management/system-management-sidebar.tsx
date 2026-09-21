@@ -7,6 +7,7 @@ import {
   Settings2,
   ShieldCheck,
   Users,
+  Workflow,
 } from "lucide-react";
 import { useT } from "../i18n";
 import { AppLink, useNavigation } from "../navigation";
@@ -25,13 +26,14 @@ import {
 } from "@multica/ui/components/ui/sidebar";
 
 interface SystemMenuItem {
-  key: "products" | "workspaces" | "users" | "settings";
+  key: "products" | "process_templates" | "workspaces" | "users" | "settings";
   href?: string;
   icon: LucideIcon;
 }
 
 const catalogItems: SystemMenuItem[] = [
   { key: "products", href: paths.system.products(), icon: Package },
+  { key: "process_templates", href: paths.system.processTemplates(), icon: Workflow },
   { key: "workspaces", icon: Database },
 ];
 
@@ -64,20 +66,26 @@ export function SystemManagementSidebar() {
           label={t(($) => $.system_management.catalog)}
           items={catalogItems}
           pathname={pathname}
-          productLabel={t(($) => $.system_management.products)}
-          workspaceLabel={t(($) => $.system_management.workspaces)}
-          userLabel={t(($) => $.system_management.users)}
-          settingsLabel={t(($) => $.system_management.settings)}
+          labels={{
+            products: t(($) => $.system_management.products),
+            process_templates: t(($) => $.system_management.process_templates),
+            workspaces: t(($) => $.system_management.workspaces),
+            users: t(($) => $.system_management.users),
+            settings: t(($) => $.system_management.settings),
+          }}
           comingSoonLabel={t(($) => $.system_management.coming_soon)}
         />
         <SystemMenuGroup
           label={t(($) => $.system_management.configuration)}
           items={configurationItems}
           pathname={pathname}
-          productLabel={t(($) => $.system_management.products)}
-          workspaceLabel={t(($) => $.system_management.workspaces)}
-          userLabel={t(($) => $.system_management.users)}
-          settingsLabel={t(($) => $.system_management.settings)}
+          labels={{
+            products: t(($) => $.system_management.products),
+            process_templates: t(($) => $.system_management.process_templates),
+            workspaces: t(($) => $.system_management.workspaces),
+            users: t(($) => $.system_management.users),
+            settings: t(($) => $.system_management.settings),
+          }}
           comingSoonLabel={t(($) => $.system_management.coming_soon)}
         />
       </SidebarContent>
@@ -90,28 +98,15 @@ function SystemMenuGroup({
   label,
   items,
   pathname,
-  productLabel,
-  workspaceLabel,
-  userLabel,
-  settingsLabel,
+  labels,
   comingSoonLabel,
 }: {
   label: string;
   items: SystemMenuItem[];
   pathname: string;
-  productLabel: string;
-  workspaceLabel: string;
-  userLabel: string;
-  settingsLabel: string;
+  labels: Record<SystemMenuItem["key"], string>;
   comingSoonLabel: string;
 }) {
-  const labels = {
-    products: productLabel,
-    workspaces: workspaceLabel,
-    users: userLabel,
-    settings: settingsLabel,
-  } satisfies Record<SystemMenuItem["key"], string>;
-
   return (
     <SidebarGroup>
       <SidebarGroupLabel>{label}</SidebarGroupLabel>
