@@ -13,7 +13,7 @@ export function useCreateProductVersion(productId: string) {
       api.createSystemProductVersion(productId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: productVersionKeys.list(productId),
+        queryKey: productVersionKeys.all(productId),
       });
     },
   });
@@ -26,10 +26,7 @@ export function useUpdateProductVersion(productId: string, versionId: string) {
       api.updateSystemProductVersion(productId, versionId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: productVersionKeys.list(productId),
-      });
-      queryClient.invalidateQueries({
-        queryKey: productVersionKeys.detail(productId, versionId),
+        queryKey: productVersionKeys.all(productId),
       });
     },
   });
@@ -41,7 +38,7 @@ export function useDeleteProductVersion(productId: string) {
     mutationFn: (versionId: string) => api.deleteSystemProductVersion(productId, versionId),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: productVersionKeys.list(productId),
+        queryKey: productVersionKeys.all(productId),
       });
     },
   });

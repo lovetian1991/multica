@@ -21,7 +21,7 @@ import {
   useUpdateSystemProduct,
 } from "@multica/core/system-products";
 import {
-  productVersionListOptions,
+  systemProductVersionListOptions,
   useCreateProductVersion,
   useDeleteProductVersion,
   useUpdateProductVersion,
@@ -34,12 +34,23 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@multica/ui/components/ui/dropdown-menu";
 import { Input } from "@multica/ui/components/ui/input";
 import { Label as FieldLabel } from "@multica/ui/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@multica/ui/components/ui/select";
 import { Switch } from "@multica/ui/components/ui/switch";
 import { Textarea } from "@multica/ui/components/ui/textarea";
 import { CollapsedNavTrigger } from "../layout/page-header";
 import { useT } from "../i18n";
 import { SystemManagementLayout } from "./system-management-layout";
 import { FolderPickerDialog } from "./folder-picker-dialog";
+import {
+  filterProductVersions,
+  type ProductVersionStatusFilter,
+} from "./product-version-filter";
 
 interface ProductDraft {
   name: string;
@@ -72,6 +83,7 @@ export function ProductVersionManagementPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productQuery, setProductQuery] = useState("");
   const [versionQuery, setVersionQuery] = useState("");
+  const [versionStatusFilter, setVersionStatusFilter] = useState<ProductVersionStatusFilter>("all");
   const [createProductOpen, setCreateProductOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [pendingDeleteProduct, setPendingDeleteProduct] = useState<Product | null>(null);
@@ -93,7 +105,7 @@ export function ProductVersionManagementPage() {
     productListQuery.error instanceof ApiError && productListQuery.error.status === 401;
 
   const versionListQuery = useQuery({
-    ...productVersionListOptions(selectedProduct?.id ?? ""),
+    ...systemProductVersionListOptions(selectedProduct?.id ?? ""),
     enabled: Boolean(selectedProduct?.id),
   });
   const versions = useMemo(
@@ -109,15 +121,15 @@ export function ProductVersionManagementPage() {
     );
   }, [products, productQuery]);
 
-  const filteredVersions = useMemo(() => {
-    const normalized = versionQuery.trim().toLowerCase();
-    if (!normalized) return versions;
-    return versions.filter((version) =>
-      [version.name, version.directory, version.remark].some((value) =>
-        value.toLowerCase().includes(normalized),
-      ),
-    );
-  }, [versions, versionQuery]);
+  const filteredVersions = useMemo(
+    () => filterProductVersions(versions, versionQuery, versionStatusFilter),
+    [versions, versionQuery, versionStatusFilter],
+  );
+  const versionStatusOptions = [
+    { value: "all" as const, label: t(($) => $.products.versions.status_filter_all) },
+    { value: "enabled" as const, label: t(($) => $.products.versions.enabled) },
+    { value: "disabled" as const, label: t(($) => $.products.versions.disabled) },
+  ];
 
   if (isForbidden) {
     return (
@@ -210,7 +222,11 @@ export function ProductVersionManagementPage() {
                           ? "bg-muted data-active:hover:bg-muted"
                           : ""
                       }`}
-                      onClick={() => setSelectedProduct(product)}
+                      onClick={() => {
+                        setSelectedProduct(product);
+                        setVersionQuery("");
+                        setVersionStatusFilter("all");
+                      }}
                     >
                       <Package className="size-4 shrink-0 text-muted-foreground" />
                       <span className="min-w-0 flex-1 truncate text-body font-medium">
@@ -281,6 +297,29 @@ export function ProductVersionManagementPage() {
                       className="pl-9"
                     />
                   </div>
+                  <Select
+                    items={versionStatusOptions}
+                    value={versionStatusFilter}
+                    onValueChange={(next) => {
+                      if (next === "all" || next === "enabled" || next === "disabled") {
+                        setVersionStatusFilter(next);
+                      }
+                    }}
+                  >
+                    <SelectTrigger
+                      className="w-36 shrink-0"
+                      aria-label={t(($) => $.products.versions.status_filter_aria)}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent align="end">
+                      {versionStatusOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Button
                     className="shrink-0 gap-2"
                     onClick={() => setCreateVersionOpen(true)}
@@ -313,7 +352,7 @@ export function ProductVersionManagementPage() {
                     <div className="px-4 py-12 text-center">
                       <Folder className="mx-auto size-6 text-faint-foreground" />
                       <p className="mt-3 text-body font-medium">
-                        {versionQuery
+                        {versionQuery || versionStatusFilter !== "all"
                           ? t(($) => $.products.no_results)
                           : t(($) => $.products.empty)}
                       </p>

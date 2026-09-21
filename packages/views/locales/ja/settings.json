@@ -1511,7 +1511,9 @@
       "enabled_label": "有効状態",
       "enabled": "有効",
       "disabled": "無効",
-      "disabled_description": "無効にすると、タスク作成時にこのバージョンは表示されません。"
+      "disabled_description": "無効にすると、タスク作成時にこのバージョンは表示されません。",
+      "status_filter_all": "すべての状態",
+      "status_filter_aria": "状態でバージョンを絞り込む"
     },
     "delete_dialog": {
       "title": "製品を削除しますか？",

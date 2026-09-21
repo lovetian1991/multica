@@ -1518,7 +1518,9 @@
       "enabled_label": "Enabled",
       "enabled": "Enabled",
       "disabled": "Disabled",
-      "disabled_description": "Disabled versions won't appear when creating tasks."
+      "disabled_description": "Disabled versions won't appear when creating tasks.",
+      "status_filter_all": "All statuses",
+      "status_filter_aria": "Filter versions by status"
     },
     "delete_dialog": {
       "title": "Delete product?",
