@@ -1595,16 +1595,21 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 
 		// Products are deployment-scoped catalog data. Any authenticated
 		// workspace can read the catalog for task selection; only system
-		// administrators can mutate it through the routes below.
-		r.Get("/api/products", h.ListProducts)
-		r.Get("/api/products/{id}", h.GetProduct)
-		r.Get("/api/products/{id}/versions", h.ListProductVersions)
-		r.Get("/api/products/{id}/versions/{versionId}", h.GetProductVersion)
-		// Picker-facing reads of a version's knowledge-base folders. The version
-		// supplies the parent folder server-side, so a signed-in human can list
-		// it without the whole-tree access /api/system/kb/folders grants.
-		r.With(handler.RequireHumanActor).
-			Get("/api/products/{id}/versions/{versionId}/folders", h.ListProductVersionFolders)
+		// administrators can mutate it through the routes below. Mounted as a
+		// route group rather than literal routes so the catalog index answers
+		// with and without a trailing slash, like the system catalog below.
+		r.Route("/api/products", func(r chi.Router) {
+			r.Get("/", h.ListProducts)
+			r.Get("/{id}", h.GetProduct)
+			r.Get("/{id}/versions", h.ListProductVersions)
+			r.Get("/{id}/versions/{versionId}", h.GetProductVersion)
+			// Picker-facing reads of a version's knowledge-base folders. The
+			// version supplies the parent folder server-side, so a signed-in human
+			// can list it without the whole-tree access /api/system/kb/folders
+			// grants.
+			r.With(handler.RequireHumanActor).
+				Get("/{id}/versions/{versionId}/folders", h.ListProductVersionFolders)
+		})
 
 		// System management is deployment-scoped rather than workspace-scoped.
 		// Keep it outside the workspace member group so an allowlisted system
