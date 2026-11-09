@@ -1,6 +1,11 @@
 # Ensure shell scripts always use LF line endings (needed for Docker on Windows)
 *.sh text eol=lf
 docker/entrypoint.sh text eol=lf
+*.mjs text eol=lf
+
+# Generated icon files are compared byte-for-byte with the generator output.
+packages/ui/icons/glyphs.ts text eol=lf
+packages/ui/icons/index.ts text eol=lf
 
 # Default behavior
 * text=auto

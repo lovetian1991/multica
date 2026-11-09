@@ -1,3 +1,5 @@
+import { RUNTIME_ACCESS_DENIED_RECOVERY_COPY } from "./runtime-access-copy";
+
 /**
  * Mobile-owned mirror of `packages/core/api/client.ts:dispatchReasonCode`.
  *
@@ -28,6 +30,11 @@ export function sendFailureMessage(err: unknown): string {
       return "你已没有运行此智能体的权限，因此消息未发送。";
     case "agent_runtime_required":
       return "发送消息前，请先为此智能体绑定运行时。";
+    case "runtime_access_denied":
+      // The agent's owner cannot execute it on the selected private runtime.
+      // Retrying never fixes this — the fix is making that runtime public or
+      // rebinding/copying the agent to a runtime its owner can use.
+      return `Message not sent — ${RUNTIME_ACCESS_DENIED_RECOVERY_COPY}`;
     default:
       return "消息发送失败，请重试。";
   }

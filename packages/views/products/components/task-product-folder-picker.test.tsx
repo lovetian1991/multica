@@ -11,6 +11,7 @@ import { TaskProductFolderPicker } from "./task-product-folder-picker";
 
 const PRODUCT: Product = {
   id: "product-1",
+  description: "",
   name: "OpenContent智能文档云",
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",

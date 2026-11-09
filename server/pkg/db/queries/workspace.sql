@@ -1,11 +1,11 @@
 -- name: ListWorkspaces :many
 SELECT w.id, w.name, w.slug, w.description, w.settings,
        w.created_at, w.updated_at, w.context, w.repos,
-       w.issue_prefix, w.issue_counter, w.avatar_url, w.attribution_fail_closed
+       w.issue_prefix, w.issue_counter, w.avatar_url, w.attribution_fail_closed, m.pinned_at
 FROM member m
 JOIN workspace w ON w.id = m.workspace_id
 WHERE m.user_id = $1
-ORDER BY w.created_at ASC;
+ORDER BY m.pinned_at DESC NULLS LAST, w.created_at ASC;
 
 -- name: ListAllWorkspaces :many
 SELECT id, name, slug, description, settings,
@@ -127,6 +127,9 @@ cleared_channel_task_deliveries AS (
 cleared_channel_outbound_messages AS (
     DELETE FROM channel_outbound_message WHERE installation_id IN (SELECT id FROM ws_installations)
 ),
+cleared_channel_reply_deliveries AS (
+    DELETE FROM channel_reply_delivery WHERE installation_id IN (SELECT id FROM ws_installations)
+),
 cleared_chat_sessions AS (
     DELETE FROM channel_chat_session_binding WHERE installation_id IN (SELECT id FROM ws_installations)
     RETURNING chat_session_id
@@ -244,3 +247,9 @@ cleared_client_usage_workspace AS (
     UPDATE client_usage_daily SET workspace_id = NULL WHERE workspace_id = $1
 )
 DELETE FROM workspace WHERE workspace.id = $1;
+
+-- name: SetWorkspacePinned :one
+UPDATE member
+SET pinned_at = CASE WHEN @pinned::bool THEN COALESCE(pinned_at, now()) ELSE NULL END
+WHERE workspace_id = @workspace_id AND user_id = @user_id
+RETURNING pinned_at;

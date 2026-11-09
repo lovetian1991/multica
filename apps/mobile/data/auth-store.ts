@@ -15,11 +15,15 @@ import { api, ApiError } from "./api";
 import { clearToken, getToken, setToken } from "./secure-storage";
 import { invalidateSessionEpoch } from "./session-epoch";
 import { useWorkspaceStore } from "./workspace-store";
+import { queryClient } from "./query-client";
+import { restoreServerUrl, saveServerUrl } from "./server-config";
+import { getCurrentServerUrl, normalizeServerUrl } from "@/lib/server-url";
 
 interface AuthState {
   user: User | null;
   isLoading: boolean;
   initialize: () => Promise<void>;
+  configureServer: (url: string) => Promise<void>;
   sendCode: (email: string) => Promise<void>;
   verifyCode: (email: string, code: string) => Promise<User>;
   logout: () => Promise<void>;
@@ -33,6 +37,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: true,
 
   initialize: async () => {
+    await restoreServerUrl();
     // Restore the persisted workspace slug alongside the auth token so the
     // entry redirect (app/index.tsx) can route directly to the last-used
     // workspace without flashing /select-workspace.
@@ -60,6 +65,19 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
       set({ user: null, isLoading: false });
     }
+  },
+
+  configureServer: async (url) => {
+    const normalized = normalizeServerUrl(url);
+    if (normalized !== getCurrentServerUrl()) {
+      // Clear the old origin's credentials and cached data before switching.
+      invalidateSessionEpoch();
+      api.setToken(null);
+      set({ user: null, isLoading: false });
+      queryClient.clear();
+      await Promise.all([clearToken(), useWorkspaceStore.getState().clear()]);
+    }
+    await saveServerUrl(normalized);
   },
 
   sendCode: async (email) => {

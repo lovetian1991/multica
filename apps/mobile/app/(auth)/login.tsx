@@ -8,6 +8,7 @@ import { TextField } from "@/components/ui/text-field";
 import { Button } from "@/components/ui/button";
 import { MulticaLogo } from "@/components/brand/multica-logo";
 import { useAuthStore } from "@/data/auth-store";
+import { i18n, useT } from "@/lib/i18n";
 import { mapAuthError } from "@/lib/auth-error";
 import {
   getCurrentServerUrl,
@@ -16,6 +17,7 @@ import {
 
 export default function Login() {
   const configureServer = useAuthStore((s) => s.configureServer);
+  const { t } = useT("auth");
   const sendCode = useAuthStore((s) => s.sendCode);
   const [serverUrl, setServerUrl] = useState(getCurrentServerUrl);
   const [email, setEmail] = useState("");
@@ -48,7 +50,7 @@ export default function Login() {
       router.push({ pathname: "/verify", params: { email: trimmed } });
     } catch (err) {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setError(mapAuthError(err, "验证码发送失败，请重试。"));
+      setError(mapAuthError(err, t("login.send_failed"), (key) => i18n.t(`auth:${key}`)));
     } finally {
       setSubmitting(false);
     }
@@ -62,7 +64,7 @@ export default function Login() {
       >
         <View className="flex-1 justify-center px-6 gap-6">
           <View className="items-center gap-3">
-            <MulticaLogo size={32} />
+            <MulticaLogo size={30} />
             <View className="gap-1 items-center">
               <Text className="text-2xl font-semibold text-foreground">
                 登录鸿翼灵工
@@ -124,7 +126,7 @@ export default function Login() {
             disabled={submitting || !email.trim() || !serverUrl.trim()}
             onPress={onSubmit}
           >
-            <Text>{submitting ? "正在发送..." : "发送验证码"}</Text>
+            <Text>{submitting ? t("login.sending") : t("login.send_code")}</Text>
           </Button>
         </View>
       </KeyboardAvoidingView>

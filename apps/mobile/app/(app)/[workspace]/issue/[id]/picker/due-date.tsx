@@ -20,6 +20,7 @@ import {
 import { issueDetailOptions } from "@/data/queries/issues";
 import { useUpdateIssue } from "@/data/mutations/issues";
 import { useWorkspaceStore } from "@/data/workspace-store";
+import { useT } from "@/lib/i18n";
 
 export default function IssueDueDatePickerRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -58,9 +59,12 @@ function DueDateHeader({
   onDone: () => void;
   onClear: () => void;
 }) {
+  const { t } = useT("issues");
   return (
     <View className="flex-row items-center justify-between px-4 pt-4 pb-2">
-      <Text className="text-base font-semibold text-foreground">截止日期</Text>
+      <Text className="text-base font-semibold text-foreground">
+        {t("common:fields.due_date")}
+      </Text>
       <View className="flex-row items-center gap-1">
         {hasValue ? (
           <Pressable
@@ -68,7 +72,9 @@ function DueDateHeader({
             hitSlop={6}
             className="px-2 py-1 rounded-md active:bg-secondary"
           >
-            <Text className="text-sm text-destructive">清除</Text>
+            <Text className="text-sm text-destructive">
+              {t("picker.clear")}
+            </Text>
           </Pressable>
         ) : null}
         <Pressable
@@ -76,7 +82,9 @@ function DueDateHeader({
           hitSlop={6}
           className="px-2 py-1 rounded-md active:bg-secondary"
         >
-          <Text className="text-sm font-medium text-primary">完成</Text>
+          <Text className="text-sm font-medium text-primary">
+            {t("common:actions.done")}
+          </Text>
         </Pressable>
       </View>
     </View>

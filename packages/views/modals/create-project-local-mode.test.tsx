@@ -38,7 +38,7 @@ vi.mock("@tanstack/react-query", () => ({
   // pickers, which expect a different shape.
   useQuery: (options: { queryKey?: unknown[] }) => {
     const key = options?.queryKey?.[0];
-    if (key === "members" || key === "agents") return { data: [] };
+    if (key !== "runtimes") return { data: [] };
     return {
       data: [
         {
@@ -96,6 +96,7 @@ vi.mock("@multica/core/config", () => ({
 }));
 
 vi.mock("@multica/core/hooks", () => ({ useWorkspaceId: () => "workspace-1" }));
+vi.mock("../workflows/workflow-pill", () => ({ WorkflowPill: () => null }));
 vi.mock("@multica/core/paths", () => ({
   useCurrentWorkspace: () => ({ id: "workspace-1", slug: "ws", repos: [] }),
   useWorkspacePaths: () => ({ projectDetail: (id: string) => `/ws/projects/${id}` }),
@@ -294,7 +295,7 @@ describe("CreateProjectModal — local directory execution mode", () => {
     await pickLocalDirectory(user);
 
     expect(screen.getByRole("radio", { name: /Run in parallel, isolated/i })).toBeDisabled();
-    expect(screen.getByText(/鸿翼灵工 server is too old/i)).toBeInTheDocument();
+    expect(screen.getByText(/server is too old/i)).toBeInTheDocument();
     // And it must not have been preselected either — that would submit a mode
     // the server would silently downgrade.
     expect(screen.getByRole("button", { name: /^Direct$/i })).toBeInTheDocument();

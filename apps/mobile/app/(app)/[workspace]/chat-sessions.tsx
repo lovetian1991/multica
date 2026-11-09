@@ -20,10 +20,11 @@ import { useDeleteChatSession } from "@/data/mutations/chat";
 import { useChatSessionPickerStore } from "@/data/stores/chat-session-picker-store";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { cn } from "@/lib/utils";
-import { chatSessionDisplayTitle } from "@/lib/chat-session-title";
+import { useT } from "@/lib/i18n";
 
 export default function ChatSessionsRoute() {
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
+  const { t } = useT("chat");
   const { data: sessions = [] } = useQuery(chatSessionsOptions(wsId));
   const activeSessionId = useChatSessionPickerStore((s) => s.activeSessionId);
   const requestSelect = useChatSessionPickerStore((s) => s.requestSelect);
@@ -31,12 +32,12 @@ export default function ChatSessionsRoute() {
 
   const confirmDelete = (session: ChatSession) => {
     Alert.alert(
-      "删除此聊天？",
-      chatSessionDisplayTitle(session.title),
+      t("alerts.delete_title"),
+      session.title || t("sessions.new_chat"),
       [
-        { text: "取消", style: "cancel" },
+        { text: t("common:actions.cancel"), style: "cancel" },
         {
-          text: "删除",
+          text: t("alerts.delete_confirm"),
           style: "destructive",
           onPress: () => {
             deleteSession.mutate(session.id);
@@ -55,13 +56,15 @@ export default function ChatSessionsRoute() {
   return (
     <View className="flex-1">
       <View className="px-4 pt-4 pb-3">
-        <Text className="text-base font-semibold text-foreground">聊天</Text>
+        <Text className="text-base font-semibold text-foreground">
+          {t("sessions.title")}
+        </Text>
       </View>
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {sessions.length === 0 ? (
           <View className="px-4 py-8">
             <Text className="text-sm text-muted-foreground text-center">
-              暂无聊天。
+              {t("sessions.empty")}
             </Text>
           </View>
         ) : (
@@ -101,11 +104,11 @@ export default function ChatSessionsRoute() {
                     )}
                     numberOfLines={1}
                   >
-                    {chatSessionDisplayTitle(session.title)}
+                    {session.title || t("sessions.new_chat")}
                   </Text>
                   {archived ? (
                     <Text className="text-xs text-muted-foreground mt-0.5">
-                      已归档
+                      {t("sessions.archived")}
                     </Text>
                   ) : null}
                 </View>

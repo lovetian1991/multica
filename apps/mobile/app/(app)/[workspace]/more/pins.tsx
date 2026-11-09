@@ -47,11 +47,13 @@ import { useAuthStore } from "@/data/auth-store";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { useColorScheme } from "@/lib/use-color-scheme";
 import { THEME } from "@/lib/theme";
+import { useT } from "@/lib/i18n";
 
 export default function PinsPage() {
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
   const wsSlug = useWorkspaceStore((s) => s.currentWorkspaceSlug);
   const userId = useAuthStore((s) => s.user?.id ?? null);
+  const { t } = useT("workspace");
 
   const { data, isLoading, error, refetch, isRefetching } = useQuery(
     pinListOptions(wsId, userId),
@@ -76,11 +78,12 @@ export default function PinsPage() {
     return (
       <View className="flex-1 bg-background px-4 gap-3 pt-4">
         <Text className="text-sm text-destructive">
-          置顶内容加载失败：{" "}
-          {error instanceof Error ? error.message : "未知错误"}
+          {t("pins.errors.load_failed", {
+            message: error instanceof Error ? error.message : "unknown",
+          })}
         </Text>
         <Button variant="outline" onPress={() => refetch()}>
-          <Text>重试</Text>
+          <Text>{t("common:actions.retry")}</Text>
         </Button>
       </View>
     );
@@ -90,7 +93,7 @@ export default function PinsPage() {
     return (
       <View className="flex-1 items-center justify-center bg-background px-6">
         <Text className="text-sm text-muted-foreground text-center">
-          暂无置顶内容。可在任务或项目的操作菜单中将其置顶。
+          {t("pins.empty")}
         </Text>
       </View>
     );
@@ -215,11 +218,16 @@ function MissingPinRow({
 }) {
   const { colorScheme } = useColorScheme();
   const deletePin = useDeletePin();
+  const { t } = useT("workspace");
   return (
     <Pressable
       onPress={() => deletePin.mutate({ itemType, itemId })}
       className="px-4 py-3 flex-row items-center gap-3 active:bg-secondary opacity-60"
-      accessibilityLabel={`无法访问的${itemType === "issue" ? "任务" : "项目"}，点击取消置顶`}
+      accessibilityLabel={
+        itemType === "issue"
+          ? t("pins.unavailable_issue")
+          : t("pins.unavailable_project")
+      }
     >
       <Ionicons
         name="alert-circle-outline"
@@ -227,7 +235,9 @@ function MissingPinRow({
         color={THEME[colorScheme].mutedForeground}
       />
       <Text className="flex-1 text-sm text-muted-foreground" numberOfLines={1}>
-        无法访问的{itemType === "issue" ? "任务" : "项目"}，点击取消置顶
+        {itemType === "issue"
+          ? t("pins.unavailable_issue")
+          : t("pins.unavailable_project")}
       </Text>
     </Pressable>
   );

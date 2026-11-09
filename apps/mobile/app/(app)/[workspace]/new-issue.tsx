@@ -37,8 +37,10 @@ import {
 } from "@/data/stores/new-issue-draft-store";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { useMentionInput } from "@/lib/use-mention-input";
+import { useT } from "@/lib/i18n";
 
 export default function NewIssueModal() {
+  const { t } = useT("issues");
   const [title, setTitle] = useState("");
   const description = useMentionInput();
   const { projectId: seedProjectId } = useLocalSearchParams<{
@@ -121,8 +123,8 @@ export default function NewIssueModal() {
       router.back();
     } catch (err) {
       Alert.alert(
-        "创建任务失败",
-        err instanceof Error ? err.message : "未知错误",
+        t("errors.create_failed"),
+        err instanceof Error ? err.message : t("common:states.error"),
       );
     }
   }, [
@@ -137,6 +139,7 @@ export default function NewIssueModal() {
     productVersion,
     kbFolder,
     createIssue,
+    t,
   ]);
 
   const headerRight = useCallback(
@@ -165,7 +168,7 @@ export default function NewIssueModal() {
           <TextInput
             value={title}
             onChangeText={setTitle}
-            placeholder="任务标题"
+            placeholder={t("new.title_placeholder")}
             placeholderTextColor={MOBILE_PLACEHOLDER_COLOR}
             className="text-2xl font-semibold text-foreground py-2"
             autoFocus

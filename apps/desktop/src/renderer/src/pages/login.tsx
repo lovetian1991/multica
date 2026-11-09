@@ -30,7 +30,7 @@ export function DesktopLoginPage() {
         <ServerEndpointForm />
         <LoginPage
           wrapperClassName="flex w-full flex-1 items-center justify-center"
-          logo={<MulticaIcon bordered size="lg" />}
+          logo={<MulticaIcon mode="intro" size={48} />}
           onSuccess={() => {
             // Auth store update triggers AppContent re-render → shows DesktopShell.
             // Initial workspace navigation happens in routes.tsx via IndexRedirect.

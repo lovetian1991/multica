@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type ReactElement, type UIEvent } from "react";
-import { Check, ChevronRight, Folder, FolderOpen, Loader2, Package } from "lucide-react";
+import { Check, ChevronRight, Folder, FolderOpen, Loader2, Package } from "@multica/ui/icons";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@multica/core/api";
 import { productListOptions } from "@multica/core/products/queries";

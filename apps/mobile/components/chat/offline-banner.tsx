@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { View } from "react-native";
 import type { AgentAvailability } from "@multica/core/agents";
 import { Text } from "@/components/ui/text";
+import { useT } from "@/lib/i18n";
 
 interface Props {
   /** Display name for the copy. */
@@ -29,8 +30,9 @@ interface Props {
 }
 
 export function OfflineBanner({ agentName, availability }: Props) {
+  const { t } = useT("chat");
   if (availability !== "offline" && availability !== "unstable") return null;
-  const name = agentName?.trim() || "该智能体";
+  const name = agentName?.trim() || t("title.this_agent");
 
   if (availability === "unstable") {
     return (
@@ -40,7 +42,7 @@ export function OfflineBanner({ agentName, availability }: Props) {
           className="flex-1 text-xs text-warning"
           numberOfLines={1}
         >
-          {name}可能刚刚断开连接，消息将进入队列。
+          {t("banners.offline_unstable", { name })}
         </Text>
       </View>
     );
@@ -53,7 +55,7 @@ export function OfflineBanner({ agentName, availability }: Props) {
         className="flex-1 text-xs text-muted-foreground"
         numberOfLines={1}
       >
-        {name}当前离线，消息会等待其运行时恢复后发送。
+        {t("banners.offline", { name })}
       </Text>
     </View>
   );

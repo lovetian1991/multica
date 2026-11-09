@@ -17,12 +17,12 @@ import {
   Linking,
   View,
 } from "react-native";
-import { Stack, router, useLocalSearchParams } from "expo-router";
-import { useTheme } from "@react-navigation/native";
+import { Stack, router, useLocalSearchParams, useTheme } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import type { Issue } from "@multica/core/types";
+import type { TFunction } from "i18next";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,6 +40,7 @@ import {
   issueKeys,
   issueTimelineOptions,
 } from "@/data/queries/issues";
+import { ApiError } from "@/data/api";
 import { useDeleteIssue } from "@/data/mutations/issues";
 import { pinListOptions } from "@/data/queries/pins";
 import { useCreatePin, useDeletePin } from "@/data/mutations/pins";
@@ -49,6 +50,7 @@ import { useWorkspaceStore } from "@/data/workspace-store";
 import { useViewedIssuesStore } from "@/data/viewed-issues-store";
 import { useCommentSelectStore } from "@/data/comment-select-store";
 import { useReplyTargetStore } from "@/data/stores/reply-target-store";
+import { useT } from "@/lib/i18n";
 
 export default function IssueDetail() {
   // `highlight` + `h` come from inbox deep-link (apps/mobile/app/(app)/
@@ -111,6 +113,7 @@ export default function IssueDetail() {
     !!pins?.some((p) => p.item_type === "issue" && p.item_id === issue.id);
   const createPin = useCreatePin();
   const deletePin = useDeletePin();
+  const { t } = useT("issues");
 
   const webUrl = process.env.EXPO_PUBLIC_WEB_URL;
   const issueLink =
@@ -138,23 +141,29 @@ export default function IssueDetail() {
           if (issueLink) Linking.openURL(issueLink);
           break;
         case "delete":
-          confirmDelete(issue, () =>
+          confirmDelete(t, issue, () =>
             deleteIssue.mutate(issue.id, {
               onSuccess: () => router.back(),
+              onError: (error) => Alert.alert(
+                t("delete.failed_title"),
+                error instanceof ApiError && error.status === 403
+                  ? t("delete.permission_denied")
+                  : t("delete.failed"),
+              ),
             }),
           );
           break;
       }
     },
-    [issue, wsSlug, createPin, deletePin, issueLink, deleteIssue],
+    [issue, wsSlug, createPin, deletePin, issueLink, deleteIssue, t],
   );
 
   return (
     <View className="flex-1 bg-background">
       <Stack.Screen
         options={{
-          title: issue?.identifier ?? "任务",
-          headerBackTitle: "返回",
+          title: issue?.identifier ?? t("navigation:routes.issue"),
+          headerBackTitle: t("common:actions.back"),
           headerRight: issue
             ? () => (
                 <View className="flex-row items-center gap-2">
@@ -179,10 +188,15 @@ export default function IssueDetail() {
       ) : detail.error || !issue ? (
         <View className="flex-1 items-center justify-center px-6 gap-3">
           <Text className="text-sm text-destructive text-center">
-            任务加载失败，请稍后重试。
+            {t("errors.load_failed", {
+              message:
+                detail.error instanceof Error
+                  ? detail.error.message
+                  : "not found",
+            })}
           </Text>
           <Button variant="outline" onPress={() => detail.refetch()}>
-            <Text>重试</Text>
+            <Text>{t("common:actions.retry")}</Text>
           </Button>
         </View>
       ) : (
@@ -221,12 +235,13 @@ function IssueActionsMenu({
   onSelect: (action: IssueAction) => void;
 }) {
   const { colors } = useTheme();
+  const { t } = useT("issues");
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         className="size-10 items-center justify-center rounded-md active:bg-accent"
-        accessibilityLabel="任务操作"
+        accessibilityLabel={t("menu.issue_actions")}
       >
         <Ionicons
           name="ellipsis-horizontal"
@@ -238,18 +253,18 @@ function IssueActionsMenu({
         <DropdownMenuItem
           onPress={() => onSelect(isPinned ? "unpin" : "pin")}
         >
-          <Text>{isPinned ? "取消置顶" : "置顶"}</Text>
+          <Text>{t(isPinned ? "menu.unpin" : "menu.pin")}</Text>
         </DropdownMenuItem>
         <DropdownMenuItem onPress={() => onSelect("edit")}>
-          <Text>编辑详情</Text>
+          <Text>{t("menu.edit_details")}</Text>
         </DropdownMenuItem>
         {hasLink ? (
           <>
             <DropdownMenuItem onPress={() => onSelect("copy-link")}>
-              <Text>复制链接</Text>
+              <Text>{t("menu.copy_link")}</Text>
             </DropdownMenuItem>
             <DropdownMenuItem onPress={() => onSelect("open-web")}>
-              <Text>在网页端打开</Text>
+              <Text>{t("menu.open_web")}</Text>
             </DropdownMenuItem>
           </>
         ) : null}
@@ -258,20 +273,20 @@ function IssueActionsMenu({
           variant="destructive"
           onPress={() => onSelect("delete")}
         >
-          <Text>删除任务</Text>
+          <Text>{t("menu.delete_issue")}</Text>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
 
-function confirmDelete(issue: Issue, onConfirm: () => void) {
+function confirmDelete(t: TFunction<"issues">, issue: Issue, onConfirm: () => void) {
   Alert.alert(
-    "删除任务？",
-    `将永久删除 ${issue.identifier} 及其评论、回应和附件。此操作无法撤销。`,
+    t("delete.title"),
+    t("delete.message", { identifier: issue.identifier }),
     [
-      { text: "取消", style: "cancel" },
-      { text: "删除", style: "destructive", onPress: onConfirm },
+      { text: t("common:actions.cancel"), style: "cancel" },
+      { text: t("common:actions.delete"), style: "destructive", onPress: onConfirm },
     ],
   );
 }

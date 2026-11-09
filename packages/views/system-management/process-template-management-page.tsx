@@ -11,7 +11,7 @@ import {
   Search,
   Trash2,
   Workflow,
-} from "lucide-react";
+} from "@multica/ui/icons";
 import { toast } from "sonner";
 import { ApiError, api } from "@multica/core/api";
 import {

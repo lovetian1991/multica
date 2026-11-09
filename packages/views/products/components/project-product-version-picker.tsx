@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { ChevronLeft, Package } from "lucide-react";
+import { ChevronLeft, Package } from "@multica/ui/icons";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@multica/core/api";
 import { productListOptions } from "@multica/core/products/queries";

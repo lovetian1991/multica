@@ -11,9 +11,11 @@
 import { router } from "expo-router";
 import { IconButton } from "@/components/ui/icon-button";
 import { useWorkspaceStore } from "@/data/workspace-store";
+import { useT } from "@/lib/i18n";
 
 export function HeaderActions() {
   const slug = useWorkspaceStore((s) => s.currentWorkspaceSlug);
+  const { t } = useT();
 
   const onSearch = () => {
     if (slug) router.push(`/${slug}/search`);
@@ -27,13 +29,13 @@ export function HeaderActions() {
       <IconButton
         name="search"
         onPress={onSearch}
-        accessibilityLabel="搜索"
+        accessibilityLabel={t("common:actions.search")}
       />
       <IconButton
         name="add"
         iconSize={24}
         onPress={onCreate}
-        accessibilityLabel="新建任务"
+        accessibilityLabel={t("navigation:routes.new_issue")}
       />
     </>
   );

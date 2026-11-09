@@ -12,3 +12,7 @@ sql:
         emit_empty_slices: true
         rename:
           kb_folder_id: KBFolderID
+        overrides:
+          - column: "issue_wakeup.condition"
+            go_type: "encoding/json.RawMessage"
+            nullable: true

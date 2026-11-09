@@ -13,6 +13,7 @@
  *   - Labels are the canonical Simplified Chinese strings used by mobile.
  */
 import type { ProjectPriority, ProjectStatus } from "@multica/core/types";
+import { i18n } from "@/lib/i18n/singleton";
 
 export const PROJECT_STATUSES: ProjectStatus[] = [
   "planned",
@@ -31,19 +32,19 @@ export const PROJECT_PRIORITIES: ProjectPriority[] = [
 ];
 
 export const PROJECT_STATUS_LABEL: Record<ProjectStatus, string> = {
-  planned: "计划中",
-  in_progress: "进行中",
-  paused: "已暂停",
-  completed: "已完成",
-  cancelled: "已取消",
+  planned: "projects:status.planned",
+  in_progress: "projects:status.in_progress",
+  paused: "projects:status.paused",
+  completed: "projects:status.completed",
+  cancelled: "projects:status.cancelled",
 };
 
 export const PROJECT_PRIORITY_LABEL: Record<ProjectPriority, string> = {
-  urgent: "紧急",
-  high: "高",
-  medium: "中",
-  low: "低",
-  none: "无优先级",
+  urgent: "projects:priority.urgent",
+  high: "projects:priority.high",
+  medium: "projects:priority.medium",
+  low: "projects:priority.low",
+  none: "projects:priority.none",
 };
 
 // Single hex per status, used by the SVG status icon (NativeWind classes
@@ -71,12 +72,15 @@ export const PROJECT_PRIORITY_BARS: Record<ProjectPriority, number> = {
 // (root CLAUDE.md "API Response Compatibility"). Returns a sensible default
 // so a future enum value still renders a labelled chip.
 export function projectStatusLabel(value: string): string {
-  return (PROJECT_STATUS_LABEL as Record<string, string>)[value] ?? value;
+  const key = (PROJECT_STATUS_LABEL as Record<string, string>)[value];
+  return key ? i18n.t(key) : value;
 }
 
 export function projectPriorityLabel(value: string): string {
-  return (PROJECT_PRIORITY_LABEL as Record<string, string>)[value] ?? value;
+  const key = (PROJECT_PRIORITY_LABEL as Record<string, string>)[value];
+  return key ? i18n.t(key) : value;
 }
+
 
 export function projectStatusColor(value: string): string {
   return (PROJECT_STATUS_COLOR as Record<string, string>)[value] ?? "#71717a";

@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUpCircle, CheckCircle2, Loader2, Workflow } from "lucide-react";
+import { ArrowUpCircle, CheckCircle2, Loader2, Workflow } from "@multica/ui/icons";
 import { toast } from "sonner";
 import { useCurrentWorkspace } from "@multica/core/paths";
 import { useCurrentMember } from "@multica/core/permissions";

@@ -17,9 +17,11 @@ import { useCreateComment } from "@/data/mutations/issues";
 import { useReplyTargetStore } from "@/data/stores/reply-target-store";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { MessageComposer } from "@/components/composer/message-composer";
+import { useT } from "@/lib/i18n";
 
 export function InlineCommentComposer({ issueId }: { issueId: string }) {
   const createComment = useCreateComment(issueId);
+  const { t } = useT("issues");
   const wsSlug = useWorkspaceStore((s) => s.currentWorkspaceSlug);
   const replyTarget = useReplyTargetStore((s) => s.target);
   const clearReplyTarget = useReplyTargetStore((s) => s.clear);
@@ -45,7 +47,7 @@ export function InlineCommentComposer({ issueId }: { issueId: string }) {
         throw err;
       }
     },
-    [createComment, replyTarget?.commentId],
+    [createComment, replyTarget],
   );
 
   return (
@@ -56,8 +58,8 @@ export function InlineCommentComposer({ issueId }: { issueId: string }) {
         params: { workspace: wsSlug ?? "", mode: "comment" },
       }}
       uploadContext={{ issueId }}
-      placeholder="添加评论..."
-      pillLabel="添加评论，使用 @ 提及..."
+      placeholder={t("comments.composer_placeholder")}
+      pillLabel={t("comments.composer_pill")}
       pillIcon="chatbubble-ellipses-outline"
       replyTarget={
         replyTarget

@@ -1,90 +1,57 @@
-import { useState, useEffect } from "react";
 import { cn } from "../../lib/utils";
 import { HONGYI_LINGGONG_MARK_DATA_URI } from "./hongyi-linggong-mark";
 
-interface MulticaIconProps extends React.ComponentProps<"span"> {
+export type MulticaIconMode =
+  /** The mark at rest. */
+  | "static"
+  /** Pulse while an agent is working or waiting. */
+  | "think"
+  /** Pop in at app launch or sign-in. */
+  | "intro"
+  /** `intro`, then `think` until whatever is loading unmounts it. */
+  | "launch";
+
+interface MulticaIconProps extends Omit<React.ComponentProps<"svg">, "mode"> {
+  mode?: MulticaIconMode;
+  /** `circle` is the avatar form. */
+  shape?: "square" | "circle";
   /**
-   * If true, play a one-time entrance spin animation.
+   * Rendered size in px. Omit to size with `className` (1em default).
    */
-  animate?: boolean;
-  /**
-   * If true, disable hover spin animation.
-   */
-  noSpin?: boolean;
-  /**
-   * If true, show a border around the icon.
-   */
-  bordered?: boolean;
-  /**
-   * Size of the bordered icon: "sm" (default), "md", "lg"
-   */
-  size?: "sm" | "md" | "lg";
+  size?: number;
+  /** Accessible name. Without one the mark is decorative. */
+  title?: string;
 }
 
-const borderedSizes = {
-  sm: { wrapper: "p-1.5", icon: "size-3.5" },
-  md: { wrapper: "p-2", icon: "size-4" },
-  lg: { wrapper: "p-2.5", icon: "size-5" },
-};
-
 export function MulticaIcon({
+  mode = "static",
+  shape = "square",
+  size,
+  title,
   className,
-  animate = false,
-  noSpin = false,
-  bordered = false,
-  size = "sm",
+  style,
   ...props
 }: MulticaIconProps) {
-  const [entranceDone, setEntranceDone] = useState(!animate);
-
-  useEffect(() => {
-    if (!animate) return;
-    const timer = setTimeout(() => setEntranceDone(true), 600);
-    return () => clearTimeout(timer);
-  }, [animate]);
-
-  const mark = (
-    <img
-      src={HONGYI_LINGGONG_MARK_DATA_URI}
-      alt=""
-      className={cn(
-        "block size-full object-contain",
-        !entranceDone && "animate-entrance-spin",
-        entranceDone && !noSpin && "hover:animate-spin",
-      )}
-      draggable={false}
-    />
-  );
-
-  if (bordered) {
-    const sizeConfig = borderedSizes[size];
-    return (
-      <span
-        className={cn(
-          "inline-flex items-center justify-center border border-border rounded-md",
-          sizeConfig.wrapper,
-          className
-        )}
-        aria-hidden="true"
-        {...props}
-      >
-        <span className={cn("block", sizeConfig.icon)}>{mark}</span>
-      </span>
-    );
-  }
+  const intro = mode === "intro" || mode === "launch";
 
   return (
-    <span
+    <svg
+      viewBox="0 0 100 100"
+      role={title ? "img" : undefined}
+      aria-label={title}
+      aria-hidden={title ? undefined : true}
       className={cn(
-        "inline-block size-[1em]",
-        !entranceDone && "animate-entrance-spin",
-        entranceDone && !noSpin && "hover:animate-spin",
-        className
+        "inline-block shrink-0",
+        size == null && "size-[1em]",
+        shape === "circle" && "rounded-full",
+        intro && "multica-pop",
+        (mode === "think" || mode === "launch") && "animate-pulse",
+        className,
       )}
-      aria-hidden="true"
+      style={{ ...(size != null && { width: size, height: size }), ...style }}
       {...props}
     >
-      {mark}
-    </span>
+      <image href={HONGYI_LINGGONG_MARK_DATA_URI} width={100} height={100} />
+    </svg>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import type { LucideIcon } from "lucide-react";
+import type { IconComponent } from "@multica/ui/icons";
 import {
   Database,
   Package,
@@ -8,7 +8,7 @@ import {
   ShieldCheck,
   Users,
   Workflow,
-} from "lucide-react";
+} from "@multica/ui/icons";
 import { useT } from "../i18n";
 import { AppLink, useNavigation } from "../navigation";
 import { paths } from "@multica/core/paths";
@@ -28,7 +28,7 @@ import {
 interface SystemMenuItem {
   key: "products" | "process_templates" | "workspaces" | "users" | "settings";
   href?: string;
-  icon: LucideIcon;
+  icon: IconComponent;
 }
 
 const catalogItems: SystemMenuItem[] = [

@@ -19,6 +19,16 @@
     "toast_deleted": "Issue deleted",
     "toast_delete_failed": "Failed to delete issue"
   },
+  "rename_issue": {
+    "title": "Rename issue",
+    "placeholder": "Issue title",
+    "input_aria_label": "Rename {{identifier}}",
+    "submit": "Save",
+    "saving": "Saving...",
+    "title_required": "Enter a title",
+    "toast_renamed": "Issue renamed",
+    "toast_failed": "Failed to rename issue"
+  },
   "feedback": {
     "title": "Feedback",
     "placeholder": "Tell us about your experience, bugs you've found, or features you'd like to see…",
@@ -35,7 +45,9 @@
     "search_placeholder": "Search issues...",
     "searching": "Searching...",
     "no_results": "No issues found.",
-    "prompt_to_search": "Type to search issues"
+    "prompt_to_search": "Type to search issues",
+    "suggested_similar": "Similar titles",
+    "suggested_recent": "Recently viewed"
   },
   "set_parent": {
     "title": "Set parent issue",
@@ -48,6 +60,12 @@
     "description": "Search for an issue to add as a sub-issue",
     "toast_failed": "Failed to add sub-issue",
     "toast_success": "Added {{identifier}} as sub-issue"
+  },
+  "add_project_issue": {
+    "title": "Add existing issue",
+    "description": "Search for an issue to move into this project",
+    "toast_success": "Moved {{identifier}} into the project",
+    "toast_failed": "Failed to move the issue"
   },
   "run_confirm": {
     "title_assign": "Confirm assignment?",
@@ -124,11 +142,6 @@
     "repos_url_placeholder": "https://github.com/owner/repo or git@github.com:owner/repo.git",
     "repos_add": "Add",
     "repos_selected": "Selected",
-    "repos_remove_aria": "Remove {{repo}}",
-    "repo_ref_label": "Branch/ref",
-    "repo_ref_input_aria": "Branch/ref for {{repo}}",
-    "repo_ref_placeholder": "main, develop, v1.2.0, or commit SHA",
-    "repo_ref_hint": "Leave empty to use the repository default branch.",
     "source_pill_local": "Local directory",
     "source_tab_repos": "GitHub repos",
     "source_tab_local": "Local directory",
@@ -142,7 +155,8 @@
     "local_clear": "Clear",
     "local_pick_failed": "Could not open the directory picker.",
     "local_invalid_dir": "This directory can't be used. Pick another.",
-    "local_hint": "Agents on other machines won't see this path — they'll fail to start. Use repos for shared work."
+    "local_hint": "Agents on other machines won't see this path — they'll fail to start. Use repos for shared work.",
+    "repos_ref_default": "Default branch"
   },
   "create_issue": {
     "sr_manual": "New Issue",
@@ -190,6 +204,7 @@
     "toast_link_subissues_partial": "Failed to link {{failed}} of {{total}} sub-issues",
     "toast_link_labels_failed": "Failed to attach labels",
     "toast_set_properties_failed": "Could not set {{count}} custom property values",
+    "unavailable_property_removed": "An unavailable custom property was removed from the draft. Review it before submitting again.",
     "switch_to_agent": "Switch to Agent",
     "switch_to_agent_tooltip": "Switch to create with agent — describe in one line and let the agent file it",
     "switch_to_manual": "Switch to Manual",
@@ -243,11 +258,28 @@
       "sent_label": "Sent",
       "sent_count": "{{count}} sent",
       "version_blocked_tooltip": "Daemon CLI must be ≥ {{min}}",
+      "qoder_attachments_unsupported": "Qoder Cloud Agents can't read attachments. Remove them or pick another agent.",
       "toast_sent": "Sent to agent — you'll get an inbox notification when it's done",
       "error_agent_unavailable_fallback": "Agent is unavailable. Pick another agent.",
       "error_daemon_version": "This agent's daemon CLI ({{current}}) is below the required {{min}}. Upgrade the daemon to use Create with agent.",
       "error_unknown": "Failed to submit. Try again.",
       "sub_issue_of": "Sub-issue of {{identifier}}"
     }
+  },
+  "mark_duplicate": {
+    "title": "Mark as duplicate",
+    "description": "Search for the original issue. This issue will be cancelled and linked to it.",
+    "toast_success": "Marked as a duplicate of {{identifier}}",
+    "toast_failed": "Failed to mark as duplicate",
+    "error_target_is_duplicate": "{{identifier}} is itself a duplicate. Pick its original instead.",
+    "error_has_duplicates": "Other issues are marked as duplicates of this one. Remove those marks first."
+  },
+  "copy_parent_fields": {
+    "trigger": "Copy parent fields",
+    "title": "Copy parent fields",
+    "description": "From {{identifier}}. Replaces selected draft values once; later changes do not sync.",
+    "apply": "Copy {{count}} fields",
+    "no_labels": "No labels",
+    "manual_only": "Labels, start date and custom properties apply only to manual creation."
   }
 }

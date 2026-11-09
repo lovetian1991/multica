@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactElement } from "react";
-import { ChevronRight, Folder, FolderOpen, Home, Loader2, MoreHorizontal } from "lucide-react";
+import { ChevronRight, Folder, FolderOpen, Loader2, MoreHorizontal } from "@multica/ui/icons";
 import { api } from "@multica/core/api";
 import type { KBFolder } from "@multica/core/types";
 import { Button } from "@multica/ui/components/ui/button";
@@ -228,7 +228,7 @@ export function FolderPickerDialog({
         </DialogHeader>
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden py-4">
           <div className="flex items-center gap-1 px-1 text-body text-muted-foreground">
-            <Home className="size-3.5" />
+            <Folder className="size-3.5" />
             <span>{t(($) => $.products.folder_picker.library_root)}</span>
           </div>
           <div className="min-h-0 flex-1 overflow-hidden rounded-md border border-surface-border">

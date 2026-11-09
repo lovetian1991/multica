@@ -10,7 +10,7 @@
  * store via setUser — same source-of-truth pattern as web (server response
  * is authoritative, never the local form state).
  */
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Alert,
   ActivityIndicator,
@@ -33,6 +33,7 @@ import {
 import { useAuthStore } from "@/data/auth-store";
 import { api } from "@/data/api";
 import type { FileAsset } from "@/data/api";
+import { useT } from "@/lib/i18n";
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024; // 5 MB — matches what's reasonable on cellular.
 
@@ -50,6 +51,7 @@ function initialsOf(name: string | undefined): string {
 export default function ProfileSettingsScreen() {
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
+  const { t } = useT("settings");
 
   const [name, setName] = useState(user?.name ?? "");
   const [saving, setSaving] = useState(false);
@@ -57,16 +59,18 @@ export default function ProfileSettingsScreen() {
 
   // Resync if `user` updates from outside (avatar upload, refetch, login as
   // different user). Without this the form would render stale init forever.
-  useEffect(() => {
+  const [previousUser, setPreviousUser] = useState(user);
+  if (previousUser !== user) {
+    setPreviousUser(user);
     setName(user?.name ?? "");
-  }, [user]);
+  }
 
   const dirty = name.trim() !== (user?.name ?? "") && name.trim().length > 0;
 
   const pickFromCamera = async () => {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert("需要相机权限", "请允许访问相机后再拍照。");
+      Alert.alert(t("avatar.permission_title"), t("avatar.permission_message"));
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
@@ -90,7 +94,7 @@ export default function ProfileSettingsScreen() {
 
   const uploadAvatar = async (asset: ImagePicker.ImagePickerAsset) => {
     if (asset.fileSize && asset.fileSize > MAX_AVATAR_BYTES) {
-      Alert.alert("图片过大", "请选择小于 5 MB 的图片。");
+      Alert.alert(t("avatar.too_large_title"), t("avatar.too_large_message"));
       return;
     }
     const fileAsset: FileAsset = {
@@ -108,8 +112,10 @@ export default function ProfileSettingsScreen() {
       setUser(updated);
     } catch (err) {
       Alert.alert(
-        "头像上传失败",
-        err instanceof Error ? err.message : "无法上传头像。",
+        t("avatar.upload_failed"),
+        err instanceof Error
+          ? err.message
+          : t("avatar.upload_failed_default"),
       );
     } finally {
       setUploading(false);
@@ -123,8 +129,10 @@ export default function ProfileSettingsScreen() {
       setUser(updated);
     } catch (err) {
       Alert.alert(
-        "头像移除失败",
-        err instanceof Error ? err.message : "无法移除头像。",
+        t("avatar.remove_failed"),
+        err instanceof Error
+          ? err.message
+          : t("avatar.remove_failed_default"),
       );
     } finally {
       setUploading(false);
@@ -139,8 +147,8 @@ export default function ProfileSettingsScreen() {
       setUser(updated);
     } catch (err) {
       Alert.alert(
-        "保存失败",
-        err instanceof Error ? err.message : "无法更新个人资料。",
+        t("errors.save_failed"),
+        err instanceof Error ? err.message : t("errors.save_failed_default"),
       );
     } finally {
       setSaving(false);
@@ -157,9 +165,9 @@ export default function ProfileSettingsScreen() {
         <DropdownMenu>
           <DropdownMenuTrigger
             disabled={uploading}
-            accessibilityLabel="更换头像"
+            accessibilityLabel={t("avatar.change_hint")}
           >
-            <Avatar alt={user?.name ?? "用户头像"} className="size-24">
+            <Avatar alt={user?.name ?? t("profile.name")} className="size-24">
               {user?.avatar_url ? (
                 <AvatarImage source={{ uri: user.avatar_url }} />
               ) : null}
@@ -172,10 +180,10 @@ export default function ProfileSettingsScreen() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" className="w-52">
             <DropdownMenuItem onPress={() => void pickFromCamera()}>
-              <Text>拍照</Text>
+              <Text>{t("avatar.take")}</Text>
             </DropdownMenuItem>
             <DropdownMenuItem onPress={() => void pickFromLibrary()}>
-              <Text>从相册选择</Text>
+              <Text>{t("avatar.library")}</Text>
             </DropdownMenuItem>
             {user?.avatar_url ? (
               <>
@@ -184,7 +192,7 @@ export default function ProfileSettingsScreen() {
                   variant="destructive"
                   onPress={() => void removeAvatar()}
                 >
-                  <Text>移除头像</Text>
+                  <Text>{t("avatar.remove")}</Text>
                 </DropdownMenuItem>
               </>
             ) : null}
@@ -194,7 +202,7 @@ export default function ProfileSettingsScreen() {
           <ActivityIndicator />
         ) : (
           <Text className="text-xs text-muted-foreground">
-            点击更换头像
+            {t("avatar.change_hint")}
           </Text>
         )}
       </View>
@@ -203,31 +211,35 @@ export default function ProfileSettingsScreen() {
 
       <View className="gap-4">
         <View>
-          <Text className="text-xs text-muted-foreground mb-1.5">姓名</Text>
+          <Text className="text-xs text-muted-foreground mb-1.5">
+            {t("profile.name")}
+          </Text>
           <TextField
             value={name}
             onChangeText={setName}
-            placeholder="输入姓名"
+            placeholder={t("profile.name")}
             autoCapitalize="words"
             autoCorrect={false}
             returnKeyType="done"
           />
         </View>
         <View>
-          <Text className="text-xs text-muted-foreground mb-1.5">邮箱</Text>
+          <Text className="text-xs text-muted-foreground mb-1.5">
+            {t("profile.email")}
+          </Text>
           <View className="rounded-md border border-border bg-muted px-3 py-2.5">
             <Text className="text-base text-muted-foreground">
               {user?.email ?? "—"}
             </Text>
           </View>
           <Text className="text-xs text-muted-foreground mt-1.5">
-            邮箱在注册时设置，暂不支持在此修改。
+            {t("email_fixed")}
           </Text>
         </View>
       </View>
 
       <Button onPress={handleSave} disabled={!dirty || saving}>
-        <Text>{saving ? "保存中..." : "保存"}</Text>
+        <Text>{saving ? t("profile.saving") : t("common:actions.save")}</Text>
       </Button>
     </ScrollView>
   );

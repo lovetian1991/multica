@@ -22,9 +22,10 @@ INSERT INTO runtime_profile (
     fixed_args,
     visibility,
     created_by,
-    enabled
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-RETURNING id, workspace_id, display_name, protocol_family, command_name, description, fixed_args, visibility, created_by, enabled, created_at, updated_at
+    enabled,
+    runtime_type
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+RETURNING id, workspace_id, display_name, protocol_family, command_name, description, fixed_args, visibility, created_by, enabled, created_at, updated_at, runtime_type
 `
 
 type CreateRuntimeProfileParams struct {
@@ -37,6 +38,7 @@ type CreateRuntimeProfileParams struct {
 	Visibility     string      `json:"visibility"`
 	CreatedBy      pgtype.UUID `json:"created_by"`
 	Enabled        bool        `json:"enabled"`
+	RuntimeType    string      `json:"runtime_type"`
 }
 
 // Custom Runtime profiles (MUL-3284). Workspace-level definitions of a custom
@@ -53,6 +55,7 @@ func (q *Queries) CreateRuntimeProfile(ctx context.Context, arg CreateRuntimePro
 		arg.Visibility,
 		arg.CreatedBy,
 		arg.Enabled,
+		arg.RuntimeType,
 	)
 	var i RuntimeProfile
 	err := row.Scan(
@@ -68,6 +71,7 @@ func (q *Queries) CreateRuntimeProfile(ctx context.Context, arg CreateRuntimePro
 		&i.Enabled,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RuntimeType,
 	)
 	return i, err
 }
@@ -137,7 +141,7 @@ func (q *Queries) DeleteRuntimeProfile(ctx context.Context, arg DeleteRuntimePro
 }
 
 const getRuntimeProfile = `-- name: GetRuntimeProfile :one
-SELECT id, workspace_id, display_name, protocol_family, command_name, description, fixed_args, visibility, created_by, enabled, created_at, updated_at FROM runtime_profile
+SELECT id, workspace_id, display_name, protocol_family, command_name, description, fixed_args, visibility, created_by, enabled, created_at, updated_at, runtime_type FROM runtime_profile
 WHERE id = $1
 `
 
@@ -157,12 +161,13 @@ func (q *Queries) GetRuntimeProfile(ctx context.Context, id pgtype.UUID) (Runtim
 		&i.Enabled,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RuntimeType,
 	)
 	return i, err
 }
 
 const getRuntimeProfileForWorkspace = `-- name: GetRuntimeProfileForWorkspace :one
-SELECT id, workspace_id, display_name, protocol_family, command_name, description, fixed_args, visibility, created_by, enabled, created_at, updated_at FROM runtime_profile
+SELECT id, workspace_id, display_name, protocol_family, command_name, description, fixed_args, visibility, created_by, enabled, created_at, updated_at, runtime_type FROM runtime_profile
 WHERE id = $1 AND workspace_id = $2
 `
 
@@ -187,6 +192,7 @@ func (q *Queries) GetRuntimeProfileForWorkspace(ctx context.Context, arg GetRunt
 		&i.Enabled,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RuntimeType,
 	)
 	return i, err
 }
@@ -205,17 +211,12 @@ WITH blockers AS (
         CASE
             WHEN a.system_key IS NULL OR btrim(a.system_key) = '' THEN 'user'
             WHEN btrim(a.system_key) = 'mika' THEN 'mika'
-            -- starts_with, not LIKE: '_' is a single-character wildcard in
-            -- LIKE, so 'agent_builder:%' also matches 'agent-builder:x' and
-            -- 'agentXbuilder:x'. Those would be classified here as carriers
-            -- and by the Go side as other_system, and the refusal would send
-            -- the user to an Agent Builder session that does not exist.
-            WHEN starts_with(btrim(a.system_key), 'agent_builder:') THEN 'agent_builder'
             ELSE 'other_system'
         END AS blocker_class
     FROM agent a
     JOIN agent_runtime ar ON ar.id = a.runtime_id
-    WHERE ar.profile_id = $1 AND ar.workspace_id = $2 AND a.archived_at IS NULL
+    WHERE ar.profile_id = $1 AND ar.workspace_id = $2
+      AND a.archived_at IS NULL AND a.kind = 'user'
 )
 SELECT
     id,
@@ -230,7 +231,6 @@ SELECT
     count(*) OVER () AS total_count,
     count(*) FILTER (WHERE blocker_class = 'user') OVER () AS user_count,
     count(*) FILTER (WHERE blocker_class = 'mika') OVER () AS mika_count,
-    count(*) FILTER (WHERE blocker_class = 'agent_builder') OVER () AS agent_builder_count,
     count(*) FILTER (WHERE blocker_class = 'other_system') OVER () AS other_system_count
 FROM blockers
 ORDER BY runtime_name ASC, name ASC
@@ -256,7 +256,6 @@ type ListActiveAgentsByProfileRow struct {
 	TotalCount        int64       `json:"total_count"`
 	UserCount         int64       `json:"user_count"`
 	MikaCount         int64       `json:"mika_count"`
-	AgentBuilderCount int64       `json:"agent_builder_count"`
 	OtherSystemCount  int64       `json:"other_system_count"`
 }
 
@@ -270,14 +269,18 @@ type ListActiveAgentsByProfileRow struct {
 // the user was trying to clean up, and a bare count gives them no way to tell
 // (GH #8456). Carrying the runtime is what lets the message say which machine.
 //
-// Deliberately not filtered by kind: it defines when deletion is refused, and
-// narrowing it to user agents here would let a profile with a bound builder
-// carrier through, whereupon TeardownRuntime would hard-delete that carrier.
+// User agents only (kind = 'user'), the same set ListActiveAgentsByRuntime
+// guards the single-runtime delete with. System agents are the hidden Agent
+// Builder carriers: runtime-local infrastructure that TeardownRuntime deletes
+// together with their sessions, drafts and pending restores. Counting them here
+// made a profile undeletable whenever an AI agent-creation flow had ever run on
+// one of its runtimes, because a carrier outlives its session (archiving the
+// session after the agent is created leaves the carrier active) and the session
+// is then hidden from every surface that could release it (GH #9762).
 //
 // system_key rides along because it, not kind, decides what the user can
 // actually do about a blocker. Mika is kind='user' with system_key='mika' and
-// can be neither archived nor moved; a builder carrier is kind='system' and is
-// released by its Builder session, not from the agent list.
+// can be moved but not archived.
 //
 // Bounded on purpose. The caller only needs to know that blockers exist, name a
 // few, and report how many there are — it never needs every row. This runs
@@ -320,7 +323,6 @@ func (q *Queries) ListActiveAgentsByProfile(ctx context.Context, arg ListActiveA
 			&i.TotalCount,
 			&i.UserCount,
 			&i.MikaCount,
-			&i.AgentBuilderCount,
 			&i.OtherSystemCount,
 		); err != nil {
 			return nil, err
@@ -371,7 +373,7 @@ func (q *Queries) ListAgentRuntimeIDsByProfile(ctx context.Context, arg ListAgen
 }
 
 const listEnabledRuntimeProfilesForWorkspace = `-- name: ListEnabledRuntimeProfilesForWorkspace :many
-SELECT id, workspace_id, display_name, protocol_family, command_name, description, fixed_args, visibility, created_by, enabled, created_at, updated_at FROM runtime_profile
+SELECT id, workspace_id, display_name, protocol_family, command_name, description, fixed_args, visibility, created_by, enabled, created_at, updated_at, runtime_type FROM runtime_profile
 WHERE workspace_id = $1 AND enabled = true
 ORDER BY created_at ASC
 `
@@ -400,6 +402,7 @@ func (q *Queries) ListEnabledRuntimeProfilesForWorkspace(ctx context.Context, wo
 			&i.Enabled,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.RuntimeType,
 		); err != nil {
 			return nil, err
 		}
@@ -412,7 +415,7 @@ func (q *Queries) ListEnabledRuntimeProfilesForWorkspace(ctx context.Context, wo
 }
 
 const listRuntimeProfiles = `-- name: ListRuntimeProfiles :many
-SELECT id, workspace_id, display_name, protocol_family, command_name, description, fixed_args, visibility, created_by, enabled, created_at, updated_at FROM runtime_profile
+SELECT id, workspace_id, display_name, protocol_family, command_name, description, fixed_args, visibility, created_by, enabled, created_at, updated_at, runtime_type FROM runtime_profile
 WHERE workspace_id = $1
 ORDER BY created_at ASC
 `
@@ -439,6 +442,7 @@ func (q *Queries) ListRuntimeProfiles(ctx context.Context, workspaceID pgtype.UU
 			&i.Enabled,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.RuntimeType,
 		); err != nil {
 			return nil, err
 		}
@@ -451,7 +455,7 @@ func (q *Queries) ListRuntimeProfiles(ctx context.Context, workspaceID pgtype.UU
 }
 
 const lockRuntimeProfileForDelete = `-- name: LockRuntimeProfileForDelete :one
-SELECT id, workspace_id, display_name, protocol_family, command_name, description, fixed_args, visibility, created_by, enabled, created_at, updated_at FROM runtime_profile
+SELECT id, workspace_id, display_name, protocol_family, command_name, description, fixed_args, visibility, created_by, enabled, created_at, updated_at, runtime_type FROM runtime_profile
 WHERE id = $1 AND workspace_id = $2
 FOR UPDATE
 `
@@ -479,12 +483,13 @@ func (q *Queries) LockRuntimeProfileForDelete(ctx context.Context, arg LockRunti
 		&i.Enabled,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RuntimeType,
 	)
 	return i, err
 }
 
 const lockRuntimeProfileForRegistration = `-- name: LockRuntimeProfileForRegistration :one
-SELECT id, workspace_id, display_name, protocol_family, command_name, description, fixed_args, visibility, created_by, enabled, created_at, updated_at FROM runtime_profile
+SELECT id, workspace_id, display_name, protocol_family, command_name, description, fixed_args, visibility, created_by, enabled, created_at, updated_at, runtime_type FROM runtime_profile
 WHERE id = $1 AND workspace_id = $2
 FOR KEY SHARE
 `
@@ -514,6 +519,7 @@ func (q *Queries) LockRuntimeProfileForRegistration(ctx context.Context, arg Loc
 		&i.Enabled,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RuntimeType,
 	)
 	return i, err
 }
@@ -528,7 +534,7 @@ SET display_name = COALESCE($1, display_name),
     enabled      = COALESCE($6, enabled),
     updated_at   = now()
 WHERE id = $7 AND workspace_id = $8
-RETURNING id, workspace_id, display_name, protocol_family, command_name, description, fixed_args, visibility, created_by, enabled, created_at, updated_at
+RETURNING id, workspace_id, display_name, protocol_family, command_name, description, fixed_args, visibility, created_by, enabled, created_at, updated_at, runtime_type
 `
 
 type UpdateRuntimeProfileParams struct {
@@ -571,6 +577,7 @@ func (q *Queries) UpdateRuntimeProfile(ctx context.Context, arg UpdateRuntimePro
 		&i.Enabled,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RuntimeType,
 	)
 	return i, err
 }

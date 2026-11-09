@@ -87,7 +87,7 @@ describe("LocalDirectoryModeDialog", () => {
 
     const option = worktreeOption();
     expect(option.hasAttribute("disabled")).toBe(true);
-    const notice = screen.getByText(/鸿翼灵工 server is too old/i);
+    const notice = screen.getByText(/server is too old/i);
     expect(notice.textContent).toMatch(/Update the server/i);
 
     fireEvent.click(option);

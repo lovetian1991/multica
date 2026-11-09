@@ -4,7 +4,7 @@ import { MulticaLanding } from "@/features/landing/components/multica-landing";
 export const metadata: Metadata = {
   title: "Homepage",
   description:
-    "鸿翼灵工 — open-source platform that turns coding agents into real teammates. Assign tasks, track progress, compound skills.",
+    "鸿翼灵工 — source-available platform that turns coding agents into real teammates. Assign tasks, track progress, compound skills.",
   openGraph: {
     title: "鸿翼灵工 — Project Management for Human + Agent Teams",
     description:

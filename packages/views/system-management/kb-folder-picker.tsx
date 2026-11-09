@@ -1,20 +1,20 @@
 "use client";
 
 import { useEffect, useState, type ReactElement } from "react";
-import { ChevronRight, Folder, FolderOpen, Loader2, X } from "lucide-react";
+import { ChevronRight, Folder, FolderOpen, Loader2, X } from "@multica/ui/icons";
 import { api } from "@multica/core/api";
 import type { KBFolder } from "@multica/core/types";
 import { Button } from "@multica/ui/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@multica/ui/components/ui/dialog";
 import { Input } from "@multica/ui/components/ui/input";
 import { cn } from "@multica/ui/lib/utils";
+import { useT } from "../i18n";
 
 interface KBFolderPickerProps {
   open: boolean;
@@ -35,6 +35,7 @@ export function KBFolderPicker({
   onOpenChange,
   onSelect,
 }: KBFolderPickerProps) {
+  const { t } = useT("settings");
   const [searchQuery, setSearchQuery] = useState("");
   const [rootFolders, setRootFolders] = useState<FolderNode[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<KBFolder | null>(null);
@@ -59,7 +60,7 @@ export function KBFolderPicker({
       }));
       setRootFolders(nodes);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "加载文件夹失败");
+      setError(err instanceof Error ? err.message : t(($) => $.products.folder_picker.load_failed));
     } finally {
       setLoading(false);
     }
@@ -104,7 +105,7 @@ export function KBFolderPicker({
 
       setRootFolders(setChildren(rootFolders));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "加载子文件夹失败");
+      setError(err instanceof Error ? err.message : t(($) => $.products.folder_picker.load_failed));
       const resetLoading = (nodes: FolderNode[]): FolderNode[] => {
         return nodes.map((n) => {
           if (n.folder.id === node.folder.id) {
@@ -205,14 +206,13 @@ export function KBFolderPicker({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>选择文件夹</DialogTitle>
-          <DialogDescription>选择一个文件夹作为版本存储位置</DialogDescription>
+          <DialogTitle>{t(($) => $.products.folder_picker.title)}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="relative">
             <Input
-              placeholder="输入文件名称搜索"
+              placeholder={t(($) => $.products.folder_picker.search_placeholder)}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pr-8"
@@ -237,7 +237,7 @@ export function KBFolderPicker({
               <div className="px-4 py-12 text-center text-body text-destructive">{error}</div>
             ) : rootFolders.length === 0 ? (
               <div className="px-4 py-12 text-center text-body text-muted-foreground">
-                没有找到文件夹
+                {t(($) => $.products.folder_picker.empty)}
               </div>
             ) : (
               <div className="h-[400px] overflow-y-auto">
@@ -248,7 +248,7 @@ export function KBFolderPicker({
 
           {selectedFolder && (
             <div className="rounded-lg border border-surface-border bg-muted/20 px-4 py-3">
-              <p className="text-caption text-muted-foreground">已选择:</p>
+              <p className="text-caption text-muted-foreground">{t(($) => $.products.folder_picker.selected)}</p>
               <p className="mt-1 text-body font-medium">{selectedFolder.name}</p>
             </div>
           )}
@@ -256,10 +256,10 @@ export function KBFolderPicker({
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            取消
+            {t(($) => $.products.folder_picker.cancel)}
           </Button>
           <Button onClick={handleSelect} disabled={!selectedFolder}>
-            确定
+            {t(($) => $.products.folder_picker.confirm)}
           </Button>
         </DialogFooter>
       </DialogContent>

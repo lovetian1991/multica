@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactElement } from "react";
-import { Package } from "lucide-react";
+import { Package } from "@multica/ui/icons";
 import { useQuery } from "@tanstack/react-query";
 import { productListOptions } from "@multica/core/products/queries";
 import type { UpdateIssueRequest } from "@multica/core/types";

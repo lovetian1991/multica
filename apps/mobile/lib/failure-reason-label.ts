@@ -17,44 +17,63 @@
  * a message, so an unrecognised reason degrades to a generic failure label
  * instead of leaking an enum string at them.
  */
-const LABELS: Record<string, string> = {
+/**
+ * Must stay in lockstep with the `failure_reason` keys in
+ * `locales/en/chat.json`; the drift test in `failure-reason-label.test.ts`
+ * enforces both directions.
+ */
+export const REASONS = new Set([
   // Platform / scheduler side.
-  queued_expired: "排队超时",
-  runtime_offline: "守护进程离线",
-  runtime_recovery: "守护进程已重启",
-  timeout: "任务执行超时",
-  iteration_limit: "达到迭代上限",
-  agent_blocked: "等待人工输入",
-  api_invalid_request: "模型 API 拒绝了请求",
-  skill_bundle_unavailable: "智能体 skill 下载失败",
-  runtime_cli_timeout: "本地运行时 CLI 超时",
-  environment_prepare_failed: "执行环境准备失败",
+  "queued_expired",
+  "runtime_offline",
+  "runtime_reconnect_timeout",
+  "runtime_recovery",
+  "timeout",
+  "iteration_limit",
+  "agent_blocked",
+  "api_invalid_request",
+  "skill_bundle_unavailable",
+  "runtime_cli_timeout",
+  "environment_prepare_failed",
+  "invalid_task_identity",
+  "runtime_access_denied",
+  "runtime_access_revoked",
 
   // Agent process side — provider.
-  "agent_error.provider_auth_or_access": "服务提供方认证失败",
-  "agent_error.provider_quota_limit": "服务提供方额度已用尽",
-  "agent_error.provider_capacity_or_rate_limit": "服务提供方限制了请求频率",
-  "agent_error.provider_server_error": "服务提供方服务器错误",
-  "agent_error.provider_network": "无法连接服务提供方",
+  "agent_error.provider_auth_or_access",
+  "agent_error.provider_quota_limit",
+  "agent_error.provider_capacity_or_rate_limit",
+  "agent_error.provider_server_error",
+  "agent_error.provider_network",
 
   // Agent process side — agent / runner.
-  "agent_error.process_failure": "智能体进程崩溃",
-  "agent_error.empty_or_unparseable_output": "智能体没有返回可用内容",
-  "agent_error.agent_timeout": "智能体执行超时",
-  "agent_error.context_overflow": "上下文窗口超限",
-  "agent_error.missing_config": "缺少 API 密钥或配置",
-  "agent_error.model_not_found_or_unavailable": "模型不可用",
-  "agent_error.runtime_version_unsupported": "运行器 CLI 版本不受支持",
-  "agent_error.runtime_missing_executable": "运行器 CLI 未安装",
-  "agent_error.unknown": "智能体执行错误",
+  "agent_error.process_failure",
+  "agent_error.empty_or_unparseable_output",
+  "agent_error.agent_timeout",
+  "agent_error.context_overflow",
+  "agent_error.missing_config",
+  "agent_error.model_not_found_or_unavailable",
+  "agent_error.runtime_version_unsupported",
+  "agent_error.runtime_missing_executable",
+  "agent_error.unknown",
 
-  // Pre-MUL-1949 coarse values, still present on historical rows.
-  agent_error: "智能体执行错误",
-  codex_semantic_inactivity: "Codex 长时间无响应",
-  manual: "已由用户取消",
-};
+  // Daemon operational reasons, outside the canonical taxonomy.
+  "agent_fallback_message",
+  "codex_resume_oversized",
+  "idle_watchdog",
+  "local_directory_error",
+  "cancelled",
 
-export function failureReasonLabel(reason: string | null | undefined): string {
-  if (!reason) return "执行失败";
-  return LABELS[reason] ?? "执行失败";
+  // Coarse values, still present on historical rows.
+  "agent_error",
+  "codex_semantic_inactivity",
+  "manual",
+  "user_cancelled",
+]);
+
+export function failureReasonKey(reason: string | null | undefined): string {
+  if (!reason || !REASONS.has(reason)) return "failure_reason.default";
+  // Refined wire reasons use dots (`agent_error.provider_auth_or_access`);
+  // the mobile bundle deliberately stores those as flat snake_case keys.
+  return `failure_reason.${reason.replaceAll(".", "_")}`;
 }

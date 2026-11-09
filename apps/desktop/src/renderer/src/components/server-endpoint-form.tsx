@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, CheckCircle2, Loader2, Server } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, Server } from "@multica/ui/icons";
 import { Button } from "@multica/ui/components/ui/button";
 import { Input } from "@multica/ui/components/ui/input";
 import { Label } from "@multica/ui/components/ui/label";
 import { cn } from "@multica/ui/lib/utils";
 import { useAuthStore } from "@multica/core/auth";
-import { useWelcomeStore } from "@multica/core/onboarding";
 import { useT } from "@multica/views/i18n";
 import { DEFAULT_RUNTIME_CONFIG } from "../../../shared/runtime-config";
 import type { RuntimeConfig } from "../../../shared/runtime-config";
@@ -206,7 +205,6 @@ export async function clearDesktopSession() {
   useAuthStore.getState().logout();
   useTabStore.getState().reset();
   useWindowOverlayStore.getState().close();
-  useWelcomeStore.getState().reset();
   window.desktopAPI.reportAuthSession?.(null);
   try {
     await window.daemonAPI.clearToken();

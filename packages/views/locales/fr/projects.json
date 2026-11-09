@@ -2,11 +2,11 @@
   "page": {
     "title": "Projets",
     "new_project": "Nouveau projet",
-    "empty": "Aucun projet pour l'instant",
-    "create_first": "Créez votre premier projet",
+    "scope_all": "Tous les projets",
+    "scope_active": "Projets actifs",
+    "scope_closed": "Projets clos",
     "view_compact": "Compact",
     "view_comfortable": "Confortable",
-    "search_placeholder": "Rechercher des projets...",
     "no_search_results": "Aucun résultat ne correspond à votre recherche",
     "view_table": "Grille",
     "view_cards": "Cartes",
@@ -14,10 +14,7 @@
     "pin": "Épingler à la barre latérale",
     "unpin": "Détacher",
     "delete": "Supprimer",
-    "no_matches": "Aucun projet correspondant",
-    "selected_one": "{{count}} sélectionné",
-    "selected_other": "{{count}} sélectionnés",
-    "clear_selection": "Effacer la sélection"
+    "no_matches": "Aucun projet correspondant"
   },
   "table": {
     "name": "Nom",
@@ -57,6 +54,8 @@
   },
   "detail": {
     "not_found": "Projet introuvable",
+    "not_found_description": "Il a peut-être été supprimé, ou vous n'y avez pas accès.",
+    "back_to_list": "Tous les projets",
     "breadcrumb_fallback": "Projets",
     "title_placeholder": "Titre du projet",
     "icon_tooltip": "Changer d'icône",
@@ -74,13 +73,15 @@
     "no_due_date": "Aucune date d'échéance",
     "description_placeholder": "Ajouter une description...",
     "description_hint": "Partagé avec les agents comme contexte à chaque exécution dans ce projet.",
-    "empty_issues_title": "Aucune tâche liée",
-    "empty_issues_hint": "Vous pouvez aussi ajouter des tâches existantes à ce projet.",
+    "empty_issues_title": "Aucune tâche dans ce projet pour l'instant",
+    "empty_issues_hint": "Créez-en une, ou déplacez ici une tâche existante.",
     "empty_issues_new_button": "Nouvelle tâche",
+    "empty_issues_add_existing": "Ajouter une tâche existante",
     "no_issues_yet": "Aucune tâche pour l'instant",
     "toast_link_copied": "Lien copié",
     "toast_project_deleted": "Projet supprimé",
-    "toast_move_issue_failed": "Échec du déplacement de la tâche"
+    "toast_move_issue_failed": "Échec du déplacement de la tâche",
+    "prop_product": "Produit"
   },
   "resources": {
     "section_header": "Ressources",
@@ -100,16 +101,12 @@
     "add_local_directory_button": "Ajouter un répertoire local",
     "local_daemon_offline_hint": "Démarrez le daemon local pour rattacher un répertoire de cette machine.",
     "local_daemon_already_attached_hint": "Cette machine a déjà un répertoire local rattaché. Retirez-le avant d'en ajouter un autre.",
-    "local_rename_tooltip": "Renommer",
-    "local_rename_label": "Libellé du répertoire local",
     "local_no_daemon_tooltip": "Le daemon local ne communique pas encore d'identifiant — l'agent ne peut pas ouvrir ce répertoire.",
     "local_other_machine_tooltip": "Disponible uniquement sur la machine qui a enregistré ce répertoire.",
     "chat_hint_prefix": "L'agent travaillera en place dans",
     "chat_hint_worktree_prefix": "L'agent travaillera dans un worktree isolé de",
     "chat_hint_worktree_note": "Votre copie de travail reste intacte : chaque exécution restitue son travail dans une branche agent/….",
     "toast_local_attached": "Répertoire local rattaché",
-    "toast_local_renamed": "Renommé",
-    "toast_local_rename_failed": "Échec du renommage",
     "toast_local_pick_failed": "Échec de la sélection du répertoire",
     "toast_local_already_attached": "Ce répertoire est déjà rattaché au projet sur cette machine.",
     "toast_local_daemon_already_attached": "Cette machine a déjà un répertoire local rattaché à ce projet. Retirez-le avant d'en ajouter un autre.",
@@ -136,9 +133,28 @@
     "mode_badge_worktree_tooltip": "Les exécutions ont lieu simultanément dans leur propre worktree git et restituent une branche. Votre copie de travail reste intacte.",
     "toast_local_mode_updated": "Mode d'exécution mis à jour",
     "toast_local_mode_update_failed": "Impossible de mettre à jour le mode d'exécution",
-    "mode_badge_in_place": "Direct"
+    "mode_badge_in_place": "Direct",
+    "ref_label": "Branche de départ",
+    "ref_placeholder": "main",
+    "ref_hint": "Les tâches démarrent depuis cette branche et y ouvrent leurs pull requests. Laissez vide pour utiliser la branche par défaut du dépôt.",
+    "ref_error_too_long": "255 caractères maximum.",
+    "ref_error_characters": "Une réf git ne peut pas contenir d'espace ni les caractères ~ ^ : ? * [ \\",
+    "ref_error_format": "Branche, tag ou commit invalide.",
+    "ref_dialog_title": "Sur quelle branche les tâches doivent-elles travailler ?",
+    "ref_dialog_description": "Les nouvelles tâches de ce projet récupèrent cette branche et y ouvrent leurs pull requests. Le travail déjà engagé conserve la branche sur laquelle il a démarré.",
+    "ref_cancel": "Annuler",
+    "ref_save": "Enregistrer",
+    "ref_edit_tooltip": "Changer la branche de travail des tâches",
+    "ref_badge_tooltip": "Les tâches démarrent depuis {{ref}} et y livrent leur travail.",
+    "toast_ref_updated": "Branche mise à jour",
+    "toast_ref_cleared": "Retour à la branche par défaut",
+    "toast_ref_update_failed": "Impossible de mettre à jour la branche",
+    "ref_error_commit": "Ceci est un commit, pas une branche. Les tâches livrent sur la branche depuis laquelle elles démarrent — pour une révision ponctuelle, utilisez multica repo checkout --ref.",
+    "ref_default_label": "Branche par défaut",
+    "ref_default_tooltip": "Aucune branche définie — les tâches utilisent la branche par défaut du dépôt au moment voulu."
   },
   "delete_dialog": {
+    "offline_error": "Vous êtes hors ligne. Reconnectez-vous, puis réessayez la suppression.",
     "title": "Supprimer le projet",
     "description": "Le projet sera supprimé. Les tâches ne seront pas supprimées, mais elles seront détachées.",
     "confirm": "Supprimer",
@@ -154,19 +170,50 @@
     "fallback_label": "Projet"
   },
   "toolbar": {
-    "result_count_title": "Projets correspondants / tous les projets",
-    "filter_label": "Filtrer",
-    "filter_active_count_one": "{{count}} filtre",
-    "filter_active_count_other": "{{count}} filtres",
-    "clear_filters": "Effacer les filtres",
     "section_status": "Statut",
     "section_priority": "Priorité",
     "section_lead": "Responsable",
-    "display": "Affichage",
-    "sort_by": "Trier par",
-    "direction_asc": "Croissant",
-    "direction_desc": "Décroissant",
-    "section_columns": "Colonnes",
     "view": "Vue"
+  },
+  "intro": {
+    "title": "Découpez les grands chantiers en projets",
+    "description": "Un projet regroupe des tâches liées pour suivre leur avancement ensemble. Sa description et ses dépôts liés accompagnent chaque exécution d'agent comme contexte.",
+    "slides": {
+      "progress": {
+        "title": "L'avancement en un coup d'œil",
+        "description": "Statut, responsable, échéance et taux d'achèvement tiennent sur une carte : inutile d'ouvrir chaque tâche."
+      },
+      "context": {
+        "title": "Le contexte suit chaque exécution",
+        "description": "Rédigez la description et liez les dépôts une seule fois. Chaque exécution sur les tâches du projet les reprend."
+      },
+      "sidebar": {
+        "title": "Épinglé dans la barre latérale",
+        "description": "Épinglez vos projets favoris dans la barre latérale et dépliez-en un pour voir ses tâches."
+      }
+    },
+    "art": {
+      "project_website": "Refonte du site",
+      "project_mobile": "Mobile 1.0",
+      "project_onboarding": "Onboarding",
+      "context_label": "Description du projet",
+      "context_body": "Nouveau site vitrine en Next.js et Tailwind. Les textes suivent docs/brand et chaque page gère le mode sombre.",
+      "run_started": "a lancé une exécution",
+      "context_loaded": "Contexte du projet et 2 dépôts chargés",
+      "issue_count": "{{done}} / {{total}} tâches",
+      "issue_hero": "Animer le hero de la page d'accueil",
+      "issue_pricing": "Tableau comparatif des tarifs",
+      "issue_blog": "Paginer la liste du blog"
+    }
+  },
+  "product": {
+    "none": "Aucun produit",
+    "bound": "Version du produit",
+    "search": "Rechercher des produits...",
+    "search_version": "Rechercher des versions...",
+    "back": "Retour",
+    "loading_versions": "Chargement des versions...",
+    "no_versions": "Aucune version activée",
+    "empty": "Aucun produit pour le moment"
   }
 }

@@ -24,6 +24,7 @@ import { useNewIssueDraftStore } from "@/data/stores/new-issue-draft-store";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { PRIORITY_LABEL } from "@/lib/issue-status";
 import { useIssueStatuses } from "@/lib/use-issue-statuses";
+import { useT } from "@/lib/i18n";
 
 /**
  * Picker fields the new-issue draft form can open. Bound to a typed map
@@ -48,6 +49,7 @@ const NEW_ISSUE_PICKER_PATHNAMES = {
 } as const satisfies Record<NewIssuePickerField, string>;
 
 export function CreateFormAttributeRow() {
+  const { t } = useT("issues");
   const wsSlug = useWorkspaceStore((s) => s.currentWorkspaceSlug);
   const status = useNewIssueDraftStore((s) => s.status);
   const priority = useNewIssueDraftStore((s) => s.priority);
@@ -63,9 +65,9 @@ export function CreateFormAttributeRow() {
   const { categoryOf, colorOf, labelOf, iconOf } = useIssueStatuses();
   const assigneeLabel = assignee
     ? getName(assignee.type, assignee.id)
-    : "负责人";
-  const priorityLabel =
-    priority === "none" ? "优先级" : PRIORITY_LABEL[priority];
+    : t("filters.assignee");
+  const priorityLabel: string =
+    priority === "none" ? t("filters.priority") : t(PRIORITY_LABEL[priority]);
 
   const open = (field: NewIssuePickerField) => {
     if (!wsSlug) return;
@@ -87,7 +89,7 @@ export function CreateFormAttributeRow() {
               size={12}
             />
           }
-          label={labelOf(status)}
+          label={String(labelOf(status))}
           variant="filled"
           onPress={() => open("status")}
         />
@@ -126,7 +128,11 @@ export function CreateFormAttributeRow() {
               color={dueDate ? undefined : "#a1a1aa"}
             />
           }
-          label={dueDate ? formatDueDate(dueDate) : "截止日期"}
+          label={
+            dueDate
+              ? formatDueDate(dueDate) || t("common:fields.due_date")
+              : t("common:fields.due_date")
+          }
           variant={dueDate ? "filled" : "dimmed"}
           onPress={() => open("due-date")}
         />
@@ -138,7 +144,7 @@ export function CreateFormAttributeRow() {
               <Ionicons name="folder-outline" size={14} color="#a1a1aa" />
             )
           }
-          label={project?.title ?? "项目"}
+          label={project?.title ?? t("common:fields.project")}
           variant={project ? "filled" : "dimmed"}
           onPress={() => open("project")}
         />
@@ -158,12 +164,7 @@ export function CreateFormAttributeRow() {
 }
 
 // due_date is a calendar day — format timezone-safely (no offset day shift).
+// An unparseable value falls back to the caller's localized chip label.
 function formatDueDate(iso: string): string {
-  return (
-    formatDateOnly(
-      iso,
-      { month: "numeric", day: "numeric" },
-      "zh-CN",
-    ) || "截止日期"
-  );
+  return formatDateOnly(iso, { month: "short", day: "numeric" });
 }

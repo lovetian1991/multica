@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, KeyRound, Save, Server } from "lucide-react";
+import { CheckCircle2, KeyRound, Save, Server } from "@multica/ui/icons";
 import { toast } from "sonner";
 import { ApiError } from "@multica/core/api";
 import {

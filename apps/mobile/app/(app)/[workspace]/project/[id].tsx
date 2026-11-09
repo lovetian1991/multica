@@ -23,9 +23,8 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Stack, router, useLocalSearchParams } from "expo-router";
+import { Stack, router, useLocalSearchParams, useTheme } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from "@react-navigation/native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
@@ -44,6 +43,9 @@ import {
   projectDetailOptions,
   projectResourcesOptions,
 } from "@/data/queries/projects";
+import { canDeleteProject } from "@multica/core/projects/deletion-permissions";
+import { agentListOptions } from "@/data/queries/agents";
+import { memberListOptions } from "@/data/queries/members";
 import { issueKeys } from "@/data/queries/issue-keys";
 import { useDeleteProject } from "@/data/mutations/projects";
 import { pinListOptions } from "@/data/queries/pins";
@@ -51,6 +53,7 @@ import { useCreatePin, useDeletePin } from "@/data/mutations/pins";
 import { useAuthStore } from "@/data/auth-store";
 import { useProjectRealtime } from "@/data/realtime/use-project-realtime";
 import { useWorkspaceStore } from "@/data/workspace-store";
+import { useT } from "@/lib/i18n";
 
 export default function ProjectDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -82,6 +85,10 @@ export default function ProjectDetail() {
   const projectMissing = !project || project.id === "";
 
   const userId = useAuthStore((s) => s.user?.id ?? null);
+  const { data: members = [] } = useQuery(memberListOptions(wsId));
+  const { data: agents = [] } = useQuery(agentListOptions(wsId, { includeArchived: true }));
+  const role = members.find((m) => m.user_id === userId)?.role ?? null;
+  const canDelete = !!project && canDeleteProject(project, userId, role, agents);
   const { data: pins } = useQuery(pinListOptions(wsId, userId));
   const isPinned =
     !!project &&
@@ -90,15 +97,17 @@ export default function ProjectDetail() {
     );
   const createPin = useCreatePin();
   const deletePin = useDeletePin();
+  const { t } = useT("projects");
 
   const onDelete = useCallback(() => {
+    if (!canDelete) return;
     Alert.alert(
-      "删除项目？",
-      "此操作无法撤销。该项目中的任务将不再归属于任何项目。",
+      t("delete.title"),
+      t("delete.message"),
       [
-        { text: "取消", style: "cancel" },
+        { text: t("common:actions.cancel"), style: "cancel" },
         {
-          text: "删除",
+          text: t("common:actions.delete"),
           style: "destructive",
           onPress: () => {
             deleteProject.mutate(undefined, {
@@ -108,7 +117,7 @@ export default function ProjectDetail() {
         },
       ],
     );
-  }, [deleteProject]);
+  }, [canDelete, deleteProject, t]);
 
   const webUrl = process.env.EXPO_PUBLIC_WEB_URL;
   const projectLink =
@@ -158,13 +167,14 @@ export default function ProjectDetail() {
     <SafeAreaView className="flex-1 bg-background" edges={["bottom"]}>
       <Stack.Screen
         options={{
-          title: project?.title || "项目",
-          headerBackTitle: "返回",
+          title: project?.title || t("navigation:routes.project"),
+          headerBackTitle: t("common:actions.back"),
           headerRight: project && project.id
             ? () => (
                 <ProjectActionsMenu
                   isPinned={isPinned}
                   hasLink={!!projectLink}
+                  canDelete={canDelete}
                   onSelect={onSelectAction}
                 />
               )
@@ -178,13 +188,15 @@ export default function ProjectDetail() {
       ) : detail.error || projectMissing ? (
         <View className="flex-1 items-center justify-center px-6 gap-3">
           <Text className="text-sm text-destructive text-center">
-            项目加载失败：{" "}
-            {detail.error instanceof Error
-              ? detail.error.message
-              : "未找到项目"}
+            {t("errors.load_failed", {
+              message:
+                detail.error instanceof Error
+                  ? detail.error.message
+                  : "not found",
+            })}
           </Text>
           <Button variant="outline" onPress={() => detail.refetch()}>
-            <Text>重试</Text>
+            <Text>{t("common:actions.retry")}</Text>
           </Button>
         </View>
       ) : (
@@ -258,19 +270,22 @@ type ProjectAction = "pin" | "unpin" | "edit" | "new-issue" | "open-web" | "dele
 function ProjectActionsMenu({
   isPinned,
   hasLink,
+  canDelete,
   onSelect,
 }: {
   isPinned: boolean;
   hasLink: boolean;
+  canDelete: boolean;
   onSelect: (action: ProjectAction) => void;
 }) {
   const { colors } = useTheme();
+  const { t } = useT("projects");
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         className="size-10 items-center justify-center rounded-md active:bg-accent"
-        accessibilityLabel="项目操作"
+        accessibilityLabel={t("menu.project_actions")}
       >
         <Ionicons
           name="ellipsis-horizontal"
@@ -282,26 +297,30 @@ function ProjectActionsMenu({
         <DropdownMenuItem
           onPress={() => onSelect(isPinned ? "unpin" : "pin")}
         >
-          <Text>{isPinned ? "取消置顶" : "置顶"}</Text>
+          <Text>{t(isPinned ? "menu.unpin" : "menu.pin")}</Text>
         </DropdownMenuItem>
         <DropdownMenuItem onPress={() => onSelect("new-issue")}>
-          <Text>新建任务</Text>
+          <Text>{t("issues:new.title")}</Text>
         </DropdownMenuItem>
         <DropdownMenuItem onPress={() => onSelect("edit")}>
-          <Text>编辑详情</Text>
+          <Text>{t("menu.edit_details")}</Text>
         </DropdownMenuItem>
         {hasLink ? (
           <DropdownMenuItem onPress={() => onSelect("open-web")}>
-            <Text>在网页端打开</Text>
+            <Text>{t("menu.open_web")}</Text>
           </DropdownMenuItem>
         ) : null}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          variant="destructive"
-          onPress={() => onSelect("delete")}
-        >
-          <Text>删除项目</Text>
-        </DropdownMenuItem>
+        {canDelete ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              onPress={() => onSelect("delete")}
+            >
+              <Text>{t("common:actions.delete")}</Text>
+            </DropdownMenuItem>
+          </>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   );

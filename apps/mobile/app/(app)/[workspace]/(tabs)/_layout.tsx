@@ -34,6 +34,7 @@ import {
   useChatUnreadMessageCount,
 } from "@/lib/unread-counts";
 import { MoreTabDropdownAnchor } from "@/components/nav/more-tab-dropdown";
+import { useT } from "@/lib/i18n";
 
 // Only override backgroundColor — @react-navigation/elements Badge internally
 // sets borderRadius = size/2, height = size, minWidth = size, so a single
@@ -46,7 +47,8 @@ const BADGE_STYLE = {
 
 export default function TabsLayout() {
   const { colorScheme } = useColorScheme();
-  const t = THEME[colorScheme];
+  const theme = THEME[colorScheme];
+  const { t } = useT("navigation");
   const insets = useSafeAreaInsets();
 
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
@@ -70,10 +72,10 @@ export default function TabsLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: t.foreground,
-          tabBarInactiveTintColor: t.mutedForeground,
+          tabBarActiveTintColor: theme.foreground,
+          tabBarInactiveTintColor: theme.mutedForeground,
           tabBarStyle: {
-            backgroundColor: t.background,
+            backgroundColor: theme.background,
             ...(Platform.OS === "android"
               ? {
                   height: 58 + insets.bottom,
@@ -88,7 +90,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="inbox"
           options={{
-            title: "收件箱",
+            title: t("tabs.inbox"),
             tabBarBadge: inboxBadge,
             tabBarBadgeStyle: BADGE_STYLE,
             tabBarIcon: ({ color, size, focused }) => (
@@ -103,7 +105,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="my-issues"
           options={{
-            title: "我的任务",
+            title: t("tabs.my_issues"),
             tabBarIcon: ({ color, size, focused }) => (
               <Ionicons
                 name={focused ? "checkbox" : "checkbox-outline"}
@@ -116,7 +118,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="chat"
           options={{
-            title: "聊天",
+            title: t("tabs.chat"),
             tabBarBadge: chatBadge,
             tabBarBadgeStyle: BADGE_STYLE,
             tabBarIcon: ({ color, size, focused }) => (
@@ -131,7 +133,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="more"
           options={{
-            title: "更多",
+            title: t("tabs.more"),
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="ellipsis-horizontal" color={color} size={size} />
             ),

@@ -65,6 +65,11 @@ export function profilePidPath(profile: string): string {
   return join(profileDir(profile), "daemon.pid");
 }
 
+export function profilePortPath(profile: string): string {
+  return join(profileDir(profile), "daemon.port");
+}
+
+// Sidecar file that records which Multica user the cached PAT in config.json
 // was minted for. The Go CLI/daemon never read or write this file, so it
 // survives Go-side config rewrites. Used to detect user switches and mint a
 // fresh PAT instead of reusing a token that belongs to a previous user.

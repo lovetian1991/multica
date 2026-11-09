@@ -17,26 +17,25 @@ import (
 	"github.com/multica-ai/multica/server/pkg/protocol"
 )
 
-// ---------------------------------------------------------------------------
 // Custom Runtime Profiles (MUL-3284)
 //
 // A runtime_profile is a workspace-level, team-shared definition of a custom
 // runtime — e.g. an in-house Codex wrapper. Daemons pull the enabled profiles
 // for their workspace, resolve command_name on PATH, and register an
 // agent_runtime instance carrying the profile_id. The profile only changes how
-// a runtime is launched/displayed; the underlying protocol_family must be a
-// backend Multica officially supports (validated against agent.SupportedTypes).
+// a runtime is launched/displayed. runtime_type selects a supported compatibility
+// target, and its descriptor determines the underlying protocol_family.
 //
 // Iron rule: a profile carries NO generic per-agent args. Per-agent launch args
 // stay on agent.custom_args. The only args field is fixed_args — args every
 // agent on this runtime must inherit to enter a compatible mode.
-// ---------------------------------------------------------------------------
 
 type RuntimeProfileResponse struct {
 	ID             string   `json:"id"`
 	WorkspaceID    string   `json:"workspace_id"`
 	DisplayName    string   `json:"display_name"`
 	ProtocolFamily string   `json:"protocol_family"`
+	RuntimeType    string   `json:"runtime_type"`
 	CommandName    string   `json:"command_name"`
 	Description    *string  `json:"description"`
 	FixedArgs      []string `json:"fixed_args"`
@@ -60,6 +59,7 @@ func runtimeProfileToResponse(p db.RuntimeProfile) RuntimeProfileResponse {
 		WorkspaceID:    uuidToString(p.WorkspaceID),
 		DisplayName:    p.DisplayName,
 		ProtocolFamily: p.ProtocolFamily,
+		RuntimeType:    agent.ProfileRuntimeType(p.RuntimeType, p.ProtocolFamily),
 		CommandName:    p.CommandName,
 		Description:    textToPtr(p.Description),
 		FixedArgs:      args,
@@ -118,6 +118,7 @@ func validateRuntimeProfileCommandName(commandName string) error {
 type createRuntimeProfileRequest struct {
 	DisplayName    string   `json:"display_name"`
 	ProtocolFamily string   `json:"protocol_family"`
+	RuntimeType    string   `json:"runtime_type"`
 	CommandName    string   `json:"command_name"`
 	Description    *string  `json:"description"`
 	FixedArgs      []string `json:"fixed_args"`
@@ -151,10 +152,17 @@ func (h *Handler) CreateRuntimeProfile(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "display_name is required")
 		return
 	}
-	if !agent.IsSupportedType(req.ProtocolFamily) {
-		writeError(w, http.StatusBadRequest, "unsupported protocol_family: must be one of "+strings.Join(agent.SupportedTypes, ", "))
+	req.RuntimeType = agent.ProfileRuntimeType(strings.TrimSpace(req.RuntimeType), req.ProtocolFamily)
+	family, supported := agent.RuntimeProtocolFamily(req.RuntimeType)
+	if !supported {
+		writeError(w, http.StatusBadRequest, "unsupported runtime_type: "+req.RuntimeType)
 		return
 	}
+	if req.ProtocolFamily != "" && req.ProtocolFamily != family {
+		writeError(w, http.StatusBadRequest, "protocol_family does not match runtime_type")
+		return
+	}
+	req.ProtocolFamily = family
 	if req.CommandName == "" {
 		writeError(w, http.StatusBadRequest, "command_name is required")
 		return
@@ -177,6 +185,7 @@ func (h *Handler) CreateRuntimeProfile(w http.ResponseWriter, r *http.Request) {
 		WorkspaceID:    wsUUID,
 		DisplayName:    req.DisplayName,
 		ProtocolFamily: req.ProtocolFamily,
+		RuntimeType:    req.RuntimeType,
 		CommandName:    req.CommandName,
 		Description:    ptrToText(req.Description),
 		FixedArgs:      fixedArgs,
@@ -254,14 +263,16 @@ func (h *Handler) GetRuntimeProfile(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateRuntimeProfileRequest struct {
-	DisplayName *string   `json:"display_name"`
-	CommandName *string   `json:"command_name"`
-	Description *string   `json:"description"`
-	FixedArgs   *[]string `json:"fixed_args"`
-	Enabled     *bool     `json:"enabled"`
+	RuntimeType    *string   `json:"runtime_type"`
+	ProtocolFamily *string   `json:"protocol_family"`
+	DisplayName    *string   `json:"display_name"`
+	CommandName    *string   `json:"command_name"`
+	Description    *string   `json:"description"`
+	FixedArgs      *[]string `json:"fixed_args"`
+	Enabled        *bool     `json:"enabled"`
 }
 
-// UpdateRuntimeProfile applies a partial update. protocol_family is immutable
+// UpdateRuntimeProfile applies a partial update. runtime_type and protocol_family are immutable
 // (changing it would silently repoint bound agents onto a different backend).
 // Admin-gated by the router.
 func (h *Handler) UpdateRuntimeProfile(w http.ResponseWriter, r *http.Request) {
@@ -282,6 +293,11 @@ func (h *Handler) UpdateRuntimeProfile(w http.ResponseWriter, r *http.Request) {
 	var req updateRuntimeProfileRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if req.RuntimeType != nil || req.ProtocolFamily != nil {
+		writeError(w, http.StatusBadRequest, "runtime_type and protocol_family are immutable; create a new profile")
 		return
 	}
 
@@ -383,10 +399,9 @@ func profileDeleteBlockedByAgents(profileName string, agents []db.ListActiveAgen
 	total := summary.TotalCount
 
 	classes := map[blockingAgentClass]bool{
-		blockingAgentUser:           summary.UserCount > 0,
-		blockingAgentMika:           summary.MikaCount > 0,
-		blockingAgentBuilderCarrier: summary.AgentBuilderCount > 0,
-		blockingAgentOtherSystem:    summary.OtherSystemCount > 0,
+		blockingAgentUser:        summary.UserCount > 0,
+		blockingAgentMika:        summary.MikaCount > 0,
+		blockingAgentOtherSystem: summary.OtherSystemCount > 0,
 	}
 
 	named := make([]string, 0, maxNamedBlockingAgents)
@@ -452,8 +467,10 @@ func profileDeleteBlockedByAgents(profileName string, agents []db.ListActiveAgen
 // DeleteRuntimeProfile removes a profile and, in the same transaction, the
 // agent_runtime instance rows registered against it. Migration 120 dropped the
 // DB ON DELETE CASCADE, so this app-layer cleanup is what prevents orphaned
-// runtime rows. Refuses (409) while active agents are still bound to the
-// profile's runtimes. Admin-gated by the router.
+// runtime rows. Refuses (409) while active user agents are still bound to the
+// profile's runtimes. Hidden Agent Builder carriers do not block: the teardown
+// deletes them with their sessions, as the single-runtime delete already does
+// (GH #9762). Admin-gated by the router.
 func (h *Handler) DeleteRuntimeProfile(w http.ResponseWriter, r *http.Request) {
 	wsID := strings.TrimSpace(chi.URLParam(r, "id"))
 	member, ok := h.requireWorkspaceMember(w, r, wsID, "workspace not found")
@@ -472,10 +489,11 @@ func (h *Handler) DeleteRuntimeProfile(w http.ResponseWriter, r *http.Request) {
 	// The profile-delete cascade must run the SAME teardown the runtime-delete
 	// path uses for each one: agent.runtime_id is ON DELETE RESTRICT, so an
 	// agent still pointing at one of these rows would turn a bare delete into a
-	// 500. Active agents are refused (409); everything else is unbound rather
-	// than destroyed, exactly as in service.TeardownRuntime.
-	// Guard: refuse while any active (non-archived) agent is bound to one of
-	// the profile's runtimes. Keep this a 409 — the profile is the thing that
+	// 500. Active user agents are refused (409); archived user agents are
+	// unbound rather than destroyed, and system agents (Builder carriers) are
+	// deleted, exactly as in service.TeardownRuntime.
+	// Guard: refuse while any active (non-archived) user agent is bound to one
+	// of the profile's runtimes. Keep this a 409 — the profile is the thing that
 	// defines those runtimes, so the user should retire the agents or move them
 	// deliberately instead of having them silently unbound in bulk.
 	tx, err := h.TxStarter.Begin(r.Context())

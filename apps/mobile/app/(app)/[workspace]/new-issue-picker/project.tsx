@@ -10,11 +10,13 @@ import {
   useNewIssueDraftStore,
 } from "@/data/stores/new-issue-draft-store";
 import { useNativeSearchBar } from "@/lib/use-native-search-bar";
+import { useT } from "@/lib/i18n";
 
 export default function NewIssueProjectPickerRoute() {
+  const { t } = useT("issues");
   const project = useNewIssueDraftStore((s) => s.project);
   const setProject = useNewIssueDraftStore((s) => s.setProject);
-  const query = useNativeSearchBar("搜索项目", { autoFocus: true });
+  const query = useNativeSearchBar(t("picker.search_projects"), { autoFocus: true });
 
   return (
     <ProjectPickerBody

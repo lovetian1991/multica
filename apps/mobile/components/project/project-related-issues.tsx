@@ -13,6 +13,7 @@ import { projectIssuesOptions } from "@/data/queries/projects";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { groupIssuesByStatus } from "@/lib/group-issues-by-status";
 import { useIssueStatuses } from "@/lib/use-issue-statuses";
+import { useT } from "@/lib/i18n";
 
 interface Props {
   projectId: string;
@@ -21,6 +22,7 @@ interface Props {
 export function ProjectRelatedIssues({ projectId }: Props) {
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
   const wsSlug = useWorkspaceStore((s) => s.currentWorkspaceSlug);
+  const { t } = useT("issues");
   const { data, isLoading, error, refetch } = useQuery(
     projectIssuesOptions(wsId, projectId),
   );
@@ -38,11 +40,12 @@ export function ProjectRelatedIssues({ projectId }: Props) {
     return (
       <View className="px-4 py-6 gap-3">
         <Text className="text-sm text-destructive">
-          任务加载失败：{" "}
-          {error instanceof Error ? error.message : "未知错误"}
+          {t("errors.load_failed", {
+            message: error instanceof Error ? error.message : "unknown",
+          })}
         </Text>
         <Button variant="outline" onPress={() => refetch()}>
-          <Text>重试</Text>
+          <Text>{t("common:actions.retry")}</Text>
         </Button>
       </View>
     );

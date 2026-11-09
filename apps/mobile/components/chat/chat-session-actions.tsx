@@ -8,6 +8,7 @@
  * rest of the header toolbar.
  */
 import { IconButton } from "@/components/ui/icon-button";
+import { useT } from "@/lib/i18n";
 
 interface Props {
   showMore: boolean;
@@ -20,20 +21,21 @@ export function ChatSessionActions({
   onMorePress,
   onNewPress,
 }: Props) {
+  const { t } = useT("chat");
   return (
     <>
       {showMore ? (
         <IconButton
           name="ellipsis-horizontal"
           onPress={onMorePress}
-          accessibilityLabel="会话操作"
+          accessibilityLabel={t("a11y.session_actions")}
         />
       ) : null}
       <IconButton
         name="add"
         iconSize={24}
         onPress={onNewPress}
-        accessibilityLabel="新建聊天"
+        accessibilityLabel={t("a11y.new_chat")}
       />
     </>
   );

@@ -26,25 +26,26 @@ FOR UPDATE;
 -- name: CreateProject :one
 INSERT INTO project (
     workspace_id, title, description, icon, status,
-    lead_type, lead_id, priority, start_date, due_date,
-    product_id, product_version_id
+    lead_type, lead_id, priority, start_date, due_date, workflow_id,
+    creator_type, creator_id, product_id, product_version_id
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+    sqlc.narg('product_id'), sqlc.narg('product_version_id')
 ) RETURNING *;
 
 -- name: UpdateProject :one
 UPDATE project SET
     title = COALESCE(sqlc.narg('title'), title),
-    description = sqlc.narg('description'),
-    icon = sqlc.narg('icon'),
+    description = CASE WHEN sqlc.arg('description_set')::boolean THEN sqlc.narg('description') ELSE description END,
+    icon = CASE WHEN sqlc.arg('icon_set')::boolean THEN sqlc.narg('icon') ELSE icon END,
     status = COALESCE(sqlc.narg('status'), status),
     priority = COALESCE(sqlc.narg('priority'), priority),
-    lead_type = sqlc.narg('lead_type'),
-    lead_id = sqlc.narg('lead_id'),
-    start_date = sqlc.narg('start_date'),
-    due_date = sqlc.narg('due_date'),
-    product_id = sqlc.narg('product_id'),
-    product_version_id = sqlc.narg('product_version_id'),
+    lead_type = CASE WHEN sqlc.arg('lead_type_set')::boolean THEN sqlc.narg('lead_type') ELSE lead_type END,
+    lead_id = CASE WHEN sqlc.arg('lead_id_set')::boolean THEN sqlc.narg('lead_id') ELSE lead_id END,
+    start_date = CASE WHEN sqlc.arg('start_date_set')::boolean THEN sqlc.narg('start_date') ELSE start_date END,
+    due_date = CASE WHEN sqlc.arg('due_date_set')::boolean THEN sqlc.narg('due_date') ELSE due_date END,
+    product_id = CASE WHEN sqlc.arg('product_id_set')::boolean THEN sqlc.narg('product_id') ELSE product_id END,
+    product_version_id = CASE WHEN sqlc.arg('product_version_id_set')::boolean THEN sqlc.narg('product_version_id') ELSE product_version_id END,
     updated_at = now()
 WHERE id = $1
 RETURNING *;
