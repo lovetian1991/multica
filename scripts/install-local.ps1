@@ -30,6 +30,11 @@ $ServerUrl = if ($env:MULTICA_SERVER_URL) { $env:MULTICA_SERVER_URL.TrimEnd('/')
 $AppUrl    = if ($env:MULTICA_APP_URL) { $env:MULTICA_APP_URL.TrimEnd('/') } else { $DefaultAppUrl }
 $TokenUrl  = "$AppUrl/settings?tab=tokens"
 
+# Leaf directory the daemon creates (and the GC reclaims) task workspaces in,
+# on whichever drive Select-WorkspacesRoot picks. Same leaf name as the CLI's
+# built-in default ($HOME/multica_workspaces) so both layouts look alike.
+$WorkspaceDirName = "multica_workspaces"
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -65,10 +70,151 @@ function Add-ToUserPath {
 
 # The freshly installed binary, called by absolute path: the PATH edit above is
 # not visible to this process for a directory that did not exist before.
+#
+# The CLI prints human-facing status on stderr ("Daemon is not running.",
+# "Authenticated as ...", "Found 1 workspace(s):") and reports failures through
+# its exit code, which callers check. Windows PowerShell promotes the first
+# stderr line of a native command to a terminating error while
+# $ErrorActionPreference is "Stop" and that stderr is redirected (2>, *>),
+# which aborted the install on the pre-start `daemon stop` of a machine that had
+# no daemon yet. Relax the preference for the call, so redirecting stderr stays
+# a way to hide chatter instead of a way to kill the installer.
 function Invoke-Multica {
     param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments)
+    $ErrorActionPreference = "Continue"
     & $Dest @Arguments
     return $LASTEXITCODE
+}
+
+# ---------------------------------------------------------------------------
+# Daemon workspace root
+#
+# Task workspaces are the bulk of what a daemon writes to disk, and the CLI's
+# built-in root sits under $HOME - the system drive, which is rarely the roomiest
+# one. Offer the fixed drive with the most free space, let the user take it or
+# name another directory, and persist the answer with `multica config set
+# workspaces_root`, so a daemon started later (from another shell, or by
+# autostart) creates task workspaces in the same place.
+# ---------------------------------------------------------------------------
+
+# Ranks candidate drives and returns the workspace root on the winner, or $null
+# when no fixed drive is usable.
+function Select-WorkspacesRoot {
+    param([object[]]$Drives)
+
+    if (-not $Drives) { $Drives = [System.IO.DriveInfo]::GetDrives() }
+
+    $best = $null
+    foreach ($drive in $Drives) {
+        # Removable and network drives come and go with the hardware and the
+        # network: a task workspace has to outlive both, so only fixed disks
+        # are candidates.
+        if ($drive.DriveType -ne [System.IO.DriveType]::Fixed) { continue }
+        try {
+            if (-not $drive.IsReady) { continue }
+            $free = [int64]$drive.AvailableFreeSpace
+        } catch {
+            continue  # unreadable drive: not a candidate, and not fatal
+        }
+        if ($null -eq $best -or $free -gt $best.Free) {
+            $best = [pscustomobject]@{
+                Path = Join-Path $drive.Name $WorkspaceDirName
+                Free = $free
+            }
+        }
+    }
+    return $best
+}
+
+# Shows what the auto-selection found and returns the directory to use: the
+# offer itself when the answer is empty, otherwise what the user typed. That
+# answer is treated as the root verbatim - `workspaces_root` is the directory
+# task workspaces go in, and someone who names one means it.
+#
+# Without a console there is nobody to ask, and Read-Host there blocks until the
+# task is killed, so the offer stands. Callers decide that, from the same
+# [Console]::IsInputRedirected signal the access-token prompt below uses.
+function Read-WorkspacesRoot {
+    param(
+        [Parameter(Mandatory = $true)][object]$Default,
+        [bool]$Interactive
+    )
+
+    if (-not $Interactive) {
+        return $Default.Path
+    }
+
+    Write-Host "  Workspaces: $($Default.Path)" -NoNewline
+    Write-Host (" (largest fixed drive, {0:N1} GB free)" -f ($Default.Free / 1GB)) -ForegroundColor DarkGray
+    Write-Host "  Press Enter to accept, or paste another directory." -ForegroundColor DarkGray
+
+    $answer = (Read-Host "  Workspace root").Trim()
+    # Explorer's "Copy as path" pastes the directory wrapped in quotes.
+    $answer = $answer.Trim('"').Trim()
+    if (-not $answer) {
+        return $Default.Path
+    }
+    return $answer
+}
+
+# Resolves the daemon workspace root and persists it, if this machine does not
+# already have one. Called before the daemon starts so the daemon this
+# installer launches uses the configured root from its first run.
+function Initialize-WorkspacesRoot {
+    param([bool]$Interactive = (-not [Console]::IsInputRedirected))
+
+    if ($env:MULTICA_SKIP_SETUP -eq "1") {
+        Write-Info "Skipping the daemon workspace root (MULTICA_SKIP_SETUP=1)."
+        return
+    }
+
+    $configPath = Join-Path $env:USERPROFILE ".multica\config.json"
+    $existing = $null
+    if (Test-Path $configPath) {
+        try { $existing = Get-Content -Raw -Path $configPath | ConvertFrom-Json } catch {}
+    }
+
+    if ($env:MULTICA_WORKSPACES_ROOT) {
+        # An explicit override is already an answer, so there is nothing to ask.
+        $root = $env:MULTICA_WORKSPACES_ROOT.Trim()
+        $origin = "from MULTICA_WORKSPACES_ROOT"
+    } elseif ($existing -and $existing.workspaces_root) {
+        # Someone picked a root on this machine already - most likely an earlier
+        # run of this installer, or a deliberate `config set`. Leave it alone.
+        Write-Host "  Workspaces: $($existing.workspaces_root)" -NoNewline
+        Write-Host " (already configured)" -ForegroundColor DarkGray
+        return
+    } else {
+        $selected = Select-WorkspacesRoot
+        if (-not $selected) {
+            Write-Warn "No ready fixed drive to put the daemon workspace root on; leaving the built-in default."
+            return
+        }
+        $root = Read-WorkspacesRoot -Default $selected -Interactive $Interactive
+        if ($root -eq $selected.Path) {
+            $origin = "largest fixed drive"
+        } else {
+            $origin = "chosen during install"
+        }
+    }
+
+    if (-not $root) { return }
+
+    # Create it now: a root the daemon cannot write to would only surface as
+    # failing tasks later.
+    try {
+        New-Item -ItemType Directory -Path $root -Force -ErrorAction Stop | Out-Null
+    } catch {
+        Write-Warn "Could not create $root ($($_.Exception.Message)); leaving the built-in default."
+        return
+    }
+
+    if ((Invoke-Multica config set workspaces_root $root) -ne 0) {
+        Write-Warn "Could not save the workspace root; set it with 'multica config set workspaces_root <path>'."
+        return
+    }
+    Write-Host "  Workspaces: $root" -NoNewline
+    Write-Host " ($origin)" -ForegroundColor DarkGray
 }
 
 # ---------------------------------------------------------------------------
@@ -186,6 +332,7 @@ function Initialize-Multica {
     Write-Info "Configuring this machine"
     Write-Host "  Server: $ServerUrl"
     Write-Host "  App:    $AppUrl"
+    Initialize-WorkspacesRoot
     Write-Host ""
     Write-Host "  Access tokens are created under Settings > API Tokens:" -ForegroundColor DarkGray
     Write-Host "    $TokenUrl" -ForegroundColor Cyan

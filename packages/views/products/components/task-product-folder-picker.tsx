@@ -61,6 +61,8 @@ export function TaskProductFolderPicker({
     enabled: Boolean(selectedProductId),
   });
   const selectedVersion = versions.find((version) => version.id === selectedVersionId) ?? null;
+  const folderVersionId = selectedVersion?.id ?? null;
+  const folderRootId = selectedVersion?.folder_id ?? null;
   const filteredProducts = useMemo(() => {
     const query = productQuery.trim().toLowerCase();
     return query ? products.filter((product) => product.name.toLowerCase().includes(query)) : products;
@@ -102,7 +104,7 @@ export function TaskProductFolderPicker({
   }, [selectedVersionId]);
 
   useEffect(() => {
-    if (!open || !selectedVersion?.folder_id) {
+    if (!open || !selectedProductId || !folderVersionId || !folderRootId) {
       setFolders([]);
       setFolderPage(0);
       setFolderTotal(0);
@@ -111,7 +113,7 @@ export function TaskProductFolderPicker({
     let cancelled = false;
     setFoldersLoading(true);
     setFoldersLoadingMore(false);
-    void api.getKBFolders(selectedVersion.folder_id, 1)
+    void api.listProductVersionFolders(selectedProductId, folderVersionId, 1)
       .then((response) => {
         if (cancelled) return;
         setFolders(response.folders);
@@ -132,7 +134,7 @@ export function TaskProductFolderPicker({
         if (!cancelled) setFoldersLoading(false);
       });
     return () => { cancelled = true; };
-  }, [open, selectedVersion?.folder_id, folderId, productVersionId, selectedVersionId]);
+  }, [open, selectedProductId, folderVersionId, folderRootId, folderId, productVersionId, selectedVersionId]);
 
   const chooseProduct = (product: Product) => {
     setSelectedProductId(product.id);
@@ -146,12 +148,12 @@ export function TaskProductFolderPicker({
   };
 
   const loadMoreFolders = useCallback(async (source: "scroll" | "search" | "manual" = "scroll") => {
-    if (!selectedVersion?.folder_id || foldersLoadingMore || folders.length >= folderTotal) return;
+    if (!selectedProductId || !folderVersionId || !folderRootId || foldersLoadingMore || folders.length >= folderTotal) return;
     const nextPage = folderPage + 1;
     if (source === "search") setAutoLoadedPages((current) => current + 1);
     setFoldersLoadingMore(true);
     try {
-      const response = await api.getKBFolders(selectedVersion.folder_id, nextPage);
+      const response = await api.listProductVersionFolders(selectedProductId, folderVersionId, nextPage);
       setFolders((current) => [...current, ...response.folders.filter((folder) => !current.some((item) => item.id === folder.id))]);
       setFolderTotal(response.totalCount);
       setFolderPage(nextPage);
@@ -161,7 +163,7 @@ export function TaskProductFolderPicker({
     } finally {
       setFoldersLoadingMore(false);
     }
-  }, [selectedVersion?.folder_id, foldersLoadingMore, folders.length, folderTotal, folderPage]);
+  }, [selectedProductId, folderVersionId, folderRootId, foldersLoadingMore, folders.length, folderTotal, folderPage]);
 
   useEffect(() => {
     if (!willAutoLoadMore) return;
