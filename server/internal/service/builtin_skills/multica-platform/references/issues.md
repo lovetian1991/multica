@@ -379,6 +379,47 @@ Body-only "Part of MUL-123"         # incorrect — passing mention, won't link
 MUL-123: fix login redirect        # correct — links the PR
 ```
 
+## Passive GitLab Delivery
+
+After an authorized, successful push, register its exact commit on the original
+delivery issue, not an implementer's child issue. This uses your existing
+Multica identity; never request or copy the server's GitLab token.
+
+```bash
+multica issue delivery projects
+multica issue delivery register <issue> --project-config-id <configuration-uuid> --sha <full-pushed-sha> --ref <remote-ref>
+multica issue delivery list <issue>
+multica issue delivery resume <issue> <delivery-id>
+```
+
+Match the returned `instance_url` and configured project path to the actual remote repository; the
+configuration UUID is not GitLab's numeric project ID. Do not guess if several
+connections match. Confirm the full SHA and remote ref from push evidence.
+Repeated registration of the same issue/configuration/SHA/ref is idempotent.
+
+The backend checks the bound pipeline and deployment job, displays progress,
+and posts one terminal system comment without dispatching an agent. Finish
+your run after registration: no sleep loops, timer wakeups, CI-watcher roles,
+or repeated progress comments. Resume only when explicitly asked after a
+terminal result; it rechecks the same pipeline, never retries GitLab jobs.
+
+For a serial Bug round, register each repository's final pushed commit once
+after the round instead of waiting for every Bug's CI. Preserve per-Bug push,
+review and resolution evidence. Frontend and backend repositories register
+separately on the same issue; one repository's success is not overall success.
+Missing configuration is a reported integration gap, not a reason to redo
+development or claim deployment. Manual release, failures, absent addresses,
+and ambiguous pipelines require a human decision. Never click a deployment
+action, change issue state, close a Bug, or redispatch a squad in response.
+
+Completion has three distinct facts: code verified and pushed, deployment
+job and pipeline successful with an extracted address, and human acceptance.
+The first implementation reads a standalone `MULTICA_DEPLOY_URL=` marker
+from the configured successful deployment job. It does not support downstream
+pipelines or prove that an address is healthy or still serves that SHA.
+After `deployed`, ask the user to verify the original acceptance criteria;
+record their decision on the issue. No automated acceptance state exists.
+
 ## Issue wakeups
 
 Use `multica issue wakeup` to arrange a future ordinary run, then finish the

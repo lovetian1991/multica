@@ -1,4 +1,21 @@
 {
+  "delivery": {
+    "title": "GitLab デリバリー", "configure": "プロジェクト設定", "connection": "接続",
+    "project": "プロジェクト ID", "project_choice": "プロジェクト", "job": "デプロイジョブ", "source": "パイプラインソース",
+    "hosts": "許可する URL ホスト", "prefix": "URL マーカー", "timeout": "追跡タイムアウト（分）",
+    "save": "保存", "cancel": "キャンセル", "edit": "編集", "remove": "削除",
+    "remove_title": "プロジェクトの追跡設定を削除しますか？", "remove_description": "新しいコミットは登録できなくなります。既存のデリバリーは保存済みのルールで追跡を続けます。",
+    "empty": "デリバリープロジェクトが未設定です", "register": "プッシュ済みコミットを追跡", "sha": "完全なコミット SHA", "ref": "ブランチまたはタグ",
+    "resume": "追跡を再開", "pipeline": "パイプライン", "job_link": "ジョブ", "visit": "環境を開く",
+    "loading": "読み込み中…", "error": "デリバリーデータを読み込めません", "retry": "更新", "none": "デリバリーの登録はありません",
+    "updated": "更新日時 {{time}}", "evidence": "取得元：デプロイジョブ出力", "acceptance": "ユーザー検収待ち",
+    "statuses": {
+      "pending_pipeline": "パイプライン待ち", "running": "実行中", "manual": "手動操作待ち",
+      "retrying": "同期を再試行中", "deployed": "デプロイ済み", "failed": "失敗", "canceled": "キャンセル済み",
+      "skipped": "スキップ済み", "address_missing": "デプロイ URL なし", "ambiguous": "一致が複数あります",
+      "timed_out": "追跡タイムアウト", "blocked": "要確認", "unknown": "不明な状態"
+    }
+  },
   "issue_statuses": {
     "title": "タスクステータス",
     "loading": "ステータスを読み込み中…",

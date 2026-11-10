@@ -1,4 +1,21 @@
 {
+  "delivery": {
+    "title": "GitLab delivery", "configure": "Configure projects", "connection": "Connection",
+    "project": "Project ID", "project_choice": "Project", "job": "Deployment job", "source": "Pipeline source",
+    "hosts": "Allowed URL hosts", "prefix": "URL marker", "timeout": "Tracking timeout (minutes)",
+    "save": "Save", "cancel": "Cancel", "edit": "Edit", "remove": "Remove",
+    "remove_title": "Remove project tracking?", "remove_description": "New commits cannot be registered. Existing deliveries keep tracking with their saved rules.",
+    "empty": "No delivery projects configured", "register": "Track pushed commit", "sha": "Full commit SHA", "ref": "Branch or tag",
+    "resume": "Resume tracking", "pipeline": "Pipeline", "job_link": "Job", "visit": "Open environment",
+    "loading": "Loading…", "error": "Could not load delivery data", "retry": "Refresh", "none": "No registered deliveries",
+    "updated": "Updated {{time}}", "evidence": "Source: deployment job output", "acceptance": "Awaiting user acceptance",
+    "statuses": {
+      "pending_pipeline": "Waiting for pipeline", "running": "Running", "manual": "Awaiting manual action",
+      "retrying": "Retrying sync", "deployed": "Deployed", "failed": "Failed", "canceled": "Canceled",
+      "skipped": "Skipped", "address_missing": "Deployment URL unavailable", "ambiguous": "Ambiguous match",
+      "timed_out": "Tracking timed out", "blocked": "Needs attention", "unknown": "Unknown status"
+    }
+  },
   "issue_statuses": {
     "title": "Issue Statuses",
     "loading": "Loading statuses…",

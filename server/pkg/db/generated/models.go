@@ -1781,6 +1781,38 @@ type VcsConnection struct {
 	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
 }
 
+type VcsDelivery struct {
+	ID              pgtype.UUID        `json:"id"`
+	WorkspaceID     pgtype.UUID        `json:"workspace_id"`
+	IssueID         pgtype.UUID        `json:"issue_id"`
+	ProjectConfigID pgtype.UUID        `json:"project_config_id"`
+	ConnectionID    pgtype.UUID        `json:"connection_id"`
+	ProjectID       int64              `json:"project_id"`
+	ProjectPath     string             `json:"project_path"`
+	Rules           []byte             `json:"rules"`
+	Sha             string             `json:"sha"`
+	Ref             string             `json:"ref"`
+	PipelineID      int64              `json:"pipeline_id"`
+	Status          string             `json:"status"`
+	Result          []byte             `json:"result"`
+	NextPollAt      pgtype.Timestamptz `json:"next_poll_at"`
+	DeadlineAt      pgtype.Timestamptz `json:"deadline_at"`
+	NotifiedAt      pgtype.Timestamptz `json:"notified_at"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type VcsDeliveryProject struct {
+	ID           pgtype.UUID        `json:"id"`
+	WorkspaceID  pgtype.UUID        `json:"workspace_id"`
+	ConnectionID pgtype.UUID        `json:"connection_id"`
+	ProjectID    int64              `json:"project_id"`
+	ProjectPath  string             `json:"project_path"`
+	Rules        []byte             `json:"rules"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
 type VcsPullRequest struct {
 	ID              pgtype.UUID        `json:"id"`
 	WorkspaceID     pgtype.UUID        `json:"workspace_id"`

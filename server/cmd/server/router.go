@@ -1866,6 +1866,7 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 					// for the same reason as GitHub installations; connect /
 					// disconnect are admin-gated in the group below.
 					r.Get("/vcs/connections", h.ListVCSConnections)
+					r.Get("/vcs/delivery-projects", h.ListVCSDeliveryProjects)
 					r.Get("/qoder", h.GetQoderConnection)
 					r.Get("/qoder/agents", h.ListQoderAgents)
 					// Custom runtime profiles — listing/reading is member-visible
@@ -1953,6 +1954,8 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 					r.Delete("/github/installations/{installationId}", h.DeleteGitHubInstallation)
 					// VCS connect / disconnect / webhook regeneration (admin-only).
 					r.Post("/vcs/connections", h.ConnectVCS)
+					r.Post("/vcs/delivery-projects", h.SaveVCSDeliveryProject)
+					r.Delete("/vcs/delivery-projects/{projectId}", h.DeleteVCSDeliveryProject)
 					r.Put("/qoder", h.SaveQoderConnection)
 					r.Post("/qoder/check", h.CheckQoderConnection)
 					r.Post("/qoder/environments", h.ListQoderEnvironments)
@@ -2247,6 +2250,9 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 					r.Put("/properties/{propertyId}", h.SetIssueProperty)
 					r.Delete("/properties/{propertyId}", h.DeleteIssueProperty)
 					r.Get("/pull-requests", h.ListPullRequestsForIssue)
+					r.Get("/deliveries", h.ListIssueDeliveries)
+					r.Post("/deliveries", h.RegisterIssueDelivery)
+					r.Post("/deliveries/{deliveryId}/resume", h.RetryIssueDelivery)
 					r.Post("/pull-requests", h.LinkIssuePullRequest)
 					r.Delete("/pull-requests/{prId}", h.UnlinkIssuePullRequest)
 					r.Put("/pr-auto-complete", h.SetIssuePRAutoComplete)

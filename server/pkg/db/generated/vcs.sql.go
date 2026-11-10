@@ -25,6 +25,12 @@ cleared_links AS (
 cleared_statuses AS (
     DELETE FROM vcs_commit_status WHERE connection_id IN (SELECT target.id FROM target)
 ),
+cleared_deliveries AS (
+    DELETE FROM vcs_delivery WHERE connection_id IN (SELECT target.id FROM target)
+),
+cleared_delivery_projects AS (
+    DELETE FROM vcs_delivery_project WHERE connection_id IN (SELECT target.id FROM target)
+),
 cleared_prs AS (
     DELETE FROM vcs_pull_request WHERE connection_id IN (SELECT target.id FROM target)
 )

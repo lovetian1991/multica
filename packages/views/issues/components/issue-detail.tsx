@@ -122,6 +122,7 @@ import { WakeupsSection } from "./wakeups-section";
 import { QuickActionsSection } from "./quick-actions-section";
 import { PluginPanelSection } from "../../plugins";
 import { PullRequestsSection } from "./pull-requests-section";
+import { IssueDeliveriesSection } from "./issue-deliveries-section";
 import { useGitHubSettings } from "@multica/core/github";
 import { DeliverablesSection } from "./deliverables/deliverables-section";
 import { DeliverablesOverview } from "./deliverables/deliverables-overview";
@@ -3091,7 +3092,8 @@ export function IssueDetail({ issueId, onDelete, onDone, defaultSidebarOpen = tr
         </IssueSidebarPropertyGrid>}
       </div>
 
-      <QuickActionsSection issueId={issue.id} />
+                <IssueDeliveriesSection key={issue.id} issueId={issue.id} />
+                <QuickActionsSection issueId={issue.id} />
 
       <WakeupsSection
         issueId={issue.id}

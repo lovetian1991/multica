@@ -1,4 +1,21 @@
 {
+  "delivery": {
+    "title": "GitLab 交付", "configure": "設定專案", "connection": "連線",
+    "project": "專案 ID", "project_choice": "專案", "job": "部署 Job", "source": "流水線來源",
+    "hosts": "允許的存取位址主機", "prefix": "位址輸出標記", "timeout": "追蹤逾時（分鐘）",
+    "save": "儲存", "cancel": "取消", "edit": "編輯", "remove": "移除",
+    "remove_title": "移除專案追蹤設定？", "remove_description": "將無法登記新提交。既有交付仍按已儲存的規則繼續追蹤。",
+    "empty": "尚未設定交付專案", "register": "追蹤已推送提交", "sha": "完整提交 SHA", "ref": "分支或標籤",
+    "resume": "恢復追蹤", "pipeline": "流水線", "job_link": "Job", "visit": "開啟環境",
+    "loading": "載入中…", "error": "無法載入交付資料", "retry": "重新整理", "none": "尚無交付紀錄",
+    "updated": "更新於 {{time}}", "evidence": "來源：部署 Job 輸出", "acceptance": "等待使用者驗收",
+    "statuses": {
+      "pending_pipeline": "等待流水線", "running": "執行中", "manual": "等待人工操作",
+      "retrying": "正在重試同步", "deployed": "已部署", "failed": "失敗", "canceled": "已取消",
+      "skipped": "已略過", "address_missing": "部署位址缺失", "ambiguous": "配對結果不唯一",
+      "timed_out": "追蹤逾時", "blocked": "需要處理", "unknown": "未知狀態"
+    }
+  },
   "products": {
     "folder_picker": {
       "search_placeholder": "搜尋資料夾",

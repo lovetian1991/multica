@@ -3,6 +3,8 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithI18n } from "../../test/i18n";
 
+vi.mock("./gitlab-delivery-settings", () => ({ GitLabDeliverySettings: () => null }));
+
 const mockConnect = vi.hoisted(() => vi.fn());
 const mockRotate = vi.hoisted(() => vi.fn());
 const mockDelete = vi.hoisted(() => vi.fn());

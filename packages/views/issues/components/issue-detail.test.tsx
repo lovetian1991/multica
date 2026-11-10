@@ -17,8 +17,9 @@ import {
 import enAgents from "../../locales/en/agents.json";
 import enCommon from "../../locales/en/common.json";
 import enIssues from "../../locales/en/issues.json";
+import enSettings from "../../locales/en/settings.json";
 
-const TEST_RESOURCES = { en: { agents: enAgents, common: enCommon, issues: enIssues } };
+const TEST_RESOURCES = { en: { agents: enAgents, common: enCommon, issues: enIssues, settings: enSettings } };
 
 const mockViewport = vi.hoisted(() => ({ isMobile: false }));
 const mockLocalDirectoryHint = vi.hoisted(() => vi.fn());
@@ -352,9 +353,11 @@ const mockApiObj = vi.hoisted(() => ({
   listRuntimes: vi.fn().mockResolvedValue([]),
   getProject: vi.fn(),
   listProjects: vi.fn().mockResolvedValue({ projects: [] }),
+  listIssueDeliveries: vi.fn().mockResolvedValue({ available: false, deliveries: [] }),
 }));
 
-vi.mock("@multica/core/api", () => ({
+vi.mock("@multica/core/api", async (original) => ({
+  ...await original<typeof import("@multica/core/api")>(),
   api: mockApiObj,
   getApi: () => mockApiObj,
   setApiInstance: vi.fn(),

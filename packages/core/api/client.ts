@@ -1,4 +1,8 @@
 import type { ZodType } from "zod";
+import {
+  DeliveryProjectSchema, DeliveryProjectsSchema, DeliverySchema, IssueDeliveriesSchema,
+  type Delivery, type DeliveryProject, type SaveDeliveryProjectInput, type RegisterDeliveryInput,
+} from "../vcs/delivery-schema";
 import { AgentRuntimeSchema, EMPTY_RUNTIME } from "../runtimes/schema";
 import type { IssueWakeup, IssueWakeupInput, IssueWakeupSummaryRow, PausedWakeup, SystemWakeup, WakeupRun, WorkspaceSystemWakeup } from "../types/issue-wakeup";
 import type { WorkspaceWakeupPage, WorkspaceWakeupFilters } from "../types/issue-wakeup";
@@ -5561,6 +5565,62 @@ export class ApiClient {
   }
 
   // VCS integration (Forgejo / Gitea / GitLab)
+  async listDeliveryProjects(workspaceId: string) {
+    const endpoint = `/api/workspaces/${workspaceId}/vcs/delivery-projects`;
+    const data = parseWithFallback<{ projects: DeliveryProject[] } | null>(
+      await this.fetch(endpoint), DeliveryProjectsSchema, null, { endpoint },
+    );
+    if (!data) throw new Error("Could not load delivery projects");
+    return data;
+  }
+
+  async saveDeliveryProject(workspaceId: string, input: SaveDeliveryProjectInput) {
+    const endpoint = `/api/workspaces/${workspaceId}/vcs/delivery-projects`;
+    const r = input.rules;
+    const data = parseWithFallback<DeliveryProject | null>(
+      await this.fetch(endpoint, { method: "POST", body: JSON.stringify({
+        connection_id: input.connectionId, project_id: input.projectId,
+        rules: { deployment_job: r.deploymentJob, pipeline_source: r.pipelineSource,
+          url_prefix: r.urlPrefix, allowed_hosts: r.allowedHosts, timeout_minutes: r.timeoutMinutes },
+      }) }), DeliveryProjectSchema, null, { endpoint },
+    );
+    if (!data) throw new Error("Invalid delivery project response");
+    return data;
+  }
+
+  async deleteDeliveryProject(workspaceId: string, projectId: string): Promise<void> {
+    await this.fetch(`/api/workspaces/${workspaceId}/vcs/delivery-projects/${projectId}`, { method: "DELETE" });
+  }
+
+  async listIssueDeliveries(issueId: string) {
+    const endpoint = `/api/issues/${issueId}/deliveries`;
+    const data = parseWithFallback<{ available: boolean; deliveries: Delivery[] } | null>(
+      await this.fetch(endpoint), IssueDeliveriesSchema, null, { endpoint },
+    );
+    if (!data) throw new Error("Could not load deliveries");
+    return data;
+  }
+
+  async registerDelivery(issueId: string, input: RegisterDeliveryInput) {
+    const endpoint = `/api/issues/${issueId}/deliveries`;
+    const data = parseWithFallback<Delivery | null>(
+      await this.fetch(endpoint, { method: "POST", body: JSON.stringify({
+        project_config_id: input.projectConfigId, sha: input.sha, ref: input.ref,
+      }) }), DeliverySchema, null, { endpoint },
+    );
+    if (!data) throw new Error("Invalid delivery response");
+    return data;
+  }
+
+  async resumeDelivery(issueId: string, deliveryId: string) {
+    const endpoint = `/api/issues/${issueId}/deliveries/${deliveryId}/resume`;
+    const data = parseWithFallback<Delivery | null>(
+      await this.fetch(endpoint, { method: "POST" }), DeliverySchema, null, { endpoint },
+    );
+    if (!data) throw new Error("Invalid delivery response");
+    return data;
+  }
+
   async listVCSConnections(workspaceId: string): Promise<ListVCSConnectionsResponse> {
     return this.fetch(`/api/workspaces/${workspaceId}/vcs/connections`);
   }

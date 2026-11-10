@@ -1,4 +1,21 @@
 {
+  "delivery": {
+    "title": "Livraison GitLab", "configure": "Configurer les projets", "connection": "Connexion",
+    "project": "ID du projet", "project_choice": "Projet", "job": "Job de déploiement", "source": "Source du pipeline",
+    "hosts": "Hôtes URL autorisés", "prefix": "Marqueur URL", "timeout": "Délai de suivi (minutes)",
+    "save": "Enregistrer", "cancel": "Annuler", "edit": "Modifier", "remove": "Supprimer",
+    "remove_title": "Supprimer la configuration du suivi ?", "remove_description": "Les nouveaux commits ne pourront plus être enregistrés. Les livraisons existantes conservent leurs règles.",
+    "empty": "Aucun projet de livraison configuré", "register": "Suivre un commit poussé", "sha": "SHA complet du commit", "ref": "Branche ou tag",
+    "resume": "Reprendre le suivi", "pipeline": "Pipeline", "job_link": "Job", "visit": "Ouvrir l’environnement",
+    "loading": "Chargement…", "error": "Impossible de charger les livraisons", "retry": "Actualiser", "none": "Aucune livraison enregistrée",
+    "updated": "Mis à jour {{time}}", "evidence": "Source : sortie du job de déploiement", "acceptance": "En attente de validation utilisateur",
+    "statuses": {
+      "pending_pipeline": "En attente du pipeline", "running": "En cours", "manual": "Action manuelle requise",
+      "retrying": "Nouvelle synchronisation", "deployed": "Déployé", "failed": "Échec", "canceled": "Annulé",
+      "skipped": "Ignoré", "address_missing": "URL de déploiement absente", "ambiguous": "Correspondance ambiguë",
+      "timed_out": "Délai de suivi dépassé", "blocked": "À vérifier", "unknown": "État inconnu"
+    }
+  },
   "issue_statuses": {
     "title": "États des tâches",
     "loading": "Chargement des états…",

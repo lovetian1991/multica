@@ -1,4 +1,21 @@
 {
+  "delivery": {
+    "title": "GitLab 배포 추적", "configure": "프로젝트 설정", "connection": "연결",
+    "project": "프로젝트 ID", "project_choice": "프로젝트", "job": "배포 작업", "source": "파이프라인 소스",
+    "hosts": "허용 URL 호스트", "prefix": "URL 출력 마커", "timeout": "추적 제한 시간(분)",
+    "save": "저장", "cancel": "취소", "edit": "편집", "remove": "제거",
+    "remove_title": "프로젝트 추적 설정을 제거할까요?", "remove_description": "새 커밋을 등록할 수 없습니다. 기존 배포는 저장된 규칙으로 계속 추적합니다.",
+    "empty": "설정된 배포 프로젝트가 없습니다", "register": "푸시한 커밋 추적", "sha": "전체 커밋 SHA", "ref": "브랜치 또는 태그",
+    "resume": "추적 재개", "pipeline": "파이프라인", "job_link": "작업", "visit": "환경 열기",
+    "loading": "불러오는 중…", "error": "배포 데이터를 불러올 수 없습니다", "retry": "새로 고침", "none": "등록된 배포가 없습니다",
+    "updated": "업데이트 {{time}}", "evidence": "출처: 배포 작업 출력", "acceptance": "사용자 검수 대기",
+    "statuses": {
+      "pending_pipeline": "파이프라인 대기", "running": "실행 중", "manual": "수동 작업 대기",
+      "retrying": "동기화 재시도 중", "deployed": "배포 완료", "failed": "실패", "canceled": "취소됨",
+      "skipped": "건너뜀", "address_missing": "배포 URL 없음", "ambiguous": "일치 항목이 여러 개임",
+      "timed_out": "추적 시간 초과", "blocked": "확인 필요", "unknown": "알 수 없는 상태"
+    }
+  },
   "issue_statuses": {
     "title": "태스크 상태",
     "loading": "상태를 불러오는 중…",

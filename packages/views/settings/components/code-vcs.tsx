@@ -47,6 +47,7 @@ import type { ConnectVCSResponse, VCSProvider } from "@multica/core/types";
 import { useT } from "../../i18n";
 import { SettingsRow } from "./settings-layout";
 import { HostMark, HostStatus } from "./code-host";
+import { GitLabDeliverySettings } from "./gitlab-delivery-settings";
 
 const PROVIDERS: VCSProvider[] = ["forgejo", "gitea", "gitlab"];
 const PROVIDER_LABELS: Record<VCSProvider, string> = {
@@ -252,6 +253,7 @@ export function VCSConnectionRows() {
         </SettingsRow>
       ) : null}
 
+      <GitLabDeliverySettings connections={connections} canManage={canManage} />
       <Dialog
         open={connectOpen}
         onOpenChange={(open) => {

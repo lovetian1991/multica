@@ -1,4 +1,21 @@
 {
+  "delivery": {
+    "title": "GitLab 交付", "configure": "配置项目", "connection": "连接",
+    "project": "项目 ID", "project_choice": "项目", "job": "部署 Job", "source": "流水线来源",
+    "hosts": "允许的访问地址主机", "prefix": "地址输出标记", "timeout": "跟踪超时（分钟）",
+    "save": "保存", "cancel": "取消", "edit": "编辑", "remove": "移除",
+    "remove_title": "移除项目跟踪配置？", "remove_description": "将不能登记新提交。已有交付仍按保存的规则继续跟踪。",
+    "empty": "尚未配置交付项目", "register": "跟踪已推送提交", "sha": "完整提交 SHA", "ref": "分支或标签",
+    "resume": "恢复跟踪", "pipeline": "流水线", "job_link": "Job", "visit": "打开环境",
+    "loading": "加载中…", "error": "无法加载交付数据", "retry": "刷新", "none": "暂无交付记录",
+    "updated": "更新于 {{time}}", "evidence": "来源：部署 Job 输出", "acceptance": "等待用户验收",
+    "statuses": {
+      "pending_pipeline": "等待流水线", "running": "运行中", "manual": "等待人工操作",
+      "retrying": "正在重试同步", "deployed": "已部署", "failed": "失败", "canceled": "已取消",
+      "skipped": "已跳过", "address_missing": "部署地址缺失", "ambiguous": "匹配结果不唯一",
+      "timed_out": "跟踪超时", "blocked": "需要处理", "unknown": "未知状态"
+    }
+  },
   "issue_statuses": {
     "title": "任务状态",
     "loading": "正在加载状态…",

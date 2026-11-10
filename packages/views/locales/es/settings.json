@@ -1,4 +1,21 @@
 {
+  "delivery": {
+    "title": "Entrega de GitLab", "configure": "Configurar proyectos", "connection": "Conexión",
+    "project": "ID del proyecto", "project_choice": "Proyecto", "job": "Job de despliegue", "source": "Origen del pipeline",
+    "hosts": "Hosts URL permitidos", "prefix": "Marcador URL", "timeout": "Tiempo de seguimiento (minutos)",
+    "save": "Guardar", "cancel": "Cancelar", "edit": "Editar", "remove": "Eliminar",
+    "remove_title": "¿Eliminar la configuración del seguimiento?", "remove_description": "No se podrán registrar nuevos commits. Las entregas existentes mantienen sus reglas.",
+    "empty": "No hay proyectos de entrega configurados", "register": "Seguir commit enviado", "sha": "SHA completo del commit", "ref": "Rama o etiqueta",
+    "resume": "Reanudar seguimiento", "pipeline": "Pipeline", "job_link": "Job", "visit": "Abrir entorno",
+    "loading": "Cargando…", "error": "No se pudieron cargar las entregas", "retry": "Actualizar", "none": "No hay entregas registradas",
+    "updated": "Actualizado {{time}}", "evidence": "Origen: salida del job de despliegue", "acceptance": "Pendiente de aceptación del usuario",
+    "statuses": {
+      "pending_pipeline": "Esperando pipeline", "running": "En ejecución", "manual": "Esperando acción manual",
+      "retrying": "Reintentando sincronización", "deployed": "Desplegado", "failed": "Fallido", "canceled": "Cancelado",
+      "skipped": "Omitido", "address_missing": "URL de despliegue no disponible", "ambiguous": "Coincidencia ambigua",
+      "timed_out": "Seguimiento agotado", "blocked": "Requiere atención", "unknown": "Estado desconocido"
+    }
+  },
   "products": {
     "folder_picker": {
       "search_placeholder": "Buscar carpetas",
