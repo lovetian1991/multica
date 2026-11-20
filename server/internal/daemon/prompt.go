@@ -333,6 +333,9 @@ func BuildPrompt(task Task, provider string, options ...PromptOption) string {
 		apply(&opts)
 	}
 	body := buildPromptBody(task, provider)
+	if task.WorkOrderPlan != nil && task.WorkOrderPlan.PersonalFork {
+		body += "\n\nRepository delivery is managed by the local daemon using this workspace's configured GitLab identity. Read work-order-manifest.json for the prepared module directories, personal fork, feature branch and exact upstream version target. Work on each recorded feature branch and commit intended changes before completing the task. Do not clone again, change remotes, obtain GitLab credentials, push, create merge requests, approve or merge. After successful task execution the daemon pushes changed modules to the verified personal forks and requests upstream review; it never approves or merges automatically.\n"
+	}
 	// Run-scoped context is appended, never prepended: everything ahead of it
 	// is stable across runs of a resumed session, and appending keeps it after
 	// the cached prefix (MUL-5377).

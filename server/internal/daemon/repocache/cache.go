@@ -113,7 +113,9 @@ func runGitCombinedOutputWithTimeoutContext(parent context.Context, timeout time
 	defer cancel()
 
 	cmd := newGitCommand(args...)
+	applyGitCredential(ctx, cmd)
 	out, err := processtree.CombinedOutput(ctx, cmd, 5*time.Second)
+	out = redactGitCredential(ctx, out)
 	if ctx.Err() == context.DeadlineExceeded {
 		return out, fmt.Errorf("git command timed out after %s: %w", timeout, ctx.Err())
 	}
@@ -137,7 +139,9 @@ func runGitOutputWithTimeoutContext(parent context.Context, timeout time.Duratio
 	defer cancel()
 
 	cmd := newGitCommand(args...)
+	applyGitCredential(ctx, cmd)
 	out, err := processtree.Output(ctx, cmd, 5*time.Second)
+	out = redactGitCredential(ctx, out)
 	if ctx.Err() == context.DeadlineExceeded {
 		return out, fmt.Errorf("git command timed out after %s: %w", timeout, ctx.Err())
 	}
@@ -161,6 +165,7 @@ func runGitWithTimeoutContext(parent context.Context, timeout time.Duration, arg
 	defer cancel()
 
 	cmd := newGitCommand(args...)
+	applyGitCredential(ctx, cmd)
 	err := processtree.Run(ctx, cmd, 5*time.Second)
 	if ctx.Err() == context.DeadlineExceeded {
 		return fmt.Errorf("git command timed out after %s: %w", timeout, ctx.Err())
@@ -742,10 +747,15 @@ func setFetchRefspecContext(ctx context.Context, barePath, refspec string) error
 
 // WorktreeParams holds inputs for creating a worktree from a cached bare clone.
 type WorktreeParams struct {
-	WorkspaceID         string // workspace that owns the repo
-	RepoURL             string // remote URL to look up in the cache
-	WorkDir             string // parent directory for the worktree (e.g. task workdir)
-	Ref                 string // optional branch, tag, or commit to base the worktree on
+	DirectoryName string // optional relative destination under WorkDir
+	WorkspaceID   string // workspace that owns the repo
+	RepoURL       string // remote URL to look up in the cache
+	WorkDir       string // parent directory for the worktree (e.g. task workdir)
+	Ref           string // optional branch, tag, or commit to base the worktree on
+	// CreateRefFrom, when set, creates the remote branch Ref from this
+	// baseline ref before the worktree is based on it. Customer project
+	// branches use this because they may not exist on the remote yet.
+	CreateRefFrom       string
 	AgentName           string // for branch naming
 	TaskID              string // for branch naming uniqueness
 	CoAuthoredByEnabled bool   // install prepare-commit-msg hook for Co-authored-by trailer
@@ -760,6 +770,9 @@ type WorktreeParams struct {
 	// listed as a writable root — on Linux (multica-ai/multica#2925) and on the
 	// Windows native sandbox (multica-ai/multica#6449).
 	IsolatedGitMetadata bool
+	// SharedObjects borrows immutable objects from the cache while keeping
+	// writable Git metadata inside the task sandbox.
+	SharedObjects bool
 	// Fresh discards what an existing checkout at the target path holds —
 	// uncommitted changes, untracked files, its branch position — and starts
 	// over on a new branch from the base ref. It deletes no branch holding
@@ -867,6 +880,15 @@ func (c *Cache) CreateWorktreeContext(ctx context.Context, params WorktreeParams
 		return nil, context.Cause(ctx)
 	}
 
+	if params.CreateRefFrom != "" {
+		if err := ensureRemoteBranchContext(ctx, barePath, params.Ref, params.CreateRefFrom); err != nil {
+			return nil, err
+		}
+		if err := ctx.Err(); err != nil {
+			return nil, context.Cause(ctx)
+		}
+	}
+
 	// Determine the ref to base the worktree on. By default this is the remote's
 	// default branch (resolved internally via getRemoteDefaultBranch, which walks
 	// origin/HEAD → origin/main, origin/master → bare-HEAD hint into origin/<same>
@@ -897,6 +919,15 @@ func (c *Cache) CreateWorktreeContext(ctx context.Context, params WorktreeParams
 
 	// Derive directory name from repo URL.
 	dirName := repoNameFromURL(params.RepoURL)
+	if params.DirectoryName != "" {
+		if !filepath.IsLocal(params.DirectoryName) || strings.ContainsAny(params.DirectoryName, "\\:") {
+			return nil, fmt.Errorf("checkout directory must be a safe relative path")
+		}
+		dirName = filepath.FromSlash(params.DirectoryName)
+		if err := os.MkdirAll(filepath.Dir(filepath.Join(params.WorkDir, dirName)), 0o755); err != nil {
+			return nil, fmt.Errorf("create checkout parent: %w", err)
+		}
+	}
 	worktreePath := filepath.Join(params.WorkDir, dirName)
 
 	if reason := orphanedWorktreeReason(worktreePath); reason != "" {
@@ -925,6 +956,7 @@ func (c *Cache) CreateWorktreeContext(ctx context.Context, params WorktreeParams
 			branchName,
 			baseRef,
 			params.Fresh,
+			params.SharedObjects,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("create isolated checkout: %w", err)
@@ -1052,13 +1084,18 @@ const (
 // an agent's normal fetch / push commands still target GitHub rather than the
 // daemon-owned bare cache.
 func (c *Cache) createOrUpdateIsolatedCheckout(barePath, repoURL, checkoutPath, branchName, baseRef string, fresh bool) (*WorktreeResult, error) {
-	return c.createOrUpdateIsolatedCheckoutContext(context.Background(), barePath, repoURL, checkoutPath, branchName, baseRef, fresh)
+	return c.createOrUpdateIsolatedCheckoutContext(context.Background(), barePath, repoURL, checkoutPath, branchName, baseRef, fresh, false)
 }
 
-func (c *Cache) createOrUpdateIsolatedCheckoutContext(ctx context.Context, barePath, repoURL, checkoutPath, branchName, baseRef string, fresh bool) (*WorktreeResult, error) {
+func (c *Cache) createOrUpdateIsolatedCheckoutContext(ctx context.Context, barePath, repoURL, checkoutPath, branchName, baseRef string, fresh, shared bool) (*WorktreeResult, error) {
 	baseCommit, err := resolveCommitContext(ctx, barePath, baseRef)
 	if err != nil {
 		return nil, err
+	}
+	if shared {
+		if err := prepareSharedObjectsContext(ctx, barePath, checkoutPath, baseCommit); err != nil {
+			return nil, err
+		}
 	}
 
 	if isIsolatedCheckoutContext(ctx, checkoutPath) {
@@ -1125,7 +1162,7 @@ func (c *Cache) createOrUpdateIsolatedCheckoutContext(ctx context.Context, bareP
 		return nil, fmt.Errorf("stat checkout path: %w", err)
 	}
 
-	actualBranch, err := createIsolatedCheckoutContext(ctx, barePath, repoURL, checkoutPath, branchName, baseRef, baseCommit, carryBranch)
+	actualBranch, err := createIsolatedCheckoutWithObjectsContext(ctx, barePath, repoURL, checkoutPath, branchName, baseRef, baseCommit, carryBranch, shared)
 	if err != nil {
 		return nil, err
 	}
@@ -1199,9 +1236,17 @@ func createIsolatedCheckout(barePath, repoURL, checkoutPath, branchName, baseRef
 }
 
 func createIsolatedCheckoutContext(ctx context.Context, barePath, repoURL, checkoutPath, branchName, baseRef, baseCommit, carryBranch string) (_ string, retErr error) {
+	return createIsolatedCheckoutWithObjectsContext(ctx, barePath, repoURL, checkoutPath, branchName, baseRef, baseCommit, carryBranch, false)
+}
+
+func createIsolatedCheckoutWithObjectsContext(ctx context.Context, barePath, repoURL, checkoutPath, branchName, baseRef, baseCommit, carryBranch string, shared bool) (_ string, retErr error) {
+	args := localCloneArgs(runtime.GOOS, barePath, checkoutPath)
+	if shared {
+		args = []string{"clone", "--shared", "--no-checkout", "--no-tags", "--origin", isolatedCacheRemoteName, barePath, checkoutPath}
+	}
 	if out, err := runGitCombinedOutputContext(
 		ctx,
-		localCloneArgs(runtime.GOOS, barePath, checkoutPath)...,
+		args...,
 	); err != nil {
 		// Do not remove checkoutPath here. A different repository with the
 		// same basename could have won the path race after our pre-check; Git
@@ -1464,6 +1509,48 @@ func checkoutNewBranchContext(ctx context.Context, repoPath, branchName, baseRef
 
 func resolveBaseRef(barePath, requestedRef string) (string, error) {
 	return resolveBaseRefContext(context.Background(), barePath, requestedRef)
+}
+
+// ensureRemoteBranchContext creates refs/heads/<ref> on origin from baseRef
+// when it is missing. An existing remote branch is left untouched, so the
+// checkout always reflects committed project work. The bare cache keeps
+// origin's branches under refs/remotes/origin/*, which is what we push from.
+func ensureRemoteBranchContext(ctx context.Context, barePath, ref, baseRef string) error {
+	if ref == "" || ref == baseRef {
+		return nil
+	}
+	if gitRefExistsContext(ctx, barePath, "refs/remotes/origin/"+ref+"^{commit}") {
+		return nil
+	}
+	base := ""
+	for _, candidate := range []string{"refs/remotes/origin/" + baseRef, "refs/tags/" + baseRef, baseRef} {
+		if gitRefExistsContext(ctx, barePath, candidate+"^{commit}") {
+			base = candidate
+			break
+		}
+	}
+	if base == "" {
+		return fmt.Errorf("cannot create project branch %q: baseline ref %q is not in the repo cache", ref, baseRef)
+	}
+	out, err := runGitCombinedOutputContext(ctx, "-C", barePath, "push", "origin", base+":refs/heads/"+ref)
+	if err != nil {
+		if ctx.Err() != nil {
+			return context.Cause(ctx)
+		}
+		// Another daemon may have created the branch between the check above
+		// and the push. Accept the remote branch if it is there now.
+		if fetchErr := runGitFetchContext(ctx, barePath); fetchErr == nil &&
+			gitRefExistsContext(ctx, barePath, "refs/remotes/origin/"+ref+"^{commit}") {
+			return nil
+		}
+		return fmt.Errorf("create project branch %q: %s: %w", ref, redact.Text(strings.TrimSpace(string(out))), err)
+	}
+	// The push succeeded; record the fresh remote branch locally so the
+	// checkout does not depend on a second network round trip.
+	if err := runGitContext(ctx, "-C", barePath, "update-ref", "refs/remotes/origin/"+ref, base); err != nil {
+		return fmt.Errorf("record project branch %q: %w", ref, err)
+	}
+	return nil
 }
 
 func resolveBaseRefContext(ctx context.Context, barePath, requestedRef string) (string, error) {

@@ -342,6 +342,13 @@ func (d *Daemon) applyGCAction(ctx context.Context, taskDir string, action gcAct
 			return 0
 		}
 	}
+	if action == gcActionClean || action == gcActionOrphan {
+		if err := d.verifyWorkOrderCleanup(ctx, taskDir); err != nil {
+			d.logger.Info("gc: retained unmerged work order checkout", "dir", taskDir, "reason", err)
+			stats.skipped++
+			return 0
+		}
+	}
 	switch action {
 	case gcActionClean:
 		bytes, removed := d.cleanTaskDir(taskDir)
@@ -1425,6 +1432,9 @@ func (d *Daemon) evictRepoCacheLocked(ctx context.Context, barePath string, stat
 	if d.repoBarePathIsLive(barePath) {
 		return
 	}
+	if borrowed, err := repocache.HasSharedCheckouts(ctx, barePath); err != nil || borrowed {
+		return
+	}
 
 	worktrees, err := linkedWorktreeCountContext(ctx, barePath)
 	if err != nil {
@@ -1524,6 +1534,10 @@ func linkedWorktreeCountContext(ctx context.Context, barePath string) (int, erro
 }
 
 func (d *Daemon) pruneWorktreeLocked(ctx context.Context, barePath string) {
+	if _, err := repocache.HasSharedCheckouts(ctx, barePath); err != nil {
+		d.logger.Warn("gc: shared checkout inspection failed", "repo", barePath, "error", err)
+		return
+	}
 	if out, err := runGitGCCommandContext(ctx, barePath, "worktree", "prune"); err != nil {
 		if ctx.Err() != nil {
 			return

@@ -10,8 +10,8 @@
 #
 # Version choice matters when the package reaches a daemon that can also see
 # GitHub: the daemon self-updates only when its version looks like a tagged
-# release (cli.IsReleaseVersion, server/internal/cli/update.go). The default
-# 0.0.0-dev therefore never gets replaced by an official release.
+# release (cli.IsReleaseVersion, server/internal/cli/update.go). Keep the
+# internal fallback as a real release-shaped version so the server accepts it.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -27,7 +27,7 @@ usage() {
 Usage: bash scripts/package-cli.sh [options]
 
   --version <v>   Version to embed. Default: the tag when HEAD is exactly on
-                  one, otherwise 0.0.0-dev (which never self-updates away).
+                  one, otherwise 0.4.45.
   --os <list>     Comma-separated GOOS values   (default: windows,linux,darwin)
   --arch <list>   Comma-separated GOARCH values (default: amd64,arm64)
   --out <dir>     Output directory              (default: <repo>/dist-cli)
@@ -35,7 +35,7 @@ Usage: bash scripts/package-cli.sh [options]
 
 Examples:
   bash scripts/package-cli.sh --os windows --arch amd64
-  bash scripts/package-cli.sh --version 0.0.0-dev-6ec7c29d8
+  bash scripts/package-cli.sh --version 0.4.45
 USAGE
 }
 
@@ -93,7 +93,7 @@ resolve_version() {
     return
   fi
 
-  printf '0.0.0-dev'
+  printf '0.4.45'
 }
 
 make_zip() {
@@ -182,6 +182,10 @@ generate_checksums() {
 }
 
 VERSION="$(resolve_version)"
+if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "error: version must be in major.minor.patch format, got '$VERSION'" >&2
+  exit 1
+fi
 COMMIT="$(git -C "$ROOT_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
 DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 # Same ldflags GoReleaser injects, minus the release-only variables.

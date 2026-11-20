@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -3989,7 +3990,12 @@ func (d *Daemon) ensureRepoReady(ctx context.Context, workspaceID, repoURL strin
 		return nil
 	}
 
-	syncErr := d.syncWorkspaceReposContext(ctx, workspaceID, resp.Repos)
+	repos := resp.Repos
+	// Claimed task repositories need not be part of the workspace defaults.
+	if !slices.ContainsFunc(repos, func(repo RepoData) bool { return repo.URL == repoURL }) {
+		repos = append(slices.Clone(repos), RepoData{URL: repoURL})
+	}
+	syncErr := d.syncWorkspaceReposContext(ctx, workspaceID, repos)
 	if err := ctx.Err(); err != nil {
 		return context.Cause(ctx)
 	}
@@ -5960,6 +5966,19 @@ func (d *Daemon) handleTask(ctx context.Context, task Task, slot int) {
 		result.Comment = "daemon shut down while task was in flight"
 	}
 
+	if result.Status == "completed" && task.WorkOrderPlan != nil && task.WorkOrderPlan.PersonalFork {
+		publishCtx, publishCancel := context.WithTimeout(ctx, 10*time.Minute)
+		reviews, publishErr := d.publishWorkOrderForks(publishCtx, task, result.WorkDir)
+		publishCancel()
+		if reviews != "" {
+			result.Comment += "\n\nUpstream review requests:\n" + reviews
+		}
+		if publishErr != nil {
+			result.Status = "failed"
+			result.Comment += "\n\nFork delivery blocked: " + publishErr.Error()
+			taskLog.Error("personal fork delivery failed; local work retained", "error", publishErr)
+		}
+	}
 	d.reportTaskResult(ctx, task.ID, result, taskLog)
 
 	// Write GC metadata after the task finishes so the periodic GC loop
@@ -8489,6 +8508,17 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, slot i
 			if err != nil {
 				return TaskResult{}, asEnvironmentSetupFailure(fmt.Errorf("prepare execution environment: %w", err))
 			}
+		}
+	}
+	if task.WorkOrderError != "" {
+		return TaskResult{}, asEnvironmentSetupFailure(errors.New(task.WorkOrderError))
+	}
+	if task.WorkOrderPlan != nil {
+		if localAssignment != nil {
+			return TaskResult{}, asEnvironmentSetupFailure(errors.New("work orders require an isolated execution directory"))
+		}
+		if err := d.prepareWorkOrderRepos(prepareCtx, task, env.WorkDir, agentName); err != nil {
+			return TaskResult{}, asEnvironmentSetupFailure(err)
 		}
 	}
 	phaseRecorder.Mark(taskPhaseEnvironmentReady)
