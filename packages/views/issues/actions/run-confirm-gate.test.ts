@@ -106,6 +106,7 @@ describe("runConfirmIntent — promote", () => {
     ["custom unstarted target is not parked", "backlog", "later"],
     ["a non-todo target that still starts a run", "backlog", "in_progress"],
     ["a custom in_review target", "backlog", "qa"],
+    ["starting assigned todo work", "todo", "in_progress"],
   ])("confirms the promotion (%s)", (_label, from, to) => {
     expect(runConfirmIntent(issue({ status: from }), { status: to }, CATALOG)).toEqual({
       issueIds: ["issue-1"],
@@ -126,7 +127,8 @@ describe("runConfirmIntent — promote", () => {
   it.each([
     ["no owner", { status: "backlog", assignee_type: null, assignee_id: null }, "todo"],
     ["member owner", { status: "backlog", assignee_type: "member" as const, assignee_id: "u-1" }, "todo"],
-    ["already active", { status: "todo" }, "in_progress"],
+    ["already active", { status: "in_review" }, "in_progress"],
+    ["todo to review does not start work", { status: "todo" }, "in_review"],
     ["closing the issue", { status: "backlog" }, "done"],
     ["cancelling the issue", { status: "backlog" }, "cancelled"],
     ["custom unstarted origin has no promotion trigger", { status: "later" }, "rework"],

@@ -62,7 +62,8 @@ const NEVER_STARTS: IssueStatusCategory[] = ["done", "closed"];
  *   issue is on the fixed backlog key, because assigning into that status
  *   never starts a run (`server/internal/service/issue_trigger.go`) and the
  *   dialog would promise something that cannot happen.
- * - **promote**: moving an already-owned issue out of the fixed backlog status.
+ * - **promote**: moving an already-owned issue out of the fixed backlog status,
+ *   or starting assigned todo work by moving it to in_progress.
  *   That status change alone starts the run (`RunSourceStatus`), so it earns
  *   the same dialog when the target is not terminal, including custom statuses.
  *
@@ -95,7 +96,7 @@ export function runConfirmIntent(
     updates.status &&
     updates.status !== issue.status &&
     // Unknown counts as possibly-parked: the write may promote, so confirm.
-    (parked || issueCategory === null) &&
+    (parked || (issue.status === "todo" && updates.status === "in_progress") || issueCategory === null) &&
     (owner === "agent" || owner === "squad") &&
     issue.assignee_id
   ) {

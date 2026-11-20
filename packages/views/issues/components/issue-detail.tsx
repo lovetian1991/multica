@@ -3092,7 +3092,6 @@ export function IssueDetail({ issueId, onDelete, onDone, defaultSidebarOpen = tr
         </IssueSidebarPropertyGrid>}
       </div>
 
-                <IssueDeliveriesSection key={issue.id} issueId={issue.id} />
                 <QuickActionsSection issueId={issue.id} />
 
       <WakeupsSection
@@ -4025,6 +4024,13 @@ export function IssueDetail({ issueId, onDelete, onDone, defaultSidebarOpen = tr
               )
             )}
 
+          </div>
+
+          {/* Delivery record, below the timeline: it is a per-commit CI
+              ledger, not part of the conversation. Leading with it pushed
+              the activity feed off the first screen for every visit. */}
+          <div className="mb-6 mt-6 min-w-0">
+            <IssueDeliveriesSection key={issue.id} issueId={issue.id} />
           </div>
 
           {/* Bottom comment input — no avatar, full width. Direct child of

@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { api, ApiError } from "@multica/core/api";
@@ -10,7 +10,7 @@ import { IssueDeliveriesSection } from "./issue-deliveries-section";
 vi.mock("@multica/core/hooks", () => ({ useWorkspaceId: () => "ws" }));
 vi.mock("@multica/core/api", async (original) => ({
   ...await original<typeof import("@multica/core/api")>(),
-  api: { listIssueDeliveries: vi.fn(), listDeliveryProjects: vi.fn(), registerDelivery: vi.fn(), resumeDelivery: vi.fn() },
+  api: { listIssueDeliveries: vi.fn(), listDeliveryProjects: vi.fn(), registerDelivery: vi.fn(), resumeDelivery: vi.fn(), integrateDelivery: vi.fn() },
 }));
 
 const delivery: Delivery = {
@@ -19,21 +19,80 @@ const delivery: Delivery = {
   createdAt: "", updatedAt: "",
   result: { pipelineId: 1, pipelineStatus: "success", pipelineUrl: "https://git.test/pipeline/1",
     jobId: 2, jobStatus: "success", jobUrl: "https://git.test/job/2",
-    deploymentUrl: "https://app.test/feature", urlSource: "job_trace", reason: "" },
+    deploymentUrl: "https://app.test/feature", urlSource: "job_trace", reason: "", downstreamPipelines: [], integration: undefined },
 };
-function renderSection() {
+// The section is collapsed by default; tests that assert on its contents
+// open it the way a user would.
+function renderSection({ expand = true }: { expand?: boolean } = {}) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false } } });
-  return renderWithI18n(<QueryClientProvider client={qc}><IssueDeliveriesSection issueId="issue" /></QueryClientProvider>);
+  const view = renderWithI18n(<QueryClientProvider client={qc}><IssueDeliveriesSection issueId="issue" /></QueryClientProvider>);
+  if (expand) fireEvent.click(screen.getByRole("button", { name: /^GitLab delivery/ }));
+  return view;
 }
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(api.listIssueDeliveries).mockResolvedValue({ available: true, deliveries: [delivery] });
   vi.mocked(api.listDeliveryProjects).mockResolvedValue({ projects: [{
-    id: "config", connectionId: "connection", instanceUrl: "https://git.test", projectId: 7, projectPath: "team/app",
+    id: "config", connectionId: "connection", instanceUrl: "https://git.test", projectId: 7, projectPath: "team/app", inheritsDefaults: false,
     rules: { deploymentJob: "deploy", pipelineSource: "push", urlPrefix: "MULTICA_DEPLOY_URL=", allowedHosts: ["app.test"], timeoutMinutes: 120 },
   }] });
   vi.mocked(api.resumeDelivery).mockResolvedValue(delivery);
   vi.mocked(api.registerDelivery).mockResolvedValue(delivery);
+});
+
+it("starts collapsed so the activity feed stays in view", async () => {
+  const view = renderSection({ expand: false });
+  const header = await screen.findByRole("button", { name: /^GitLab delivery/ });
+  expect(header).toHaveAttribute("aria-expanded", "false");
+  expect(within(view.container).queryByText("team/app")).not.toBeInTheDocument();
+  fireEvent.click(header);
+  expect(await screen.findByText("team/app")).toBeVisible();
+});
+
+it("previews a readonly target and only merges after explicit review confirmation", async () => {
+  const user = userEvent.setup();
+  const integration = {
+    sourceRef: "feature", sourceSha: delivery.sha, targetRef: "prod-9.1",
+    state: "preview", sourceCleanup: "retained", mergeRequestUrl: "", mergeRequestIid: 0, mergeSha: "", reason: "",
+  };
+  vi.mocked(api.integrateDelivery).mockResolvedValueOnce({ integration }).mockResolvedValueOnce({
+    integration: { ...integration, state: "blocked", reason: "Resolve conflict", mergeRequestUrl: "https://git.test/mr/2" },
+  });
+  renderSection();
+  await user.click(await screen.findByRole("button", { name: "Merge into version" }));
+  const dialog = await screen.findByRole("dialog");
+  expect(await within(dialog).findByText("prod-9.1")).toBeVisible();
+  expect(within(dialog).queryByRole("textbox")).not.toBeInTheDocument();
+  expect(api.integrateDelivery).toHaveBeenCalledExactlyOnceWith("issue", "delivery", { merge: false, targetRef: undefined });
+  await user.click(within(dialog).getByRole("button", { name: "Confirm review and merge" }));
+  expect(await within(dialog).findByRole("alert")).toHaveTextContent("Resolve conflict");
+  expect(within(dialog).getByRole("link", { name: "Merge request" })).toHaveAttribute("href", "https://git.test/mr/2");
+  expect(api.integrateDelivery).toHaveBeenLastCalledWith("issue", "delivery", { merge: true, targetRef: "prod-9.1" });
+});
+
+it("does not enable merging when preview fails", async () => {
+  const user = userEvent.setup();
+  vi.mocked(api.integrateDelivery).mockRejectedValue(new Error("No configured version branch"));
+  renderSection();
+  await user.click(await screen.findByRole("button", { name: "Merge into version" }));
+  const dialog = await screen.findByRole("dialog");
+  expect(await within(dialog).findByRole("alert")).toHaveTextContent("No configured version branch");
+  expect(within(dialog).getByRole("button", { name: "Confirm review and merge" })).toBeDisabled();
+});
+
+it("does not offer a second merge for an already integrated feature commit", async () => {
+  vi.mocked(api.listIssueDeliveries).mockResolvedValue({ available: true, deliveries: [delivery, {
+    ...delivery, id: "target", sha: "b".repeat(40), ref: "prod-9.1",
+    result: { ...delivery.result, integration: {
+      sourceRef: delivery.ref, sourceSha: delivery.sha, targetRef: "prod-9.1",
+      state: "merged", sourceCleanup: "deleted", mergeRequestUrl: "https://git.test/mr/2",
+      mergeRequestIid: 2, mergeSha: "b".repeat(40), reason: "",
+    } },
+  }] });
+  renderSection();
+  expect(await screen.findByRole("link", { name: "Merge request" })).toHaveAttribute("href", "https://git.test/mr/2");
+  expect(screen.queryByRole("button", { name: "Merge into version" })).not.toBeInTheDocument();
+  expect(api.integrateDelivery).not.toHaveBeenCalled();
 });
 
 it("shows evidence-backed links separately from user acceptance", async () => {
@@ -51,6 +110,20 @@ it("resumes only when explicitly clicked, without rerunning the squad", async ()
   await user.click(await screen.findByRole("button", { name: "Resume tracking" }));
   await waitFor(() => expect(api.resumeDelivery).toHaveBeenCalledWith("issue", "delivery"));
   expect(api.registerDelivery).not.toHaveBeenCalled();
+});
+
+it("shows failed child CI without offering an unverified environment", async () => {
+  vi.mocked(api.listIssueDeliveries).mockResolvedValue({ available: true, deliveries: [{
+    ...delivery, status: "failed", result: {
+      ...delivery.result, deploymentUrl: "", urlSource: "",
+      downstreamPipelines: [{ id: 3, name: "trigger-aiagent", status: "failed", url: "https://git.test/pipeline/3" }],
+    },
+  }] });
+  renderSection();
+  expect(await screen.findByRole("link", { name: "trigger-aiagent #3" })).toHaveAttribute("href", "https://git.test/pipeline/3");
+  expect(screen.getByRole("region", { name: "GitLab delivery" })).toBeVisible();
+  expect(screen.queryByRole("link", { name: "Open environment" })).not.toBeInTheDocument();
+  expect(api.resumeDelivery).not.toHaveBeenCalled();
 });
 
 it("registers exact project, SHA and ref from the dialog", async () => {
@@ -77,6 +150,6 @@ it("does not present a fetch failure as an empty delivery list", async () => {
 
 it("hides the section against a backend without this feature", async () => {
   vi.mocked(api.listIssueDeliveries).mockRejectedValue(new ApiError("not found", 404, "Not Found"));
-  const view = renderSection();
+  const view = renderSection({ expand: false });
   await waitFor(() => expect(view.container).toBeEmptyDOMElement());
 });

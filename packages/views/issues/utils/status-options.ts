@@ -97,9 +97,7 @@ const CATEGORY_RANK = new Map<IssueStatusCategory, number>(ALL_STATUSES.map((c, 
  * - a project id: that project's workflow;
  * - `null`: an issue outside any project. It offers the workspace Default
  *   workflow's statuses and nothing else, as a project on Default does and
- *   as the server enforces. (MUL-8121, MUL-8250) Default has no handoffs
- *   here — the server applies none outside a project — so `workflow` stays
- *   null and `defaultScope` names the Default instead.
+ *   as the server enforces, including its handoffs.
  * - `undefined`: a surface spanning projects; the whole catalog.
  *
  * On Default, `currentStatus` stays listed even when Default leaves it out

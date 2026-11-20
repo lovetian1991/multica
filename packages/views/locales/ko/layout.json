@@ -1,5 +1,6 @@
 {
   "nav": {
+    "work_orders": "작업 요청",
     "inbox": "인박스",
     "chat": "채팅",
     "my_issues": "내 태스크",

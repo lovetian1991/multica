@@ -4,14 +4,14 @@ import { useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@multica/core/api";
 import { useWorkspaceId } from "@multica/core/hooks";
-import { deliveryProjectsOptions, issueDeliveriesOptions, vcsKeys } from "@multica/core/vcs";
+import { deliveryProjectsOptions, issueDeliveriesOptions, vcsKeys, type Delivery, type DeliveryIntegration } from "@multica/core/vcs";
 import { Button } from "@multica/ui/components/ui/button";
 import { IconButton } from "@multica/ui/components/common/icon-button";
 import { Input } from "@multica/ui/components/ui/input";
 import { Label } from "@multica/ui/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@multica/ui/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@multica/ui/components/ui/select";
-import { Plus, RefreshCw, ExternalLink } from "@multica/ui/icons";
+import { Plus, RefreshCw, ExternalLink, GitMerge } from "@multica/ui/icons";
 import { useT } from "../../i18n";
 import { IssueSidebarSectionHeader } from "./issue-sidebar-section";
 
@@ -22,11 +22,26 @@ export function IssueDeliveriesSection({ issueId }: { issueId: string }) {
   const { t } = useT("settings");
   const query = useQuery(issueDeliveriesOptions(wsId, issueId));
   const projects = useQuery({ ...deliveryProjectsOptions(wsId), enabled: !!wsId && query.data?.available === true });
-  const [expanded, setExpanded] = useState(true);
+  // Collapsed by default: the delivery ledger is reference material, and an
+  // expanded list pushed the activity feed down on every issue visit.
+  const [expanded, setExpanded] = useState(false);
   const [open, setOpen] = useState(false);
   const [project, setProject] = useState("");
   const [sha, setSha] = useState("");
   const [ref, setRef] = useState("");
+  const [selected, setSelected] = useState<Delivery | null>(null);
+  const [plan, setPlan] = useState<DeliveryIntegration | null>(null);
+  const integration = useMutation({
+    mutationFn: ({ delivery, merge, targetRef }: { delivery: Delivery; merge: boolean; targetRef?: string }) =>
+      api.integrateDelivery(issueId, delivery.id, { merge, targetRef }),
+    onSuccess: async (result) => {
+      setPlan(result.integration);
+      if (result.integration.state === "merged") {
+        await qc.invalidateQueries({ queryKey: vcsKeys.deliveries(wsId, issueId) });
+        setSelected(null);
+      }
+    },
+  });
   const registration = useMutation({
     mutationFn: () => api.registerDelivery(issueId, { projectConfigId: project || projects.data?.projects[0]?.id || "", sha: sha.trim(), ref: ref.trim() }),
     onSuccess: async () => {
@@ -40,7 +55,7 @@ export function IssueDeliveriesSection({ issueId }: { issueId: string }) {
   });
   if ((query.error instanceof ApiError && query.error.status === 404) || query.data?.available === false) return null;
   const statuses = t(($) => $.delivery.statuses, { returnObjects: true });
-  return <div>
+  return <section aria-label={t(($) => $.delivery.title)} className="min-w-0">
     <IssueSidebarSectionHeader title={t(($) => $.delivery.title)} open={expanded} onOpenChange={setExpanded}
       count={query.data?.deliveries.length}
       actions={<Dialog open={open} onOpenChange={(next) => { if (!registration.isPending) { setOpen(next); registration.reset(); } }}>
@@ -78,6 +93,19 @@ export function IssueDeliveriesSection({ issueId }: { issueId: string }) {
           {d.terminal && <IconButton variant="ghost" size="icon-xs" label={t(($) => $.delivery.resume)} disabled={resume.isPending} onClick={() => resume.mutate(d.id)}><RefreshCw /></IconButton>}
         </div>
         <p className="break-all text-muted-foreground">{d.ref} · {d.sha.slice(0, 8)}</p>
+        {!d.result.integration && !query.data?.deliveries.some((target) =>
+          target.projectConfigId === d.projectConfigId && target.result.integration?.state === "merged" &&
+          target.result.integration.sourceRef === d.ref && target.result.integration.sourceSha.toLowerCase() === d.sha.toLowerCase()
+        ) && <Button variant="ghost" size="sm" disabled={integration.isPending} onClick={() => {
+          setSelected(d); setPlan(null); integration.reset(); integration.mutate({ delivery: d, merge: false });
+        }}><GitMerge />{t(($) => $.delivery.integrate)}</Button>}
+        {d.result.integration && <div className="min-w-0 space-y-1">
+          <p className="break-all">{d.result.integration.sourceRef} {"->"} {d.result.integration.targetRef}</p>
+          <p className="text-muted-foreground">{d.result.integration.sourceCleanup === "deleted" ? t(($) => $.delivery.cleanup_deleted)
+            : d.result.integration.sourceCleanup === "requested" ? t(($) => $.delivery.cleanup_requested) : t(($) => $.delivery.cleanup_retained)}</p>
+          {d.result.integration.mergeRequestUrl && <a className="inline-flex items-center gap-1 text-muted-foreground hover:underline"
+            href={d.result.integration.mergeRequestUrl} target="_blank" rel="noreferrer"><ExternalLink className="size-3" />{t(($) => $.delivery.merge_request)}</a>}
+        </div>}
         <p className={d.status === "deployed" ? "text-success" : d.status === "failed" || d.status === "blocked" ? "text-destructive" : "text-muted-foreground"}>
           {Object.hasOwn(statuses, d.status) ? statuses[d.status as keyof typeof statuses] : statuses.unknown}
         </p>
@@ -86,6 +114,14 @@ export function IssueDeliveriesSection({ issueId }: { issueId: string }) {
           {d.result.jobUrl && <a className="inline-flex items-center gap-1 text-muted-foreground hover:underline" href={d.result.jobUrl} target="_blank" rel="noreferrer"><ExternalLink className="size-3" />{t(($) => $.delivery.job_link)}</a>}
           {d.result.deploymentUrl && <a className="inline-flex items-center gap-1 hover:underline" href={d.result.deploymentUrl} target="_blank" rel="noreferrer"><ExternalLink className="size-3" />{t(($) => $.delivery.visit)}</a>}
         </div>
+        {d.result.downstreamPipelines.map((child) => <div key={child.id} className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+          {child.url && <a className="inline-flex min-w-0 items-center gap-1 text-muted-foreground hover:underline" href={child.url} target="_blank" rel="noreferrer">
+            <ExternalLink className="size-3 shrink-0" /><span className="break-all">{child.name || t(($) => $.delivery.pipeline)} #{child.id}</span>
+          </a>}
+          <span className={child.status === "failed" ? "text-destructive" : "text-muted-foreground"}>
+            {Object.hasOwn(statuses, child.status) ? statuses[child.status as keyof typeof statuses] : statuses.unknown}
+          </span>
+        </div>)}
         {d.result.deploymentUrl && <p className="break-all text-muted-foreground">{d.result.deploymentUrl}</p>}
         {d.result.urlSource === "job_trace" && <p className="text-muted-foreground">{t(($) => $.delivery.evidence)}</p>}
         {d.status === "deployed" && <p className="text-muted-foreground">{t(($) => $.delivery.acceptance)}</p>}
@@ -93,5 +129,34 @@ export function IssueDeliveriesSection({ issueId }: { issueId: string }) {
         {d.updatedAt && !Number.isNaN(Date.parse(d.updatedAt)) && <p className="text-micro text-muted-foreground">{t(($) => $.delivery.updated, { time: new Date(d.updatedAt).toLocaleString() })}</p>}
       </div>)}
     </div>}
-  </div>;
+    <Dialog open={selected !== null} onOpenChange={(next) => {
+      if (!next && !integration.isPending) { setSelected(null); setPlan(null); integration.reset(); }
+    }}>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg" aria-describedby={undefined}>
+        <DialogHeader><DialogTitle>{t(($) => $.delivery.integrate)}</DialogTitle></DialogHeader>
+        {selected && <div className="min-w-0 space-y-3 text-caption">
+          <p className="break-all font-medium">{selected.projectPath}</p>
+          <dl className="space-y-2">
+            <div><dt className="text-muted-foreground">{t(($) => $.delivery.source_branch)}</dt><dd className="break-all">{selected.ref}</dd></div>
+            <div><dt className="text-muted-foreground">{t(($) => $.delivery.target_branch)}</dt><dd className="break-all">{plan?.targetRef || (integration.isPending ? t(($) => $.delivery.loading) : "-")}</dd></div>
+            <div><dt className="text-muted-foreground">{t(($) => $.delivery.sha)}</dt><dd className="break-all font-mono">{selected.sha}</dd></div>
+          </dl>
+          <p className="text-muted-foreground">{t(($) => $.delivery.merge_consequence)}</p>
+          {integration.error && <p role="alert" className="break-words text-destructive">{integration.error.message}</p>}
+          {plan?.state === "blocked" && <p role="alert" className="break-words text-destructive">{plan.reason}</p>}
+          {plan?.mergeRequestUrl && <a className="inline-flex items-center gap-1 hover:underline" href={plan.mergeRequestUrl} target="_blank" rel="noreferrer"><ExternalLink />{t(($) => $.delivery.merge_request)}</a>}
+        </div>}
+        <DialogFooter>
+          <Button variant="outline" disabled={integration.isPending} onClick={() => setSelected(null)}>{t(($) => $.delivery.cancel)}</Button>
+          {!plan && <Button variant="outline" disabled={integration.isPending} onClick={() => {
+            if (selected) integration.mutate({ delivery: selected, merge: false });
+          }}><RefreshCw />{t(($) => $.delivery.retry)}</Button>}
+          <Button disabled={integration.isPending || !plan || !["preview", "blocked"].includes(plan.state)} aria-busy={integration.isPending}
+            onClick={() => { if (selected && plan) integration.mutate({ delivery: selected, merge: true, targetRef: plan.targetRef }); }}>
+            <GitMerge />{t(($) => $.delivery.confirm_merge)}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  </section>;
 }

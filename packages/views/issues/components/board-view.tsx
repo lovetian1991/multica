@@ -495,17 +495,11 @@ function BoardViewImpl({
   const { workflows } = useIssueWorkflows(boardWsId);
   const { data: workspaceProjects } = useQuery(projectListOptions(boardWsId));
   const workflowOfIssue = useCallback(
-    (issue: Issue | null | undefined) => {
-      if (!issue?.project_id) return null;
-      return resolveProjectWorkflow(
-        workflows,
-        workspaceProjects?.find((p) => p.id === issue.project_id),
-      );
-    },
+    (issue: Issue | null | undefined) => (issue ? issueStatusWorkflow(workflows, workspaceProjects, issue) : null),
     [workflows, workspaceProjects],
   );
   // Which statuses a card may move to: its project's workflow, or Default
-  // outside a project, where nothing hands off. (MUL-8250)
+  // outside a project.
   const statusWorkflowOfIssue = useCallback(
     (issue: Issue | null | undefined) => (issue ? issueStatusWorkflow(workflows, workspaceProjects, issue) : null),
     [workflows, workspaceProjects],

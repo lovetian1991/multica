@@ -28,7 +28,11 @@ let workspaceDefault: IssueWorkflow | null = null;
 
 vi.mock("@multica/core/issue-workflows", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@multica/core/issue-workflows")>()),
-  useProjectWithWorkflow: () => ({ project: null, workflow: projectWorkflow, defaultWorkflow: workspaceDefault }),
+  useProjectWithWorkflow: (_wsId: string, projectId: string | null | undefined) => ({
+    project: null,
+    workflow: projectId === null ? workspaceDefault : projectWorkflow,
+    defaultWorkflow: workspaceDefault,
+  }),
 }));
 
 vi.mock("../../../common/actor-avatar", () => ({
@@ -245,7 +249,6 @@ describe("StatusPicker on an issue outside any project (MUL-8121)", () => {
     owner_id: null,
     steps: [
       { status_key: "todo", handler: { type: "none" }, instructions: "" },
-      // A handoff on Default never fires outside a project, so it is not hinted.
       { status_key: "in_review", handler: { type: "agent", id: "agent-1" }, instructions: "" },
       { status_key: "done", handler: { type: "none" }, instructions: "" },
     ],
@@ -258,15 +261,15 @@ describe("StatusPicker on an issue outside any project (MUL-8121)", () => {
     return Array.from(document.querySelectorAll("button[data-picker-item]")).map((el) => el.textContent?.trim());
   }
 
-  it("offers only the Default workflow's statuses, without a header or handoff hints", () => {
+  it("offers the Default workflow's statuses and handoff hints without a project", () => {
     catalogEntries = [TODO, IN_REVIEW, QA, MERGED, DONE];
     workspaceDefault = DEFAULT;
     renderWithI18n(
       <StatusPicker status="todo" projectId={null} onUpdate={() => {}} open onOpenChange={() => {}} />,
     );
-    expect(rows()).toEqual(["Todo", "In Review", "Done"]);
+    expect(rows()).toEqual(["Todo", "In ReviewHands off to Sentinel", "Done"]);
     expect(screen.queryByText(/Default statuses/)).toBeNull();
-    expect(screen.queryByText(/Hands off to/)).toBeNull();
+    expect(screen.getByText("Hands off to Sentinel")).toBeTruthy();
   });
 
   it("keeps a current status Default leaves out, checked, in its category's place", () => {
@@ -275,7 +278,7 @@ describe("StatusPicker on an issue outside any project (MUL-8121)", () => {
     renderWithI18n(
       <StatusPicker status="merged" projectId={null} onUpdate={() => {}} open onOpenChange={() => {}} />,
     );
-    expect(rows()).toEqual(["Todo", "In Review", "Merged", "Done"]);
+    expect(rows()).toEqual(["Todo", "In ReviewHands off to Sentinel", "Merged", "Done"]);
     // The check mark is the last svg in a row; it is hidden on the others.
     const checkOf = (label: string) => Array.from(optionRow(label).querySelectorAll("svg")).at(-1);
     expect(checkOf("Merged")?.getAttribute("class")).not.toContain("invisible");
@@ -293,8 +296,8 @@ describe("StatusPicker on an issue outside any project (MUL-8121)", () => {
     fireEvent.change(search, { target: { value: "merg" } });
     expect(rows()).toEqual([]);
     fireEvent.change(search, { target: { value: "rev" } });
-    expect(rows()).toEqual(["In Review"]);
-    fireEvent.click(optionRow("In Review"));
+    expect(rows()).toEqual(["In ReviewHands off to Sentinel"]);
+    fireEvent.click(optionRow("In ReviewHands off to Sentinel"));
     expect(onUpdate).toHaveBeenCalledWith({ status: "in_review" });
   });
 
