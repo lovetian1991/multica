@@ -13,13 +13,8 @@ export function useIssueWorkflows(wsId: string): { workflows: IssueWorkflow[]; i
 }
 
 /**
- * A project and the workflow it uses. `workflow` is null for the Default
- * workflow — including while either list is still loading, which renders the
- * Default behavior rather than an empty board.
- *
- * `defaultWorkflow` is the workspace Default itself, null until loaded or on a
- * server without workflows. An issue outside any project offers its statuses.
- * (MUL-8121)
+ * A project and its resolved workflow. Issues outside a project inherit the
+ * workspace Default. Null while the required lists are still loading.
  */
 export function useProjectWithWorkflow(
   wsId: string,
@@ -34,13 +29,13 @@ export function useProjectWithWorkflow(
     const project = projectId ? projects?.find((p) => p.id === projectId) ?? null : null;
     return {
       project,
-      workflow: resolveProjectWorkflow(workflows, project),
+      workflow: projectId === null ? defaultWorkflow(workflows) : resolveProjectWorkflow(workflows, project),
       defaultWorkflow: defaultWorkflow(workflows),
     };
   }, [projectId, projects, workflows]);
 }
 
-/** The workflow a project uses, or null for the Default workflow. */
+/** The project's workflow, or the workspace Default outside a project. */
 export function useProjectWorkflow(
   wsId: string,
   projectId: string | null | undefined,

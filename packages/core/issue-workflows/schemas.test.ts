@@ -33,6 +33,21 @@ const baseWorkflow = {
 };
 
 describe("workflow schemas (MUL-7420)", () => {
+  it("preserves squad stage controls and squad handoff previews", () => {
+    const step = {
+      status_key: "in_progress", handler: { type: "squad", id: "squad-1" },
+      instructions: "Implement the approved design.", next_status_key: "done", back_status_key: "todo",
+    };
+    expect(IssueWorkflowSchema.parse({ ...baseWorkflow, steps: [step] }).steps).toEqual([step]);
+    const preview = WorkflowHandoffPreviewSchema.parse({
+      handoff: true, handler_type: "squad", handler_id: "squad-1",
+      previous_assignee_type: "squad", previous_assignee_id: "squad-design", brief: step.instructions,
+    });
+    expect(preview.handler_type).toBe("squad");
+    expect(preview.previous_assignee_type).toBe("squad");
+    expect(preview.brief).toBe(step.instructions);
+  });
+
   it("parses a workflow list", () => {
     const parsed = ListIssueWorkflowsResponseSchema.parse({ workflows: [baseWorkflow], total: 1 });
     expect(parsed.workflows[0]?.steps[1]?.handler).toEqual({ type: "agent", id: "agent-1" });

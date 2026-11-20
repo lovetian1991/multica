@@ -107,8 +107,7 @@ export function resolveProjectWorkflow(
 
 /**
  * The workflow whose statuses an issue may take: its project's, or Default
- * for an issue outside any project. Only for statuses — outside a project
- * nothing hands off, so handoffs still come from `resolveProjectWorkflow`.
+ * for an issue outside any project, including its handoffs.
  * Null while workflows or the issue's project are unknown. (MUL-8250)
  */
 export function issueStatusWorkflow(

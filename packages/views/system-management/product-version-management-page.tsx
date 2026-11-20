@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
+  ChevronRight,
   Folder,
   FolderOpen,
   MoreHorizontal,
@@ -13,7 +14,7 @@ import {
   Trash2,
 } from "@multica/ui/icons";
 import { toast } from "sonner";
-import { ApiError } from "@multica/core/api";
+import { api, ApiError } from "@multica/core/api";
 import {
   systemProductListOptions,
   useCreateSystemProduct,
@@ -47,6 +48,7 @@ import { CollapsedNavTrigger } from "../layout/page-header";
 import { useT } from "../i18n";
 import { SystemManagementLayout } from "./system-management-layout";
 import { FolderPickerDialog } from "./folder-picker-dialog";
+import { VersionCodeDialog } from "../work-orders/version-code-dialog";
 import {
   filterProductVersions,
   type ProductVersionStatusFilter,
@@ -54,6 +56,7 @@ import {
 
 interface ProductDraft {
   name: string;
+  slug: string;
   description: string;
 }
 
@@ -67,6 +70,7 @@ interface ProductVersionDraft {
 
 const EMPTY_PRODUCT_DRAFT: ProductDraft = {
   name: "",
+  slug: "",
   description: "",
 };
 
@@ -89,7 +93,9 @@ export function ProductVersionManagementPage() {
   const [pendingDeleteProduct, setPendingDeleteProduct] = useState<Product | null>(null);
   const [createVersionOpen, setCreateVersionOpen] = useState(false);
   const [editingVersion, setEditingVersion] = useState<ProductVersion | null>(null);
+  const [codeVersion, setCodeVersion] = useState<ProductVersion | null>(null);
   const [pendingDeleteVersion, setPendingDeleteVersion] = useState<ProductVersion | null>(null);
+  const [expandedVersionId, setExpandedVersionId] = useState<string | null>(null);
 
   const productListQuery = useQuery({
     ...systemProductListOptions(),
@@ -117,7 +123,7 @@ export function ProductVersionManagementPage() {
     const normalized = productQuery.trim().toLowerCase();
     if (!normalized) return products;
     return products.filter((product) =>
-      product.name.toLowerCase().includes(normalized),
+      `${product.name} ${product.slug ?? ""}`.toLowerCase().includes(normalized),
     );
   }, [products, productQuery]);
 
@@ -230,7 +236,8 @@ export function ProductVersionManagementPage() {
                     >
                       <Package className="size-4 shrink-0 text-muted-foreground" />
                       <span className="min-w-0 flex-1 truncate text-body font-medium">
-                        {product.name}
+                        <span>{product.name}</span>
+                        {product.slug && <span className="ml-2 font-mono text-caption text-muted-foreground">{product.slug}</span>}
                       </span>
                       <DropdownMenu>
                         <DropdownMenuTrigger
@@ -360,11 +367,23 @@ export function ProductVersionManagementPage() {
                   ) : (
                     <div className="divide-y divide-surface-border">
                       {filteredVersions.map((version) => (
+                        <Fragment key={version.id}>
                         <div
-                          key={version.id}
                           className="grid gap-2 px-4 py-3 md:grid-cols-[minmax(8rem,0.8fr)_minmax(10rem,1fr)_minmax(8rem,0.8fr)_5rem_2rem] md:items-center md:gap-4"
                         >
-                          <span className="truncate text-body font-medium">{version.name}</span>
+                          <div className="min-w-0">
+                            <div className="flex min-w-0 items-center gap-1">
+                              <Button variant="ghost" size="icon-sm" aria-expanded={expandedVersionId === version.id}
+                                aria-label={`${version.name} / ${t(($) => $.work_orders.project_branches)}`}
+                                onClick={() => setExpandedVersionId(expandedVersionId === version.id ? null : version.id)}>
+                                <ChevronRight className={`size-4 transition-transform ${expandedVersionId === version.id ? "rotate-90" : ""}`} />
+                              </Button>
+                              <span className="min-w-0 truncate text-body font-medium">{version.name}</span>
+                            </div>
+                            <Button variant="ghost" size="sm" className="mt-1 max-w-full" onClick={() => setCodeVersion(version)}>
+                              <Package className="size-3.5 shrink-0" />{t(($) => $.work_orders.code)}
+                            </Button>
+                          </div>
                           <div className="flex min-w-0 items-center gap-2 text-caption text-muted-foreground md:text-body">
                             <Folder className="size-3.5 shrink-0" />
                             <span className="truncate">
@@ -406,6 +425,9 @@ export function ProductVersionManagementPage() {
                                 <Pencil className="size-4" />
                                 {t(($) => $.products.actions.edit)}
                               </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setCodeVersion(version)}>
+                                <Package className="size-4" />{t(($) => $.work_orders.code)}
+                              </DropdownMenuItem>
                               <DropdownMenuItem
                                 variant="destructive"
                                 onClick={() => setPendingDeleteVersion(version)}
@@ -416,6 +438,8 @@ export function ProductVersionManagementPage() {
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
+                        {expandedVersionId === version.id && <VersionProjectBranches versionId={version.id} />}
+                        </Fragment>
                       ))}
                     </div>
                   )}
@@ -450,6 +474,7 @@ export function ProductVersionManagementPage() {
           productId={selectedProduct?.id}
           version={editingVersion}
         />
+        {codeVersion && <VersionCodeDialog version={codeVersion} onClose={() => setCodeVersion(null)} />}
         <DeleteProductVersionDialog
           version={pendingDeleteVersion}
           productId={selectedProduct?.id ?? null}
@@ -512,6 +537,7 @@ function ProductEditorDialog({
       product
         ? {
             name: product.name,
+            slug: product.slug ?? "",
             description: product.description ?? "",
           }
         : EMPTY_PRODUCT_DRAFT,
@@ -523,6 +549,7 @@ function ProductEditorDialog({
     if (!name) return;
     const data = {
       name,
+      slug: draft.slug.trim(),
       description: draft.description.trim(),
     };
     const options = {
@@ -572,6 +599,13 @@ function ProductEditorDialog({
             />
           </div>
           <div className="space-y-2">
+            <FieldLabel htmlFor="system-product-slug">{t(($) => $.work_orders.product_slug)}</FieldLabel>
+            <Input id="system-product-slug" required maxLength={64} value={draft.slug}
+              onChange={(event) => setDraft((current) => ({ ...current, slug: event.target.value.trim().toLowerCase() }))}
+              aria-describedby="system-product-slug-help" />
+            <p id="system-product-slug-help" className="text-caption text-muted-foreground">{t(($) => $.work_orders.product_slug_help)}</p>
+          </div>
+          <div className="space-y-2">
             <FieldLabel htmlFor="system-product-description">
               {t(($) => $.products.product_editor.description_label)}
             </FieldLabel>
@@ -589,7 +623,7 @@ function ProductEditorDialog({
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
             {t(($) => $.products.product_editor.cancel)}
           </Button>
-          <Button onClick={submit} disabled={!draft.name.trim() || saving}>
+          <Button onClick={submit} disabled={!draft.name.trim() || !/^[a-z][a-z0-9_-]{0,63}$/.test(draft.slug) || saving}>
             {saving
               ? t(($) => $.products.product_editor.saving)
               : t(($) => $.products.product_editor.save)}
@@ -884,4 +918,39 @@ function DeleteProductVersionDialog({
       </AlertDialogContent>
     </AlertDialog>
   );
+}
+
+function VersionProjectBranches({ versionId }: { versionId: string }) {
+  const { t } = useT("settings");
+  const query = useQuery({
+    queryKey: ["work-order-version-branches", versionId],
+    queryFn: () => api.getWorkOrderVersionBranches(versionId),
+  });
+  return <div className="border-t border-surface-border bg-muted/20 px-4 py-4 md:px-10">
+    {query.isLoading && <p className="text-body text-muted-foreground">{t(($) => $.work_orders.loading)}</p>}
+    {query.error && <p role="alert" className="text-body text-destructive">{query.error.message}</p>}
+    {query.data && query.data.projects.length === 0 && <p className="text-body text-muted-foreground">{t(($) => $.work_orders.project_branches_empty)}</p>}
+    {query.data?.projects.map((project) => <section key={project.id} className="mb-4 last:mb-0">
+      <h3 className="mb-2 flex flex-wrap items-center gap-2 text-body font-medium">
+        <span className="break-words">{project.name}</span>
+        <span className="text-caption text-muted-foreground">{t(($) => $.work_orders.branch_count, { count: project.branches.length })}</span>
+      </h3>
+      <div className="overflow-x-auto rounded-md border border-surface-border bg-background">
+        <table className="w-full min-w-[680px] text-left text-caption">
+          <thead className="border-b border-surface-border text-muted-foreground"><tr>
+            <th className="p-2.5">{t(($) => $.work_orders.module)}</th>
+            <th className="p-2.5">{t(($) => $.work_orders.version)}</th>
+            <th className="p-2.5">{t(($) => $.work_orders.repository)}</th>
+            <th className="p-2.5">{t(($) => $.work_orders.ref)}</th>
+          </tr></thead>
+          <tbody>{project.branches.map((branch) => <tr key={`${branch.versionId}/${branch.moduleKey}`} className="border-b border-surface-border last:border-b-0">
+            <td className="break-words p-2.5 font-medium">{branch.moduleKey}</td>
+            <td className="break-words p-2.5 text-muted-foreground">{branch.productName} / {branch.versionName}</td>
+            <td className="break-all p-2.5 font-mono">{branch.repoUrl}</td>
+            <td className="break-all p-2.5 font-mono">{branch.ref}</td>
+          </tr>)}</tbody>
+        </table>
+      </div>
+    </section>)}
+  </div>;
 }

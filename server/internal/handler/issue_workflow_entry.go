@@ -54,14 +54,7 @@ func (h *Handler) applyIssueWorkflow(ctx context.Context, prev db.Issue, params 
 	// workflow no longer lists it.
 	statusChanging := params.Status.Valid && params.Status.String != prev.Status
 	if def == nil {
-		if !statusChanging {
-			return nil, nil
-		}
-		outside, err := issueworkflow.OutsideProject(ctx, h.Queries, prev.WorkspaceID)
-		if err != nil {
-			return nil, err
-		}
-		return nil, issueworkflow.CheckStatusOutsideProject(outside, params.Status.String)
+		return nil, nil
 	}
 	projectMoving := params.ProjectID != prev.ProjectID
 	if projectMoving && !statusExplicit && !def.IsDefault && !def.Has(prev.Status) {
@@ -73,7 +66,11 @@ func (h *Handler) applyIssueWorkflow(ctx context.Context, prev db.Issue, params 
 	// A move into a Default project keeps the issue's status, as it is never
 	// mapped; a named workflow must list the status the issue lands on.
 	if params.Status.Valid && (statusChanging || (projectMoving && !def.IsDefault)) {
-		if err := issueworkflow.CheckStatus(def, params.Status.String); err != nil {
+		checkStatus := issueworkflow.CheckStatus
+		if !params.ProjectID.Valid {
+			checkStatus = issueworkflow.CheckStatusOutsideProject
+		}
+		if err := checkStatus(def, params.Status.String); err != nil {
 			return nil, err
 		}
 	}
@@ -354,7 +351,7 @@ func (h *Handler) assigneeActiveRuns(ctx context.Context, issue db.Issue) []db.A
 
 // claimProjectWorkflow renders the issue's project workflow for a task claim,
 // or nil when there is nothing to say beyond the runtime's own status rules:
-// no project, or Default with no handoffs. The issue's assignee gets the
+// Default with no handoffs. The issue's assignee gets the
 // step's instructions and commands; any other agent working on the issue
 // gets the observer brief, so it does not move a step it does not own.
 //

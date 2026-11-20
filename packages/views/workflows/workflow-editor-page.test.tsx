@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildIssueStatusCatalog } from "@multica/core/issue-statuses";
-import { agentListOptions, memberListOptions } from "@multica/core/workspace/queries";
+import { agentListOptions, memberListOptions, squadListOptions } from "@multica/core/workspace/queries";
 import { projectListOptions } from "@multica/core/projects/queries";
 import { renderWithI18n } from "../test/i18n";
 import { WorkflowEditorPage } from "./workflow-editor-page";
@@ -32,6 +33,7 @@ function renderEditor(props: { template?: "content"; canCreateStatus?: boolean }
   qc.setQueryData(projectListOptions("ws-1").queryKey, [] as never);
   qc.setQueryData(agentListOptions("ws-1").queryKey, [{ id: "agent-1", name: "Builder", archived_at: null }] as never);
   qc.setQueryData(memberListOptions("ws-1").queryKey, [] as never);
+  qc.setQueryData(squadListOptions("ws-1").queryKey, [{ id: "squad-1", name: "Dev squad", archived_at: null }] as never);
   renderWithI18n(
     <QueryClientProvider client={qc}>
       <WorkflowEditorPage workflowId={null} seed={null} canEdit onBack={vi.fn()} onOpen={vi.fn()} {...props} />
@@ -45,6 +47,31 @@ afterEach(() => {
 });
 
 describe("WorkflowEditorPage", () => {
+  it("creates a squad stage with instructions and next/back controls", async () => {
+    const user = userEvent.setup();
+    createWorkflow.mockResolvedValue({ id: "wf-1" });
+    renderEditor();
+    await addNewStatus("Development");
+    fireEvent.click(screen.getByRole("radio", { name: /Hand to a squad/ }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Name" }), { target: { value: "Squad delivery" } });
+    expect(screen.getByRole("button", { name: "Create" }).hasAttribute("disabled")).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "Choose a squad" }));
+    fireEvent.click(await screen.findByText("Dev squad"));
+    fireEvent.change(screen.getByRole("textbox", { name: "What this step does" }), { target: { value: "Implement the approved design." } });
+    await user.click(screen.getByRole("combobox", { name: "When done, move to" }));
+    await user.click(await screen.findByRole("option", { name: "Done" }));
+    await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
+    await user.click(screen.getByRole("combobox", { name: "If rejected, send back to" }));
+    await user.click(await screen.findByRole("option", { name: "Todo" }));
+    expect(stepCard("Development").textContent).toContain("then → Done");
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    await waitFor(() => expect(createWorkflow).toHaveBeenCalled());
+    expect(createWorkflow.mock.calls[0]![0].steps).toContainEqual({
+      new_status: { name: "Development" }, handler: { type: "squad", id: "squad-1" },
+      instructions: "Implement the approved design.", next_status_key: "done", back_status_key: "todo",
+    });
+  });
+
   it("edits a new status step's handoff before the save (MUL-8118)", async () => {
     createWorkflow.mockResolvedValue({ id: "wf-1" });
     renderEditor();

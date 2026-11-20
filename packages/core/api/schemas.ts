@@ -515,6 +515,7 @@ export const EMPTY_LIST_LABELS_RESPONSE: ListLabelsResponse = {
 export const ProductSchema = z.object({
   id: z.string(),
   name: z.string(),
+  slug: z.string().optional().default("").catch(""),
   description: z.string().optional().default("").catch(""),
   directory: z.string().optional().default(""),
   remark: z.string().optional().default(""),
@@ -525,6 +526,7 @@ export const ProductSchema = z.object({
 export const EMPTY_PRODUCT: Product = {
   id: "",
   name: "",
+  slug: "",
   description: "",
   created_at: "",
   updated_at: "",
@@ -608,6 +610,11 @@ export const ProcessTemplateSchema = z.object({
   applied_at: z.string().optional().default(""),
   applied_by: z.string().optional().default(""),
   can_upgrade: z.boolean().optional().default(false).catch(false),
+  squads: z.array(z.object({
+    key: z.string(),
+    name: z.string(),
+    id: z.string().optional(),
+  })).optional().default([]).catch([]),
 }).loose();
 
 export const EMPTY_PROCESS_TEMPLATE: ProcessTemplate = {
@@ -640,14 +647,20 @@ export const EMPTY_LIST_PROCESS_TEMPLATE_VERSIONS_RESPONSE: ListProcessTemplateV
   total: 0,
 };
 
+export const OCConnectionSchema = z.object({
+  connected: z.boolean().default(false),
+});
+
 export const SystemSettingsSchema = z.object({
   kb_environment_url: z.string().default(""),
   kb_integration_key_configured: z.boolean().default(false),
+  oc_integration_key_configured: z.boolean().default(false),
 });
 
 export const EMPTY_SYSTEM_SETTINGS: SystemSettings = {
   kb_environment_url: "",
   kb_integration_key_configured: false,
+  oc_integration_key_configured: false,
 };
 
 export const KBFolderSchema = z.object({

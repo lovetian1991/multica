@@ -499,6 +499,203 @@ func TestStatusChangeHandsOffOnDefaultProject(t *testing.T) {
 	}
 }
 
+func TestWorkflowSquadStageHandoff(t *testing.T) {
+	seedTestCatalog(t)
+	designLeader := seededReadyAgentID(t)
+	var runtimeID string
+	dbfx.QueryRow(t, `SELECT runtime_id::text FROM agent WHERE id = $1`, designLeader).Scan(&runtimeID)
+	devLeader := dbfx.Agent(t, "Development leader "+workflowTestSuffix(), runtimeID)
+	designSquad := dbfx.Squad(t, "Product design "+workflowTestSuffix(), designLeader)
+	devSquad := dbfx.Squad(t, "Development "+workflowTestSuffix(), devLeader)
+	wf := createTestWorkflowSteps(t, "Squad delivery "+workflowTestSuffix(), []map[string]any{
+		{"status_key": "todo", "handler": map[string]any{"type": "squad", "id": designSquad},
+			"instructions": "Write and attach the approved design.", "next_status_key": "in_progress"},
+		{"status_key": "in_progress", "handler": map[string]any{"type": "squad", "id": devSquad},
+			"instructions": "Implement the attached design without replanning.", "next_status_key": "in_review", "back_status_key": "todo"},
+		{"status_key": "in_review", "handler": map[string]any{"type": "member", "id": testUserID}},
+	})
+	projectID := createWorkflowTestProject(t, "Squad delivery project")
+	setProjectWorkflow(t, projectID, map[string]any{"workflow_id": wf.ID}).Want(http.StatusOK)
+	created := createIssueForTest(t, map[string]any{"title": "Design to development", "project_id": projectID, "status": "todo"})
+
+	tasks, err := testHandler.Queries.ListTasksByIssue(context.Background(), parseUUID(created.ID))
+	if err != nil || len(tasks) != 1 {
+		t.Fatalf("initial squad tasks = %+v, %v", tasks, err)
+	}
+	designRun := tasks[0]
+	if uuidToString(designRun.AgentID) != designLeader || uuidToString(designRun.SquadID) != designSquad || !designRun.IsLeaderTask {
+		t.Fatalf("initial run must belong to the design squad leader: %+v", designRun)
+	}
+	if brief := claimBriefForTest(t, created.ID, designRun); !strings.Contains(brief, "Write and attach the approved design.") {
+		t.Fatalf("design stage brief missing instructions:\n%s", brief)
+	}
+
+	var preview WorkflowHandoffPreviewResponse
+	req := withURLParam(newRequest("GET", "/api/issues/"+created.ID+"/workflow-handoff?status=in_progress", nil), "id", created.ID)
+	testutil.Call(t, testHandler.PreviewWorkflowHandoff, req).Want(http.StatusOK).JSON(&preview)
+	if !preview.Handoff || preview.HandlerType != "squad" ||
+		preview.HandlerID != devSquad || !strings.Contains(preview.Brief, "Implement the attached design") {
+		t.Fatalf("squad handoff preview = %+v", preview)
+	}
+	if taskCountFor(t, created.ID, devLeader) != 0 {
+		t.Fatal("preview must not start development")
+	}
+
+	// The design leader advances the same issue after completing its stage.
+	agentUpdateIssue(t, created.ID, designLeader, uuidToString(designRun.ID), map[string]any{"status": "in_progress"}).Want(http.StatusOK)
+	status, at, aid := issueStatusAndAssignee(t, created.ID)
+	if status != "in_progress" || at != "squad" || aid != devSquad {
+		t.Fatalf("development stage = %s %s/%s", status, at, aid)
+	}
+	tasks, err = testHandler.Queries.ListTasksByIssue(context.Background(), parseUUID(created.ID))
+	if err != nil || len(tasks) != 2 {
+		t.Fatalf("handoff tasks = %+v, %v; want two stages on the same issue", tasks, err)
+	}
+	var devRun db.AgentTaskQueue
+	for _, task := range tasks {
+		if uuidToString(task.AgentID) == devLeader {
+			devRun = task
+		}
+	}
+	if !devRun.ID.Valid || uuidToString(devRun.SquadID) != devSquad || !devRun.IsLeaderTask || devRun.WorkflowStep.String != "in_progress" {
+		t.Fatalf("development leader run = %+v", devRun)
+	}
+	brief := claimBriefForTest(t, created.ID, devRun)
+	for _, want := range []string{"Implement the attached design without replanning.", "in_review", "todo"} {
+		if !strings.Contains(brief, want) {
+			t.Fatalf("development brief missing %q:\n%s", want, brief)
+		}
+	}
+	updateIssueForTest(t, created.ID, map[string]any{"status": "in_progress"}).Want(http.StatusOK)
+	if n := taskCountFor(t, created.ID, devLeader); n != 1 {
+		t.Fatalf("unchanged stage launched development %d times", n)
+	}
+	agentUpdateIssue(t, created.ID, devLeader, uuidToString(devRun.ID), map[string]any{"status": "in_review"}).Want(http.StatusOK)
+	if _, at, aid := issueStatusAndAssignee(t, created.ID); at != "member" || aid != testUserID {
+		t.Fatalf("human confirmation assignee = %s/%s", at, aid)
+	}
+	if tasks, _ := testHandler.Queries.ListTasksByIssue(context.Background(), parseUUID(created.ID)); len(tasks) != 2 {
+		t.Fatalf("human confirmation must not start a run: %+v", tasks)
+	}
+}
+
+func TestDesignApprovalBeforeDevelopmentSquad(t *testing.T) {
+	for _, scope := range []string{"workspace", "inherited_project", "project_override"} {
+		t.Run(scope, func(t *testing.T) {
+			testDesignApprovalBeforeDevelopmentSquad(t, scope)
+		})
+	}
+}
+
+func testDesignApprovalBeforeDevelopmentSquad(t *testing.T, scope string) {
+	t.Helper()
+	seedTestCatalog(t)
+	designLeader := seededReadyAgentID(t)
+	var runtimeID string
+	dbfx.QueryRow(t, `SELECT runtime_id::text FROM agent WHERE id = $1`, designLeader).Scan(&runtimeID)
+	devLeader := dbfx.Agent(t, "Approved development leader "+workflowTestSuffix(), runtimeID)
+	designSquad := dbfx.Squad(t, "Approval design "+workflowTestSuffix(), designLeader)
+	devSquad := dbfx.Squad(t, "Approved development "+workflowTestSuffix(), devLeader)
+	wf := createTestWorkflowSteps(t, "Design approval "+workflowTestSuffix(), []map[string]any{
+		{"status_key": "todo", "handler": map[string]any{"type": "squad", "id": designSquad},
+			"instructions": "Attach the design, then wait for human approval."},
+		{"new_status": map[string]any{"name": "Design approval " + workflowTestSuffix(), "category": "started"},
+			"handler": map[string]any{"type": "member", "id": testUserID}},
+		{"status_key": "in_progress", "handler": map[string]any{"type": "squad", "id": devSquad},
+			"instructions": "Implement the approved design on this issue.", "next_status_key": "in_review", "back_status_key": "todo"},
+		{"status_key": "in_review", "handler": map[string]any{"type": "member", "id": testUserID}},
+	})
+	approvalKey := wf.Steps[1].StatusKey
+	body := map[string]any{"title": "Approved design implementation", "status": "todo"}
+	if scope == "project_override" {
+		projectID := createWorkflowTestProject(t, "Design approval project")
+		setProjectWorkflow(t, projectID, map[string]any{"workflow_id": wf.ID}).Want(http.StatusOK)
+		body["project_id"] = projectID
+	} else {
+		projectID := createWorkflowTestProject(t, "Default design approval project")
+		defaultID := projectWorkflowID(t, projectID)
+		testutil.Call(t, testHandler.UpdateIssueWorkflow, withURLParam(workflowRequest("PATCH", "/api/issue-workflows/"+defaultID,
+			map[string]any{"steps": wf.Steps}), "id", defaultID)).Want(http.StatusOK)
+		if scope == "inherited_project" {
+			body["project_id"] = projectID
+		}
+	}
+	created := createIssueForTest(t, body)
+	tasks, err := testHandler.Queries.ListTasksByIssue(context.Background(), parseUUID(created.ID))
+	if err != nil || len(tasks) != 1 {
+		t.Fatalf("design tasks = %+v, %v", tasks, err)
+	}
+	brief := claimBriefForTest(t, created.ID, tasks[0])
+	if !strings.Contains(brief, approvalKey) || !strings.Contains(brief, "wait for human approval") {
+		t.Fatalf("design brief does not point to approval:\n%s", brief)
+	}
+	agentUpdateIssue(t, created.ID, designLeader, uuidToString(tasks[0].ID), map[string]any{
+		"status": approvalKey, "description": "Design artifact and acceptance criteria.",
+	}).Want(http.StatusOK)
+	status, kind, id := issueStatusAndAssignee(t, created.ID)
+	if status != approvalKey || kind != "member" || id != testUserID || taskCountFor(t, created.ID, devLeader) != 0 {
+		t.Fatalf("approval must wait for the member: %s %s/%s", status, kind, id)
+	}
+	dbfx.Exec(t, `UPDATE agent_task_queue SET status = 'completed', completed_at = now() WHERE id = $1`, tasks[0].ID)
+	if status, _, _ := issueStatusAndAssignee(t, created.ID); status != approvalKey {
+		t.Fatalf("finishing design skipped approval: %s", status)
+	}
+	var preview WorkflowHandoffPreviewResponse
+	req := withURLParam(newRequest("GET", "/api/issues/"+created.ID+"/workflow-handoff?status=in_progress", nil), "id", created.ID)
+	testutil.Call(t, testHandler.PreviewWorkflowHandoff, req).Want(http.StatusOK).JSON(&preview)
+	if !preview.Handoff || preview.HandlerType != "squad" || preview.HandlerID != devSquad ||
+		!strings.Contains(preview.Brief, "Implement the approved design") || taskCountFor(t, created.ID, devLeader) != 0 {
+		t.Fatalf("approval preview must describe development without starting it: %+v", preview)
+	}
+	updateIssueForTest(t, created.ID, map[string]any{"status": "in_progress"}).Want(http.StatusOK)
+	updateIssueForTest(t, created.ID, map[string]any{"status": "in_progress"}).Want(http.StatusOK)
+	status, kind, id = issueStatusAndAssignee(t, created.ID)
+	if status != "in_progress" || kind != "squad" || id != devSquad || taskCountFor(t, created.ID, devLeader) != 1 {
+		t.Fatalf("approval must start development once: %s %s/%s", status, kind, id)
+	}
+	var description string
+	dbfx.QueryRow(t, `SELECT description FROM issue WHERE id = $1`, created.ID).Scan(&description)
+	if description != "Design artifact and acceptance criteria." {
+		t.Fatalf("design context was not preserved: %q", description)
+	}
+}
+
+func TestSquadWorkflowHandoffValidationAndSave(t *testing.T) {
+	seedTestCatalog(t)
+	leader := seededReadyAgentID(t)
+	squad := dbfx.Squad(t, "Handoff squad "+workflowTestSuffix(), leader)
+	archived := dbfx.Squad(t, "Archived handoff squad "+workflowTestSuffix(), leader, testutil.Cols{"archived_at": time.Now()})
+	wf := createTestWorkflow(t, "Squad save "+workflowTestSuffix(), "in_progress", "in_review")
+	for _, handler := range []map[string]any{
+		{"type": "squad"}, {"type": "squad", "id": "invalid"}, {"type": "squad", "id": testUserID},
+		{"type": "squad", "id": archived},
+	} {
+		setWorkflowHandoff(t, wf.ID, "in_progress", map[string]any{"handler": handler}).Want(http.StatusBadRequest)
+	}
+	var saved IssueWorkflowResponse
+	setWorkflowHandoff(t, wf.ID, "in_progress", map[string]any{
+		"handler":      map[string]any{"type": "squad", "id": squad},
+		"instructions": "Use the approved design.", "next_status_key": "in_review", "back_status_key": "todo",
+	}).Want(http.StatusOK).JSON(&saved)
+	var stage IssueWorkflowStepPayload
+	for _, step := range saved.Steps {
+		if step.StatusKey == "in_progress" {
+			stage = step
+		}
+	}
+	if stage.Handler.Type != "squad" || stage.Handler.ID != squad || stage.Instructions != "Use the approved design." ||
+		stage.NextStatusKey != "in_review" || stage.BackStatusKey != "todo" {
+		t.Fatalf("saved squad stage = %+v", stage)
+	}
+	testutil.Call(t, testHandler.UpdateIssueWorkflow, withURLParam(workflowRequest("PATCH", "/api/issue-workflows/"+wf.ID,
+		map[string]any{"steps": saved.Steps}), "id", wf.ID)).Want(http.StatusOK).JSON(&saved)
+	for _, step := range saved.Steps {
+		if step.StatusKey == "in_progress" && step != stage {
+			t.Fatalf("full workflow save lost squad settings: %+v, want %+v", step, stage)
+		}
+	}
+}
+
 func TestSetWorkflowHandoffValidatesAndClears(t *testing.T) {
 	seedTestCatalog(t)
 	agentID := seededReadyAgentID(t)
@@ -933,10 +1130,14 @@ func TestClaimCarriesProjectWorkflow(t *testing.T) {
 		t.Fatalf("observer brief must leave the step to its assignee:\n%s", other)
 	}
 
-	plain := dbfx.Issue(t, "no workflow", testutil.Cols{"status": "todo"})
-	plainIssue, _ := testHandler.Queries.GetIssue(context.Background(), util.MustParseUUID(plain))
-	if testHandler.claimProjectWorkflow(context.Background(), plainIssue, nil, false) != nil {
-		t.Fatal("an issue outside a project must not carry a workflow")
+	plain := dbfx.Issue(t, "workspace workflow", testutil.Cols{
+		"status": "in_progress", "assignee_type": "agent", "assignee_id": agentID,
+	})
+	workspaceBrief := claimBriefForTest(t, plain, db.AgentTaskQueue{AgentID: util.MustParseUUID(agentID)})
+	for _, want := range []string{"This workspace's workflow", "Implement it and open a PR.", "Step done"} {
+		if !strings.Contains(workspaceBrief, want) {
+			t.Fatalf("workspace brief is missing %q:\n%s", want, workspaceBrief)
+		}
 	}
 }
 
@@ -1229,16 +1430,14 @@ func TestAgentStatusChangeOnDefaultIgnoresStep(t *testing.T) {
 	agentUpdateIssue(t, issueID, agentID, taskID, map[string]any{"status": "in_review"}).Want(http.StatusOK)
 }
 
-// Squads can't be handed to, but a handoff away from an issue a squad owns
-// offers to stop — and stops — the runs made on
-// the squad's behalf, recording who stopped them.
+// A handoff away from a squad offers to stop its runs and records who stopped them.
 func TestHandoffStopsPreviousSquadRuns(t *testing.T) {
 	seedTestCatalog(t)
 	agentID := seededReadyAgentID(t)
 	squadID := dbfx.Squad(t, "Workflow review squad "+workflowTestSuffix(), agentID)
 	projectID := createWorkflowTestProject(t, "Workflow squad stop project")
 	setColumnHandoff(t, projectID, "in_progress", map[string]any{"handler": map[string]any{"type": "member", "id": testUserID}}).Want(http.StatusOK)
-	setColumnHandoff(t, projectID, "in_review", map[string]any{"handler": map[string]any{"type": "squad", "id": squadID}}).Want(http.StatusBadRequest)
+	setColumnHandoff(t, projectID, "in_review", map[string]any{"handler": map[string]any{"type": "squad", "id": squadID}}).Want(http.StatusOK)
 	issueID := dbfx.Issue(t, "squad reviewing", testutil.Cols{
 		"project_id": projectID, "status": "in_review", "assignee_type": "squad", "assignee_id": squadID,
 	})

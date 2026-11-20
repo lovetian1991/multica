@@ -79,7 +79,7 @@ func TestValidateRejectsBrokenWorkflows(t *testing.T) {
 		"duplicate status": {name: "x", middle: []string{"implement", "implement"}, want: "more than once"},
 	}
 	broken := stepsFor([]string{"implement"})
-	broken[0].Handler = Handler{Type: HandlerSquad, ID: testAgentID}
+	broken[0].Handler = Handler{Type: HandlerCreator}
 	name, desc, steps := Normalize("x", "", broken)
 	if err := Validate(name, desc, steps, false, testCatalog()); err == nil || !strings.Contains(err.Error(), "hand off to an agent") {
 		t.Fatalf("Validate must check handoffs, got %v", err)
@@ -111,6 +111,7 @@ func TestValidateHandoff(t *testing.T) {
 	}{
 		"not a column":      {step: Step{StatusKey: "nope", Handler: Handler{Type: HandlerProjectLead}}, want: "not part"},
 		"needs an id":       {step: Step{StatusKey: "implement", Handler: Handler{Type: HandlerAgent}}, want: "choose a agent"},
+		"squad needs an id": {step: Step{StatusKey: "implement", Handler: Handler{Type: HandlerSquad}}, want: "choose a squad"},
 		"unknown handler":   {step: Step{StatusKey: "implement", Handler: Handler{Type: "robot"}}, want: "unknown handler"},
 		"backlog parks":     {step: Step{StatusKey: "backlog", Handler: Handler{Type: HandlerProjectLead}}, want: "cannot be handed off"},
 		"done finishes":     {step: Step{StatusKey: "done", Handler: Handler{Type: HandlerProjectLead}}, want: "cannot be handed off"},
@@ -127,6 +128,31 @@ func TestValidateHandoff(t *testing.T) {
 	}
 	if err := ValidateHandoff(NormalizeHandoff(Step{StatusKey: "todo", Handler: Handler{Type: HandlerProjectLead}}), def); err != nil {
 		t.Fatalf("todo may hand off: %v", err)
+	}
+}
+
+func TestSquadHandoffPreservesStageControls(t *testing.T) {
+	def := devDefinition()
+	step := NormalizeHandoff(Step{
+		StatusKey: "implement", Handler: Handler{Type: HandlerSquad, ID: testAgentID},
+		Instructions: " Build from the approved design. ", NextStatusKey: "code_review", BackStatusKey: "todo",
+	})
+	if err := ValidateHandoff(step, def); err != nil {
+		t.Fatalf("squad handoff rejected: %v", err)
+	}
+	def = withHandoffs(def, []Step{step})
+	raw, err := EncodeSteps(def.Steps)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := DecodeSteps(raw)
+	if err != nil || !reflect.DeepEqual(got, def.Steps) {
+		t.Fatalf("squad handoff roundtrip = %+v, %v; want %+v", got, err, def.Steps)
+	}
+	var id pgtype.UUID
+	_ = id.Scan(testAgentID)
+	if typ, target, ok := ResolveHandler(step, db.Project{}, "", pgtype.UUID{}); !ok || typ != "squad" || target != id {
+		t.Fatalf("squad resolution = %s %v %v", typ, target, ok)
 	}
 }
 

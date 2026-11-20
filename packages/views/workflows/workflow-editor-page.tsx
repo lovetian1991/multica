@@ -252,11 +252,15 @@ export function WorkflowEditorPage({
   const missingStatuses = canCreateStatus
     ? []
     : draft.middle.flatMap((c) => ("new_name" in c ? [c.new_name] : []));
-  const canSave = canEdit && dirty && draft.name.trim().length > 0 && !pending && missingStatuses.length === 0;
+  const columns = draftColumns(draft);
+  const needsTarget = columns.some(({ id }) => {
+    const handler = draft.handoffs[id]?.handler;
+    return (handler?.type === "agent" || handler?.type === "squad" || handler?.type === "member") && !handler.id;
+  });
+  const canSave = canEdit && dirty && draft.name.trim().length > 0 && !pending && missingStatuses.length === 0 && !needsTarget;
   const usedBy = saved
     ? projects.filter((p) => (saved.is_default ? !p.workflow_id : saved.project_ids.includes(p.id)))
     : [];
-  const columns = draftColumns(draft);
   const middleKeys = draft.middle.flatMap((c) => ("status_key" in c ? [c.status_key] : []));
   const addable = statusColumnKeys(catalog).filter((key) => !isFixedWorkflowStatus(key) && !middleKeys.includes(key));
   const ids = draft.middle.map((c) => c.id);
@@ -765,7 +769,7 @@ function StepCard({
               <span className="shrink-0">{t(($) => $.workflows.editor.card_hand_to)}</span>
               {actor && <ActorAvatar actorType={actor.type} actorId={actor.id} size="xs" profileLink={false} />}
               <span className="min-w-0 truncate text-foreground">{actor ? getActorName(actor.type, actor.id) : who}</span>
-              {handoff?.handler.type === "agent" && nextLabel && (
+              {(handoff?.handler.type === "agent" || handoff?.handler.type === "squad") && nextLabel && (
                 <span className="shrink-0 truncate">· {t(($) => $.workflows.editor.card_then, { status: nextLabel })}</span>
               )}
             </>

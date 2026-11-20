@@ -24,6 +24,7 @@ import { stepHandlerActor, useStepHandlerLabel } from "./step-handler";
  */
 export function IssueFlowCard({ projectId, currentStatus }: { projectId: string | null; currentStatus: string }) {
   const { t } = useT("issues");
+  const { t: settingsT } = useT("settings");
   const wsId = useWorkspaceId();
   const navigation = useNavigation();
   const paths = useWorkspacePaths();
@@ -33,7 +34,7 @@ export function IssueFlowCard({ projectId, currentStatus }: { projectId: string 
   const { canCreateWorkflow } = useWorkflowPermissions(project);
   const handlerLabel = useStepHandlerLabel(project);
   const [open, setOpen] = useState(false);
-  if (!workflow || !project) return null;
+  if (!workflow) return null;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -45,13 +46,19 @@ export function IssueFlowCard({ projectId, currentStatus }: { projectId: string 
           >
             <Workflow aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
             <span className="truncate text-foreground">{workflow.name}</span>
-            <span className="shrink-0 text-muted-foreground">{t(($) => $.workflows.detail.follows_project)}</span>
+            <span className="shrink-0 text-muted-foreground">
+              {project
+                ? t(($) => $.workflows.detail.follows_project)
+                : settingsT(($) => $.setup.workflow.workspace_default)}
+            </span>
           </button>
         }
       />
       <PopoverContent align="start" className="w-72 p-3">
         <p className="mb-2 text-caption text-muted-foreground">
-          {t(($) => $.workflows.detail.card_title, { workflow: workflow.name, project: project.title })}
+          {project
+            ? t(($) => $.workflows.detail.card_title, { workflow: workflow.name, project: project.title })
+            : settingsT(($) => $.setup.workflow.workspace_default)}
         </p>
         <ol className="space-y-0.5">
           {workflow.steps.map((step) => {

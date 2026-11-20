@@ -508,14 +508,12 @@ func ValidateHandoff(s Step, def Definition) error {
 	}
 	switch s.Handler.Type {
 	case HandlerNone, HandlerProjectLead:
-	case HandlerAgent, HandlerMember:
+	case HandlerAgent, HandlerMember, HandlerSquad:
 		if s.Handler.ID == "" {
 			return invalid("choose a %s to hand off to", s.Handler.Type)
 		}
-	case HandlerSquad, HandlerCreator:
-		// A squad routes work itself, so a handoff to one would compete with
-		// its own assignment. (MUL-7420)
-		return invalid("hand off to an agent, a member or the project lead")
+	case HandlerCreator:
+		return invalid("hand off to an agent, a squad, a member or the project lead")
 	default:
 		return invalid("unknown handler type %q", s.Handler.Type)
 	}
@@ -553,11 +551,12 @@ func DefaultFor(ctx context.Context, q Querier, workspaceID pgtype.UUID) (Defini
 	return Decode(row)
 }
 
-// ForProject loads the workflow a project uses. def is nil only for an issue
-// outside any project.
+// ForProject loads a project's workflow, or the workspace Default for an
+// issue outside any project.
 func ForProject(ctx context.Context, q Querier, workspaceID, projectID pgtype.UUID) (*Definition, db.Project, error) {
 	if !projectID.Valid {
-		return nil, db.Project{}, nil
+		def, err := OutsideProject(ctx, q, workspaceID)
+		return def, db.Project{}, err
 	}
 	project, err := q.GetProjectInWorkspace(ctx, db.GetProjectInWorkspaceParams{ID: projectID, WorkspaceID: workspaceID})
 	if err != nil {
@@ -570,10 +569,8 @@ func ForProject(ctx context.Context, q Querier, workspaceID, projectID pgtype.UU
 	return def, project, err
 }
 
-// OutsideProject loads the workflow that limits the statuses of an issue
-// outside any project: the workspace's stored Default, or nil before the
-// workspace stores one. Nothing hands off outside a project, so it is only
-// for checking statuses; ForProject stays nil there. (MUL-8250)
+// OutsideProject loads the workspace's stored Default, including its handoffs,
+// or nil before the workspace stores one.
 func OutsideProject(ctx context.Context, q Querier, workspaceID pgtype.UUID) (*Definition, error) {
 	row, err := q.GetDefaultIssueWorkflow(ctx, workspaceID)
 	if err != nil {
@@ -789,7 +786,11 @@ func Brief(in BriefInput) string {
 	if project := briefLine(in.ProjectName); project != "" {
 		title = fmt.Sprintf("%s (%s)", title, project)
 	}
-	fmt.Fprintf(&b, "This project's workflow — %s\n", title)
+	if in.ProjectName == "" {
+		fmt.Fprintf(&b, "This workspace's workflow — %s\n", title)
+	} else {
+		fmt.Fprintf(&b, "This project's workflow — %s\n", title)
+	}
 	// Each move names who the target step hands off to, so the list needs no
 	// preamble about handoffs.
 	handsOffTo := func(key string) string {

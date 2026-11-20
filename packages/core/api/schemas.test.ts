@@ -523,6 +523,7 @@ describe("Product schemas", () => {
   const baseProduct = {
     id: "33333333-3333-3333-3333-333333333333",
     name: "Multica",
+    slug: "",
     description: "",
     directory: "G:/aicode/multica",
     remark: "Main product",
@@ -2591,11 +2592,13 @@ describe("system settings schemas", () => {
       kb_environment_url: "https://kb.example.com/",
       kb_integration_key_configured: true,
       kb_integration_key: "should-not-be-kept",
+      oc_integration_key: "should-not-be-kept-either",
     });
 
     expect(parsed).toEqual({
       kb_environment_url: "https://kb.example.com/",
       kb_integration_key_configured: true,
+      oc_integration_key_configured: false,
     });
   });
 
@@ -2659,6 +2662,15 @@ describe("Process template schemas", () => {
     const parsed = ProcessTemplateSchema.parse(baseTemplate);
     expect(parsed.latest_version?.version).toBe(2);
     expect(parsed.can_upgrade).toBe(true);
+  });
+
+  it("preserves expanded squad bindings and safely defaults unavailable metadata", () => {
+    const squads = [{ key: "designer", name: "Product design", id: "77777777-7777-4777-8777-777777777777" },
+      { key: "developer", name: "Development" }];
+    expect(ProcessTemplateSchema.parse({ ...baseTemplate, squads }).squads).toEqual(squads);
+    expect(ProcessTemplateSchema.parse(baseTemplate).squads).toEqual([]);
+    expect(ProcessTemplateSchema.parse({ ...baseTemplate, squads: "invalid" }).squads).toEqual([]);
+    expect(ProcessTemplateSchema.parse({ ...baseTemplate, squads: [{ key: "x", name: "X", id: 42 }] }).squads).toEqual([]);
   });
 
   it("defaults upgrade and install flags", () => {
