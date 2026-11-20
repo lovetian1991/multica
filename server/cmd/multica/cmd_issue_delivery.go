@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"os"
 
@@ -12,7 +13,7 @@ import (
 func init() { issueCmd.AddCommand(newIssueDeliveryCommand()) }
 
 func newIssueDeliveryCommand() *cobra.Command {
-	root := &cobra.Command{Use: "delivery", Short: "Register and inspect passive GitLab delivery tracking"}
+	root := &cobra.Command{Use: "delivery", Short: "Track GitLab delivery and explicitly integrate verified feature branches"}
 	projects := &cobra.Command{
 		Use: "projects", Args: cobra.NoArgs, Short: "List configured GitLab delivery projects in this workspace",
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -34,6 +35,37 @@ func newIssueDeliveryCommand() *cobra.Command {
 		},
 	}
 	root.AddCommand(projects)
+	integrate := &cobra.Command{
+		Use: "integrate <issue-id> <delivery-id>", Args: cobra.ExactArgs(2),
+		Short: "Preview or explicitly merge a verified feature into its configured version branch",
+		Long:  "Default: preview only. After independent review, --merge --target <preview-target> creates/reuses a GitLab merge request, merges the registered SHA and requests source branch cleanup. Conflicts, required checks and permissions remain enforced by GitLab. Tracks the merged target commit CI without dispatching an agent.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			merge, _ := cmd.Flags().GetBool("merge")
+			target, _ := cmd.Flags().GetString("target")
+			if merge && target == "" {
+				return fmt.Errorf("--merge requires --target from the preview")
+			}
+			client, err := newAPIClient(cmd)
+			if err != nil {
+				return err
+			}
+			ctx, cancel := cli.APIContext(context.Background())
+			defer cancel()
+			issue, err := resolveIssueRef(ctx, client, args[0])
+			if err != nil {
+				return err
+			}
+			var out map[string]any
+			path := "/api/issues/" + url.PathEscape(issue.ID) + "/deliveries/" + url.PathEscape(args[1]) + "/integrate"
+			if err := client.PostJSON(ctx, path, map[string]any{"merge": merge, "target_ref": target}, &out); err != nil {
+				return err
+			}
+			return cli.PrintJSON(os.Stdout, out)
+		},
+	}
+	integrate.Flags().Bool("merge", false, "Explicitly merge the registered, independently reviewed commit")
+	integrate.Flags().String("target", "", "Exact configured target branch returned by preview (required with --merge)")
+	root.AddCommand(integrate)
 	for _, action := range []string{"list", "register", "resume"} {
 		use, count := action+" <issue-id>", 1
 		if action == "resume" {
@@ -60,9 +92,16 @@ func newIssueDeliveryCommand() *cobra.Command {
 					err = client.GetJSON(ctx, path, &out)
 				case "register":
 					project, _ := cmd.Flags().GetString("project-config-id")
+					repository, _ := cmd.Flags().GetString("repo")
 					sha, _ := cmd.Flags().GetString("sha")
 					ref, _ := cmd.Flags().GetString("ref")
-					err = client.PostJSON(ctx, path, map[string]string{"project_config_id": project, "sha": sha, "ref": ref}, &out)
+					body := map[string]string{"sha": sha, "ref": ref}
+					if repository != "" {
+						body["repository_url"] = repository
+					} else {
+						body["project_config_id"] = project
+					}
+					err = client.PostJSON(ctx, path, body, &out)
 				case "resume":
 					err = client.PostJSON(ctx, path+"/"+url.PathEscape(args[1])+"/resume", map[string]any{}, &out)
 				}
@@ -74,9 +113,12 @@ func newIssueDeliveryCommand() *cobra.Command {
 		}
 		if action == "register" {
 			c.Flags().String("project-config-id", "", "Configuration UUID from delivery projects (not the numeric GitLab project ID)")
+			c.Flags().String("repo", "", "Git remote URL; automatically resolve the project using the workspace GitLab token")
+			c.MarkFlagsOneRequired("repo", "project-config-id")
+			c.MarkFlagsMutuallyExclusive("repo", "project-config-id")
 			c.Flags().String("sha", "", "Full commit SHA confirmed pushed to the remote")
 			c.Flags().String("ref", "", "Actual remote branch or tag")
-			for _, flag := range []string{"project-config-id", "sha", "ref"} {
+			for _, flag := range []string{"sha", "ref"} {
 				_ = c.MarkFlagRequired(flag)
 			}
 		}

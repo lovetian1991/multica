@@ -97,7 +97,9 @@ func TestVCSDeliveryTerminalNotificationIsAtomicAndDoesNotDispatch(t *testing.T)
 	out := registerDeliveryForTest(t, issue, config)
 	id := out["id"].(string)
 	dbfx.Exec(t, `UPDATE vcs_delivery SET status='deployed', pipeline_id=12,
-		result='{"deployment_url":"https://app.test/","pipeline_url":"https://delivery.test/pipelines/12"}'
+		result='{"deployment_url":"https://app.test/","pipeline_url":"https://delivery.test/pipelines/12",
+		"downstream_pipelines":[{"id":13,"name":"trigger-app","status":"success","url":"https://delivery.test/pipelines/13"}],
+		"job_url":"https://delivery.test/jobs/14"}'
 		WHERE id=$1`, id)
 	rows, err := testHandler.Queries.ListIssueVCSDeliveries(context.Background(), db.ListIssueVCSDeliveriesParams{
 		WorkspaceID: parseUUID(testWorkspaceID), IssueID: parseUUID(issue),
@@ -126,6 +128,10 @@ func TestVCSDeliveryTerminalNotificationIsAtomicAndDoesNotDispatch(t *testing.T)
 	dbfx.QueryRow(t, "SELECT status FROM issue WHERE id=$1", issue).Scan(&status)
 	if !strings.Contains(content, "Awaiting user acceptance") || status != "done" {
 		t.Fatal("notification must preserve issue status and distinguish acceptance")
+	}
+	if !strings.Contains(content, "Child pipeline (success): https://delivery.test/pipelines/13") ||
+		!strings.Contains(content, "Job: https://delivery.test/jobs/14") {
+		t.Fatal("terminal comment must include child pipeline and job evidence")
 	}
 	req := testutil.WithURLParams(newRequest(http.MethodPost, "/unused", nil), "id", issue, "deliveryId", id)
 	var resumed map[string]any

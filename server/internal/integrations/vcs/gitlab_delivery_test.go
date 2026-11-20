@@ -39,6 +39,94 @@ func TestExtractDeploymentURL(t *testing.T) {
 	}
 }
 
+func TestExtractDeploymentURLDynamicHosts(t *testing.T) {
+	rules := testDeliveryRules()
+	rules.AllowedHosts = nil
+	for _, tc := range []struct{ name, trace, want string }{
+		{"scheduled IP", "MULTICA_DEPLOY_URL=http://172.16.4.99:37522/", "http://172.16.4.99:37522/"},
+		{"scheduled DNS", "MULTICA_DEPLOY_URL=https://preview-42.other.test:8443/feature", "https://preview-42.other.test:8443/feature"},
+		{"IPv6", "MULTICA_DEPLOY_URL=http://[fd00::42]:30080/", "http://[fd00::42]:30080/"},
+		{"echo is not evidence", "$ echo MULTICA_DEPLOY_URL=http://172.16.4.99:37522/", ""},
+		{"unmarked", "Visit http://172.16.4.99:37522/", ""},
+		{"credentials", "MULTICA_DEPLOY_URL=https://user:secret@preview.test/", ""},
+		{"query", "MULTICA_DEPLOY_URL=https://preview.test/?token=secret", ""},
+		{"fragment", "MULTICA_DEPLOY_URL=https://preview.test/#secret", ""},
+		{"non HTTP", "MULTICA_DEPLOY_URL=javascript:alert(1)", ""},
+		{"conflicting hosts", "MULTICA_DEPLOY_URL=http://172.16.4.99/\nMULTICA_DEPLOY_URL=http://172.16.4.100/", ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := ExtractDeploymentURL(tc.trace, rules)
+			if got != tc.want || (err != nil) != (tc.want == "") {
+				t.Fatalf("got %q, %v; want %q", got, err, tc.want)
+			}
+		})
+	}
+}
+
+func TestExtractDeploymentURLProductSummary(t *testing.T) {
+	rules := testDeliveryRules()
+	rules.DeploymentJob = "product-selective"
+	rules.URLPrefix = "[SUMMARY] 部署访问地址："
+	if err := rules.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	cases := []struct{ name, trace, want string }{
+		{"ready", "[SUMMARY] 产品 CI：success\r\n[SUMMARY] 部署状态：workloads_ready\r\n[SUMMARY] 部署访问地址：http://app.test:37521/\r\n[SUMMARY] 业务功能：请访问环境自行验收", "http://app.test:37521/"},
+		{"colored", "\x1b[32m[SUMMARY] 部署访问地址：http://app.test:37521/\x1b[0m", "http://app.test:37521/"},
+		{"no address", "[SUMMARY] 产品 CI：success\n[SUMMARY] 部署状态：disabled", ""},
+		{"unmarked address", "Visit http://app.test:37521/", ""},
+		{"wrong host", "[SUMMARY] 部署访问地址：http://other.test:37521/", ""},
+		{"ambiguous", "[SUMMARY] 部署访问地址：http://app.test:37521/\n[SUMMARY] 部署访问地址：http://app.test:37522/", ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := ExtractDeploymentURL(tc.trace, rules)
+			if got != tc.want || (err != nil) != (tc.want == "") {
+				t.Fatalf("got %q, %v; want %q", got, err, tc.want)
+			}
+		})
+	}
+}
+
+func TestGitLabDeliveryProductPipeline(t *testing.T) {
+	sha := strings.Repeat("a", 40)
+	ref := "prod-9.1.0.0-feature"
+	rules := testDeliveryRules()
+	rules.AllowedHosts = nil
+	rules.DeploymentJob = "product-selective"
+	rules.URLPrefix = "[SUMMARY] 部署访问地址："
+	traceRead := false
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			t.Error("delivery tracking must not trigger CI or deployment")
+		}
+		switch r.URL.Path {
+		case "/api/v4/projects/7/pipelines/1/bridges":
+			fmt.Fprint(w, "[]")
+		case "/api/v4/projects/7/pipelines":
+			if r.URL.Query().Get("sha") != sha || r.URL.Query().Get("ref") != ref || r.URL.Query().Get("source") != "push" {
+				t.Error("incorrect product pipeline identity")
+			}
+			fmt.Fprintf(w, `[{"id":1,"sha":%q,"ref":%q,"source":"push"}]`, sha, ref)
+		case "/api/v4/projects/7/pipelines/1":
+			fmt.Fprintf(w, `{"id":1,"sha":%q,"ref":%q,"source":"push","status":"success"}`, sha, ref)
+		case "/api/v4/projects/7/pipelines/1/jobs":
+			fmt.Fprint(w, `[{"id":2,"name":"product-ecm-images","status":"success"},{"id":3,"name":"product-agent-images","status":"success"},{"id":4,"name":"product-selective","status":"success"}]`)
+		case "/api/v4/projects/7/jobs/4/trace":
+			traceRead = true
+			fmt.Fprint(w, "[SUMMARY] 产品 CI：success\n[SUMMARY] 部署状态：workloads_ready\n[SUMMARY] 部署访问地址：http://app.test:37521/")
+		default:
+			t.Errorf("unexpected GitLab request: %s", r.URL.Path)
+			http.NotFound(w, r)
+		}
+	}))
+	defer s.Close()
+	status, result, err := (GitLabDeliveryClient{InstanceURL: s.URL}).Check(context.Background(), 7, sha, ref, 0, rules)
+	if err != nil || status != "deployed" || result.JobID != 4 || result.DeploymentURL != "http://app.test:37521/" || !traceRead {
+		t.Fatalf("product delivery: status=%s result=%+v err=%v traceRead=%v", status, result, err, traceRead)
+	}
+}
+
 func TestGitLabDeliveryStates(t *testing.T) {
 	sha := strings.Repeat("a", 40)
 	cases := []struct {
@@ -64,6 +152,8 @@ func TestGitLabDeliveryStates(t *testing.T) {
 					t.Error("missing API credential")
 				}
 				switch {
+				case strings.HasSuffix(r.URL.Path, "/bridges"):
+					fmt.Fprint(w, "[]")
 				case strings.HasSuffix(r.URL.Path, "/pipelines"):
 					if r.URL.Query().Get("sha") != sha || r.URL.Query().Get("ref") != "feature" {
 						t.Error("incorrect pipeline filters")
@@ -147,6 +237,8 @@ func TestGitLabDeliveryJobPaginationAndPipelineBinding(t *testing.T) {
 	pages, lists := 0, 0
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
+		case strings.HasSuffix(r.URL.Path, "/bridges"):
+			fmt.Fprint(w, "[]")
 		case strings.HasSuffix(r.URL.Path, "/pipelines"):
 			lists++
 			t.Error("bound pipeline must not be replaced with the latest pipeline")

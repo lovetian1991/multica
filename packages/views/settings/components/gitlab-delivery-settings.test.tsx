@@ -9,7 +9,8 @@ import { GitLabDeliverySettings } from "./gitlab-delivery-settings";
 vi.mock("@multica/core/hooks", () => ({ useWorkspaceId: () => "ws" }));
 vi.mock("@multica/core/api", async (original) => ({
   ...await original<typeof import("@multica/core/api")>(),
-  api: { listDeliveryProjects: vi.fn(), saveDeliveryProject: vi.fn(), deleteDeliveryProject: vi.fn() },
+  api: { listDeliveryProjects: vi.fn(), saveDeliveryProject: vi.fn(), deleteDeliveryProject: vi.fn(),
+    getDeliveryDefaults: vi.fn(), saveDeliveryDefaults: vi.fn() },
 }));
 function renderSettings(canManage = true) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false } } });
@@ -20,39 +21,41 @@ function renderSettings(canManage = true) {
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(api.listDeliveryProjects).mockResolvedValue({ projects: [] });
+  vi.mocked(api.getDeliveryDefaults).mockResolvedValue({
+    enabled: true, rules: { autoDiscover: true, deploymentJob: "", pipelineSource: "push",
+      urlPrefix: "MULTICA_DEPLOY_URL=", allowedHosts: [], timeoutMinutes: 120 },
+  });
 });
 
 it("saves project tracking rules without collecting another token", async () => {
   const user = userEvent.setup();
   renderSettings();
-  await user.click(screen.getByRole("button", { name: "Configure projects" }));
+  await user.click(screen.getByRole("button", { name: "Repository overrides" }));
   const dialog = await screen.findByRole("dialog");
-  expect(within(dialog).queryByLabelText(/token/i)).not.toBeInTheDocument();
+  expect(within(dialog).queryByLabelText(/token|hosts/i)).not.toBeInTheDocument();
   await user.type(within(dialog).getByLabelText("Project ID"), "7");
   await user.type(within(dialog).getByLabelText("Deployment job"), "deploy");
-  await user.type(within(dialog).getByLabelText("Allowed URL hosts"), "app.test, preview.test");
   await user.click(within(dialog).getByRole("button", { name: "Save" }));
   await waitFor(() => expect(api.saveDeliveryProject).toHaveBeenCalledWith("ws", {
     connectionId: "connection", projectId: 7,
-    rules: { deploymentJob: "deploy", pipelineSource: "push", allowedHosts: ["app.test", "preview.test"],
+    rules: { deploymentJob: "deploy", pipelineSource: "push", allowedHosts: [],
       urlPrefix: "MULTICA_DEPLOY_URL=", timeoutMinutes: 120 },
   }));
 });
 
 it("does not expose project mutations to non-admins", () => {
   renderSettings(false);
-  expect(screen.queryByRole("button", { name: "Configure projects" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Repository overrides" })).not.toBeInTheDocument();
 });
 
 it("keeps a failed save open with the error visible", async () => {
   vi.mocked(api.saveDeliveryProject).mockRejectedValue(new Error("project access denied"));
   const user = userEvent.setup();
   renderSettings();
-  await user.click(screen.getByRole("button", { name: "Configure projects" }));
+  await user.click(screen.getByRole("button", { name: "Repository overrides" }));
   const dialog = await screen.findByRole("dialog");
   await user.type(within(dialog).getByLabelText("Project ID"), "7");
   await user.type(within(dialog).getByLabelText("Deployment job"), "deploy");
-  await user.type(within(dialog).getByLabelText("Allowed URL hosts"), "app.test");
   await user.click(within(dialog).getByRole("button", { name: "Save" }));
   expect(await within(dialog).findByRole("alert")).toHaveTextContent("project access denied");
   expect(dialog).toBeVisible();

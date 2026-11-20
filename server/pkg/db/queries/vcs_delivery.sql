@@ -4,6 +4,20 @@ SELECT * FROM vcs_delivery_project WHERE workspace_id = $1 ORDER BY project_path
 -- name: GetVCSDeliveryProject :one
 SELECT * FROM vcs_delivery_project WHERE id = $1 AND workspace_id = $2;
 
+-- name: SaveVCSDeliveryDefaults :one
+UPDATE workspace SET settings = jsonb_set(settings, '{gitlab_delivery_defaults}', sqlc.arg('defaults')::jsonb),
+    updated_at = now()
+WHERE id = sqlc.arg('workspace_id')
+RETURNING settings;
+
+-- name: EnsureVCSDeliveryProject :one
+INSERT INTO vcs_delivery_project (workspace_id, connection_id, project_id, project_path, rules)
+SELECT $1, c.id, $3, $4, '{"inherit_defaults":true}'::jsonb FROM vcs_connection c
+WHERE c.id = $2 AND c.workspace_id = $1 AND c.provider = 'gitlab'
+ON CONFLICT (workspace_id, connection_id, project_id) DO UPDATE SET
+    project_path = EXCLUDED.project_path
+RETURNING *;
+
 -- name: UpsertVCSDeliveryProject :one
 INSERT INTO vcs_delivery_project (workspace_id, connection_id, project_id, project_path, rules)
 SELECT $1, c.id, $3, $4, $5 FROM vcs_connection c
@@ -18,16 +32,20 @@ DELETE FROM vcs_delivery_project WHERE id = $1 AND workspace_id = $2;
 -- name: RegisterVCSDelivery :one
 INSERT INTO vcs_delivery (
     workspace_id, issue_id, project_config_id, connection_id, project_id,
-    project_path, rules, sha, ref, deadline_at
+    project_path, rules, sha, ref, deadline_at, result
 )
 SELECT p.workspace_id, i.id, p.id, p.connection_id, p.project_id,
-    p.project_path, p.rules, sqlc.arg('sha'), sqlc.arg('ref'), sqlc.arg('deadline_at')
+    p.project_path, sqlc.arg('rules'), sqlc.arg('sha'), sqlc.arg('ref'), sqlc.arg('deadline_at'), sqlc.arg('result')
 FROM vcs_delivery_project p
 JOIN issue i ON i.workspace_id = p.workspace_id AND i.id = sqlc.arg('issue_id')
 JOIN vcs_connection c ON c.id = p.connection_id AND c.workspace_id = p.workspace_id
 WHERE p.id = sqlc.arg('project_config_id') AND p.workspace_id = sqlc.arg('workspace_id')
-ON CONFLICT (workspace_id, issue_id, project_config_id, sha, ref) DO UPDATE SET sha = EXCLUDED.sha
+ON CONFLICT (workspace_id, issue_id, project_config_id, sha, ref) DO UPDATE SET
+    result = vcs_delivery.result || EXCLUDED.result
 RETURNING *;
+
+-- name: GetIssueVCSDelivery :one
+SELECT * FROM vcs_delivery WHERE id = $1 AND workspace_id = $2 AND issue_id = $3;
 
 -- name: ListIssueVCSDeliveries :many
 SELECT * FROM vcs_delivery WHERE workspace_id = $1 AND issue_id = $2 ORDER BY created_at DESC LIMIT 50;
@@ -40,7 +58,8 @@ WHERE d.notified_at IS NULL AND d.next_poll_at <= now()
 ORDER BY d.next_poll_at LIMIT 10;
 
 -- name: UpdateVCSDelivery :one
-UPDATE vcs_delivery SET pipeline_id = $3, status = $4, result = $5,
+UPDATE vcs_delivery SET pipeline_id = $3, status = $4,
+    result = sqlc.arg('result')::jsonb || CASE WHEN result ? 'integration' THEN jsonb_build_object('integration', result->'integration') ELSE '{}'::jsonb END,
     next_poll_at = now() + interval '30 seconds', updated_at = now()
 WHERE id = $1 AND workspace_id = $2 AND notified_at IS NULL
 RETURNING *;
@@ -51,7 +70,8 @@ WHERE id = $1 AND workspace_id = $2 AND notified_at IS NULL
 RETURNING *;
 
 -- name: RetryVCSDelivery :one
-UPDATE vcs_delivery SET status = 'pending_pipeline', notified_at = NULL, result = '{}',
+UPDATE vcs_delivery SET status = 'pending_pipeline', notified_at = NULL,
+    result = CASE WHEN result ? 'integration' THEN jsonb_build_object('integration', result->'integration') ELSE '{}'::jsonb END,
     next_poll_at = now(), deadline_at = $4, updated_at = now()
 WHERE id = $1 AND workspace_id = $2 AND issue_id = $3 AND notified_at IS NOT NULL
 RETURNING *;

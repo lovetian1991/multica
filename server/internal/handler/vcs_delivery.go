@@ -36,6 +36,7 @@ func deliveryProjectResponse(p db.VcsDeliveryProject, instanceURL string) map[st
 		"id": uuidToString(p.ID), "connection_id": uuidToString(p.ConnectionID),
 		"instance_url": instanceURL,
 		"project_id":   p.ProjectID, "project_path": p.ProjectPath, "rules": json.RawMessage(p.Rules),
+		"inherits_defaults": deliveryInheritsDefaults(p.Rules),
 	}
 }
 
@@ -72,8 +73,17 @@ func (h *Handler) ListVCSDeliveryProjects(w http.ResponseWriter, r *http.Request
 		instances[conn.ID] = conn.InstanceUrl
 	}
 	out := make([]map[string]any, 0, len(rows))
+	defaults, err := h.loadVCSDeliveryDefaults(r.Context(), ws)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load CI tracking defaults")
+		return
+	}
 	for _, row := range rows {
-		out = append(out, deliveryProjectResponse(row, instances[row.ConnectionID]))
+		response := deliveryProjectResponse(row, instances[row.ConnectionID])
+		if deliveryInheritsDefaults(row.Rules) {
+			response["rules"] = defaults.Rules
+		}
+		out = append(out, response)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"projects": out})
 }
@@ -188,6 +198,7 @@ func (h *Handler) RegisterIssueDelivery(w http.ResponseWriter, r *http.Request) 
 	}
 	var req struct {
 		ProjectConfigID string `json:"project_config_id"`
+		RepositoryURL   string `json:"repository_url"`
 		SHA             string `json:"sha"`
 		Ref             string `json:"ref"`
 	}
@@ -195,8 +206,8 @@ func (h *Handler) RegisterIssueDelivery(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	id, ok := parseUUIDOrBadRequest(w, req.ProjectConfigID, "project_config_id")
-	if !ok {
+	if (req.ProjectConfigID == "") == (req.RepositoryURL == "") {
+		writeError(w, http.StatusBadRequest, "provide exactly one of repository_url or project_config_id")
 		return
 	}
 	req.SHA, req.Ref = strings.TrimSpace(req.SHA), strings.TrimSpace(req.Ref)
@@ -204,19 +215,47 @@ func (h *Handler) RegisterIssueDelivery(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusBadRequest, "full commit sha and ref are required")
 		return
 	}
-	p, err := h.Queries.GetVCSDeliveryProject(r.Context(), db.GetVCSDeliveryProjectParams{ID: id, WorkspaceID: issue.WorkspaceID})
+	var p db.VcsDeliveryProject
+	var err error
+	if req.RepositoryURL != "" {
+		p, err = h.resolveDeliveryRepository(r.Context(), issue.WorkspaceID, strings.TrimSpace(req.RepositoryURL))
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+	} else {
+		id, valid := parseUUIDOrBadRequest(w, req.ProjectConfigID, "project_config_id")
+		if !valid {
+			return
+		}
+		p, err = h.Queries.GetVCSDeliveryProject(r.Context(), db.GetVCSDeliveryProjectParams{ID: id, WorkspaceID: issue.WorkspaceID})
+	}
 	if err != nil {
 		writeError(w, http.StatusNotFound, "delivery project not found")
 		return
 	}
 	var rules vcs.DeliveryRules
-	if json.Unmarshal(p.Rules, &rules) != nil || rules.Validate() != nil {
+	if deliveryInheritsDefaults(p.Rules) {
+		defaults, loadErr := h.loadVCSDeliveryDefaults(r.Context(), issue.WorkspaceID)
+		if loadErr != nil || !defaults.Enabled {
+			writeError(w, http.StatusConflict, "automatic CI tracking defaults are unavailable or disabled")
+			return
+		}
+		rules = defaults.Rules
+	} else if json.Unmarshal(p.Rules, &rules) != nil {
 		writeError(w, http.StatusConflict, "delivery project rules are invalid")
 		return
 	}
+	if rules.Validate() != nil {
+		writeError(w, http.StatusConflict, "delivery project rules are invalid")
+		return
+	}
+	rawRules, _ := json.Marshal(rules)
 	d, err := h.Queries.RegisterVCSDelivery(r.Context(), db.RegisterVCSDeliveryParams{
 		WorkspaceID: issue.WorkspaceID, IssueID: issue.ID, ProjectConfigID: p.ID,
-		Sha: strings.ToLower(req.SHA), Ref: req.Ref,
+		Rules:  rawRules,
+		Result: []byte(`{}`),
+		Sha:    strings.ToLower(req.SHA), Ref: req.Ref,
 		DeadlineAt: pgtype.Timestamptz{Time: time.Now().Add(time.Duration(rules.TimeoutMinutes) * time.Minute), Valid: true},
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -305,14 +344,15 @@ func (h *Handler) pollVCSDelivery(ctx context.Context, d db.VcsDelivery) error {
 				status, result.Reason = "blocked", "Invalid delivery rules."
 				break
 			}
-			pollCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
+			pollCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 			nextStatus, nextResult, checkErr := (vcs.GitLabDeliveryClient{InstanceURL: conn.InstanceUrl, Token: token}).Check(
 				pollCtx, d.ProjectID, d.Sha, d.Ref, d.PipelineID, rules,
 			)
 			cancel()
+			nextResult.Integration = result.Integration
 			if checkErr != nil {
 				if nextResult.PipelineID > 0 {
-					result.PipelineID = nextResult.PipelineID
+					result = nextResult
 				}
 				result.Reason = checkErr.Error()
 				status = "retrying"
@@ -349,8 +389,15 @@ func (h *Handler) pollVCSDelivery(ctx context.Context, d db.VcsDelivery) error {
 		return err
 	}
 	content := fmt.Sprintf("GitLab delivery: %s\nProject: %s\nCommit: %s\nRef: %s", status, d.ProjectPath, d.Sha, d.Ref)
+	if result.Integration != nil {
+		content += fmt.Sprintf("\nIntegration: %s -> %s\nMerge request: %s\nSource branch cleanup: %s",
+			result.Integration.SourceRef, result.Integration.TargetRef, result.Integration.MergeRequestURL, result.Integration.SourceCleanup)
+	}
 	if result.PipelineURL != "" {
 		content += "\nPipeline: " + result.PipelineURL
+	}
+	for _, child := range result.DownstreamPipelines {
+		content += fmt.Sprintf("\nChild pipeline (%s): %s", child.Status, child.URL)
 	}
 	if result.JobURL != "" {
 		content += "\nJob: " + result.JobURL

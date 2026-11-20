@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Pencil, Trash2, Settings } from "@multica/ui/icons";
 import { useT } from "../../i18n";
 import { SettingsRow } from "./settings-layout";
+import { GitLabDeliveryDefaults } from "./gitlab-delivery-defaults";
 
 const sources = ["push", "web", "api", "merge_request_event", "schedule"].map((value) => ({ value, label: value }));
 
@@ -31,7 +32,6 @@ export function GitLabDeliverySettings({ connections, canManage }: { connections
   const [projectId, setProjectId] = useState("");
   const [job, setJob] = useState("");
   const [source, setSource] = useState("push");
-  const [hosts, setHosts] = useState("");
   const [prefix, setPrefix] = useState("MULTICA_DEPLOY_URL=");
   const [timeout, setTimeout] = useState("120");
   const [remove, setRemove] = useState<DeliveryProject | null>(null);
@@ -39,7 +39,7 @@ export function GitLabDeliverySettings({ connections, canManage }: { connections
     mutationFn: () => api.saveDeliveryProject(wsId, {
       connectionId: connectionId || gitlabs[0]?.id || "", projectId: Number(projectId),
       rules: { deploymentJob: job.trim(), pipelineSource: source, urlPrefix: prefix,
-        allowedHosts: hosts.split(",").map((h) => h.trim()).filter(Boolean), timeoutMinutes: Number(timeout) },
+        allowedHosts: [], timeoutMinutes: Number(timeout) },
     }),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: vcsKeys.deliveryProjects(wsId) });
@@ -57,11 +57,12 @@ export function GitLabDeliverySettings({ connections, canManage }: { connections
   function edit(p: DeliveryProject) {
     setConnectionId(p.connectionId); setProjectId(String(p.projectId));
     setJob(p.rules.deploymentJob); setSource(p.rules.pipelineSource);
-    setHosts(p.rules.allowedHosts.join(", ")); setPrefix(p.rules.urlPrefix);
+    setPrefix(p.rules.urlPrefix);
     setTimeout(String(p.rules.timeoutMinutes)); save.reset();
   }
   return (
     <>
+      <GitLabDeliveryDefaults canManage={canManage} />
       <SettingsRow label={t(($) => $.delivery.title)}>
         {canManage && <Dialog open={open} onOpenChange={(next) => { if (!save.isPending) { setOpen(next); save.reset(); } }}>
           <DialogTrigger render={<Button variant="outline" size="sm" />}>
@@ -73,7 +74,7 @@ export function GitLabDeliverySettings({ connections, canManage }: { connections
               {query.isLoading && <p>{t(($) => $.delivery.loading)}</p>}
               {query.isError && <p role="alert">{t(($) => $.delivery.error)}</p>}
               {query.data?.projects.map((p) => <div key={p.id} className="flex min-w-0 items-center gap-2 text-caption">
-                <span className="min-w-0 flex-1 break-all">{p.projectPath} · {p.rules.deploymentJob}</span>
+                <span className="min-w-0 flex-1 break-all">{p.projectPath} · {p.inheritsDefaults ? t(($) => $.delivery.inherited) : p.rules.deploymentJob}</span>
                 <IconButton variant="ghost" size="icon-sm" label={t(($) => $.delivery.edit)} disabled={save.isPending || deletion.isPending} onClick={() => edit(p)}><Pencil /></IconButton>
                 <IconButton variant="ghost" size="icon-sm" label={t(($) => $.delivery.remove)} disabled={save.isPending || deletion.isPending} onClick={() => { deletion.reset(); setRemove(p); }}><Trash2 /></IconButton>
               </div>)}
@@ -96,8 +97,6 @@ export function GitLabDeliverySettings({ connections, canManage }: { connections
                   <SelectTrigger id={`${formId}-source`} className="w-full"><SelectValue /></SelectTrigger>
                   <SelectContent>{sources.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
                 </Select></div>
-              <div className="space-y-1.5"><Label htmlFor={`${formId}-hosts`}>{t(($) => $.delivery.hosts)}</Label>
-                <Input id={`${formId}-hosts`} disabled={save.isPending} required value={hosts} onChange={(e) => setHosts(e.target.value)} /></div>
               <div className="space-y-1.5"><Label htmlFor={`${formId}-prefix`}>{t(($) => $.delivery.prefix)}</Label>
                 <Input id={`${formId}-prefix`} disabled={save.isPending} required maxLength={100} value={prefix} onChange={(e) => setPrefix(e.target.value)} /></div>
               <div className="space-y-1.5"><Label htmlFor={`${formId}-timeout`}>{t(($) => $.delivery.timeout)}</Label>

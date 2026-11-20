@@ -25,6 +25,79 @@ func (q *Queries) DeleteVCSDeliveryProject(ctx context.Context, arg DeleteVCSDel
 	return err
 }
 
+const ensureVCSDeliveryProject = `-- name: EnsureVCSDeliveryProject :one
+INSERT INTO vcs_delivery_project (workspace_id, connection_id, project_id, project_path, rules)
+SELECT $1, c.id, $3, $4, '{"inherit_defaults":true}'::jsonb FROM vcs_connection c
+WHERE c.id = $2 AND c.workspace_id = $1 AND c.provider = 'gitlab'
+ON CONFLICT (workspace_id, connection_id, project_id) DO UPDATE SET
+    project_path = EXCLUDED.project_path
+RETURNING id, workspace_id, connection_id, project_id, project_path, rules, created_at, updated_at
+`
+
+type EnsureVCSDeliveryProjectParams struct {
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	ID          pgtype.UUID `json:"id"`
+	ProjectID   int64       `json:"project_id"`
+	ProjectPath string      `json:"project_path"`
+}
+
+func (q *Queries) EnsureVCSDeliveryProject(ctx context.Context, arg EnsureVCSDeliveryProjectParams) (VcsDeliveryProject, error) {
+	row := q.db.QueryRow(ctx, ensureVCSDeliveryProject,
+		arg.WorkspaceID,
+		arg.ID,
+		arg.ProjectID,
+		arg.ProjectPath,
+	)
+	var i VcsDeliveryProject
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.ConnectionID,
+		&i.ProjectID,
+		&i.ProjectPath,
+		&i.Rules,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getIssueVCSDelivery = `-- name: GetIssueVCSDelivery :one
+SELECT id, workspace_id, issue_id, project_config_id, connection_id, project_id, project_path, rules, sha, ref, pipeline_id, status, result, next_poll_at, deadline_at, notified_at, created_at, updated_at FROM vcs_delivery WHERE id = $1 AND workspace_id = $2 AND issue_id = $3
+`
+
+type GetIssueVCSDeliveryParams struct {
+	ID          pgtype.UUID `json:"id"`
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+	IssueID     pgtype.UUID `json:"issue_id"`
+}
+
+func (q *Queries) GetIssueVCSDelivery(ctx context.Context, arg GetIssueVCSDeliveryParams) (VcsDelivery, error) {
+	row := q.db.QueryRow(ctx, getIssueVCSDelivery, arg.ID, arg.WorkspaceID, arg.IssueID)
+	var i VcsDelivery
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.IssueID,
+		&i.ProjectConfigID,
+		&i.ConnectionID,
+		&i.ProjectID,
+		&i.ProjectPath,
+		&i.Rules,
+		&i.Sha,
+		&i.Ref,
+		&i.PipelineID,
+		&i.Status,
+		&i.Result,
+		&i.NextPollAt,
+		&i.DeadlineAt,
+		&i.NotifiedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getVCSDeliveryProject = `-- name: GetVCSDeliveryProject :one
 SELECT id, workspace_id, connection_id, project_id, project_path, rules, created_at, updated_at FROM vcs_delivery_project WHERE id = $1 AND workspace_id = $2
 `
@@ -218,22 +291,25 @@ func (q *Queries) MarkVCSDeliveryNotified(ctx context.Context, arg MarkVCSDelive
 const registerVCSDelivery = `-- name: RegisterVCSDelivery :one
 INSERT INTO vcs_delivery (
     workspace_id, issue_id, project_config_id, connection_id, project_id,
-    project_path, rules, sha, ref, deadline_at
+    project_path, rules, sha, ref, deadline_at, result
 )
 SELECT p.workspace_id, i.id, p.id, p.connection_id, p.project_id,
-    p.project_path, p.rules, $1, $2, $3
+    p.project_path, $1, $2, $3, $4, $5
 FROM vcs_delivery_project p
-JOIN issue i ON i.workspace_id = p.workspace_id AND i.id = $4
+JOIN issue i ON i.workspace_id = p.workspace_id AND i.id = $6
 JOIN vcs_connection c ON c.id = p.connection_id AND c.workspace_id = p.workspace_id
-WHERE p.id = $5 AND p.workspace_id = $6
-ON CONFLICT (workspace_id, issue_id, project_config_id, sha, ref) DO UPDATE SET sha = EXCLUDED.sha
+WHERE p.id = $7 AND p.workspace_id = $8
+ON CONFLICT (workspace_id, issue_id, project_config_id, sha, ref) DO UPDATE SET
+    result = vcs_delivery.result || EXCLUDED.result
 RETURNING id, workspace_id, issue_id, project_config_id, connection_id, project_id, project_path, rules, sha, ref, pipeline_id, status, result, next_poll_at, deadline_at, notified_at, created_at, updated_at
 `
 
 type RegisterVCSDeliveryParams struct {
+	Rules           []byte             `json:"rules"`
 	Sha             string             `json:"sha"`
 	Ref             string             `json:"ref"`
 	DeadlineAt      pgtype.Timestamptz `json:"deadline_at"`
+	Result          []byte             `json:"result"`
 	IssueID         pgtype.UUID        `json:"issue_id"`
 	ProjectConfigID pgtype.UUID        `json:"project_config_id"`
 	WorkspaceID     pgtype.UUID        `json:"workspace_id"`
@@ -241,9 +317,11 @@ type RegisterVCSDeliveryParams struct {
 
 func (q *Queries) RegisterVCSDelivery(ctx context.Context, arg RegisterVCSDeliveryParams) (VcsDelivery, error) {
 	row := q.db.QueryRow(ctx, registerVCSDelivery,
+		arg.Rules,
 		arg.Sha,
 		arg.Ref,
 		arg.DeadlineAt,
+		arg.Result,
 		arg.IssueID,
 		arg.ProjectConfigID,
 		arg.WorkspaceID,
@@ -273,7 +351,8 @@ func (q *Queries) RegisterVCSDelivery(ctx context.Context, arg RegisterVCSDelive
 }
 
 const retryVCSDelivery = `-- name: RetryVCSDelivery :one
-UPDATE vcs_delivery SET status = 'pending_pipeline', notified_at = NULL, result = '{}',
+UPDATE vcs_delivery SET status = 'pending_pipeline', notified_at = NULL,
+    result = CASE WHEN result ? 'integration' THEN jsonb_build_object('integration', result->'integration') ELSE '{}'::jsonb END,
     next_poll_at = now(), deadline_at = $4, updated_at = now()
 WHERE id = $1 AND workspace_id = $2 AND issue_id = $3 AND notified_at IS NOT NULL
 RETURNING id, workspace_id, issue_id, project_config_id, connection_id, project_id, project_path, rules, sha, ref, pipeline_id, status, result, next_poll_at, deadline_at, notified_at, created_at, updated_at
@@ -317,8 +396,28 @@ func (q *Queries) RetryVCSDelivery(ctx context.Context, arg RetryVCSDeliveryPara
 	return i, err
 }
 
+const saveVCSDeliveryDefaults = `-- name: SaveVCSDeliveryDefaults :one
+UPDATE workspace SET settings = jsonb_set(settings, '{gitlab_delivery_defaults}', $1::jsonb),
+    updated_at = now()
+WHERE id = $2
+RETURNING settings
+`
+
+type SaveVCSDeliveryDefaultsParams struct {
+	Defaults    []byte      `json:"defaults"`
+	WorkspaceID pgtype.UUID `json:"workspace_id"`
+}
+
+func (q *Queries) SaveVCSDeliveryDefaults(ctx context.Context, arg SaveVCSDeliveryDefaultsParams) ([]byte, error) {
+	row := q.db.QueryRow(ctx, saveVCSDeliveryDefaults, arg.Defaults, arg.WorkspaceID)
+	var settings []byte
+	err := row.Scan(&settings)
+	return settings, err
+}
+
 const updateVCSDelivery = `-- name: UpdateVCSDelivery :one
-UPDATE vcs_delivery SET pipeline_id = $3, status = $4, result = $5,
+UPDATE vcs_delivery SET pipeline_id = $3, status = $4,
+    result = $5::jsonb || CASE WHEN result ? 'integration' THEN jsonb_build_object('integration', result->'integration') ELSE '{}'::jsonb END,
     next_poll_at = now() + interval '30 seconds', updated_at = now()
 WHERE id = $1 AND workspace_id = $2 AND notified_at IS NULL
 RETURNING id, workspace_id, issue_id, project_config_id, connection_id, project_id, project_path, rules, sha, ref, pipeline_id, status, result, next_poll_at, deadline_at, notified_at, created_at, updated_at
