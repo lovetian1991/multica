@@ -7,11 +7,13 @@ WHERE id = TRUE;
 INSERT INTO system_setting (
     id,
     kb_environment_url,
-    kb_integration_key_encrypted
+    kb_integration_key_encrypted,
+    oc_integration_key_encrypted
 )
-VALUES (TRUE, $1, $2)
+VALUES (TRUE, $1, $2, $3)
 ON CONFLICT (id) DO UPDATE SET
     kb_environment_url = EXCLUDED.kb_environment_url,
     kb_integration_key_encrypted = EXCLUDED.kb_integration_key_encrypted,
+    oc_integration_key_encrypted = EXCLUDED.oc_integration_key_encrypted,
     updated_at = now()
 RETURNING *;

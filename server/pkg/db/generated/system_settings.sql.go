@@ -10,7 +10,7 @@ import (
 )
 
 const getSystemSettings = `-- name: GetSystemSettings :one
-SELECT id, kb_environment_url, kb_integration_key_encrypted, created_at, updated_at
+SELECT id, kb_environment_url, kb_integration_key_encrypted, created_at, updated_at, oc_integration_key_encrypted
 FROM system_setting
 WHERE id = TRUE
 `
@@ -24,6 +24,7 @@ func (q *Queries) GetSystemSettings(ctx context.Context) (SystemSetting, error) 
 		&i.KbIntegrationKeyEncrypted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OcIntegrationKeyEncrypted,
 	)
 	return i, err
 }
@@ -32,23 +33,26 @@ const upsertSystemSettings = `-- name: UpsertSystemSettings :one
 INSERT INTO system_setting (
     id,
     kb_environment_url,
-    kb_integration_key_encrypted
+    kb_integration_key_encrypted,
+    oc_integration_key_encrypted
 )
-VALUES (TRUE, $1, $2)
+VALUES (TRUE, $1, $2, $3)
 ON CONFLICT (id) DO UPDATE SET
     kb_environment_url = EXCLUDED.kb_environment_url,
     kb_integration_key_encrypted = EXCLUDED.kb_integration_key_encrypted,
+    oc_integration_key_encrypted = EXCLUDED.oc_integration_key_encrypted,
     updated_at = now()
-RETURNING id, kb_environment_url, kb_integration_key_encrypted, created_at, updated_at
+RETURNING id, kb_environment_url, kb_integration_key_encrypted, created_at, updated_at, oc_integration_key_encrypted
 `
 
 type UpsertSystemSettingsParams struct {
 	KbEnvironmentUrl          string `json:"kb_environment_url"`
 	KbIntegrationKeyEncrypted string `json:"kb_integration_key_encrypted"`
+	OcIntegrationKeyEncrypted string `json:"oc_integration_key_encrypted"`
 }
 
 func (q *Queries) UpsertSystemSettings(ctx context.Context, arg UpsertSystemSettingsParams) (SystemSetting, error) {
-	row := q.db.QueryRow(ctx, upsertSystemSettings, arg.KbEnvironmentUrl, arg.KbIntegrationKeyEncrypted)
+	row := q.db.QueryRow(ctx, upsertSystemSettings, arg.KbEnvironmentUrl, arg.KbIntegrationKeyEncrypted, arg.OcIntegrationKeyEncrypted)
 	var i SystemSetting
 	err := row.Scan(
 		&i.ID,
@@ -56,6 +60,7 @@ func (q *Queries) UpsertSystemSettings(ctx context.Context, arg UpsertSystemSett
 		&i.KbIntegrationKeyEncrypted,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.OcIntegrationKeyEncrypted,
 	)
 	return i, err
 }

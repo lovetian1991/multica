@@ -22,11 +22,13 @@ const (
 type SystemSettingsResponse struct {
 	KBEnvironmentURL           string `json:"kb_environment_url"`
 	KBIntegrationKeyConfigured bool   `json:"kb_integration_key_configured"`
+	OCIntegrationKeyConfigured bool   `json:"oc_integration_key_configured"`
 }
 
 type UpdateSystemSettingsRequest struct {
 	KBEnvironmentURL string `json:"kb_environment_url"`
 	KBIntegrationKey string `json:"kb_integration_key"`
+	OCIntegrationKey string `json:"oc_integration_key"`
 }
 
 func (h *Handler) GetSystemSettings(w http.ResponseWriter, r *http.Request) {
@@ -63,6 +65,16 @@ func (h *Handler) UpdateSystemSettings(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	if utf8.RuneCountInString(request.OCIntegrationKey) > maxKBIntegrationKeyLength {
+		writeError(w, http.StatusBadRequest, "oc integration key is too long")
+		return
+	}
+	for _, ch := range request.OCIntegrationKey {
+		if unicode.IsControl(ch) {
+			writeError(w, http.StatusBadRequest, "oc integration key cannot contain control characters")
+			return
+		}
+	}
 	if utf8.RuneCountInString(request.KBIntegrationKey) > maxKBIntegrationKeyLength {
 		writeError(w, http.StatusBadRequest, "kb integration key is too long")
 		return
@@ -96,9 +108,23 @@ func (h *Handler) UpdateSystemSettings(w http.ResponseWriter, r *http.Request) {
 		encryptedKey = base64.StdEncoding.EncodeToString(sealed)
 	}
 
+	encryptedOCKey := current.OcIntegrationKeyEncrypted
+	if strings.TrimSpace(request.OCIntegrationKey) != "" {
+		if h.SystemSettingsSecretBox == nil {
+			writeError(w, http.StatusServiceUnavailable, "system settings secret encryption is not configured")
+			return
+		}
+		sealed, sealErr := h.SystemSettingsSecretBox.Seal([]byte(strings.TrimSpace(request.OCIntegrationKey)))
+		if sealErr != nil {
+			writeError(w, http.StatusInternalServerError, "failed to encrypt oc integration key")
+			return
+		}
+		encryptedOCKey = base64.StdEncoding.EncodeToString(sealed)
+	}
 	settings, err := h.Queries.UpsertSystemSettings(r.Context(), db.UpsertSystemSettingsParams{
 		KbEnvironmentUrl:          environmentURL,
 		KbIntegrationKeyEncrypted: encryptedKey,
+		OcIntegrationKeyEncrypted: encryptedOCKey,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to save system settings")
@@ -112,6 +138,7 @@ func systemSettingsResponse(settings db.SystemSetting) SystemSettingsResponse {
 	return SystemSettingsResponse{
 		KBEnvironmentURL:           settings.KbEnvironmentUrl,
 		KBIntegrationKeyConfigured: strings.TrimSpace(settings.KbIntegrationKeyEncrypted) != "",
+		OCIntegrationKeyConfigured: strings.TrimSpace(settings.OcIntegrationKeyEncrypted) != "",
 	}
 }
 

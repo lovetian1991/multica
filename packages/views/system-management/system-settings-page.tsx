@@ -16,6 +16,7 @@ import { Label } from "@multica/ui/components/ui/label";
 import { CollapsedNavTrigger } from "../layout/page-header";
 import { useT } from "../i18n";
 import { SystemManagementLayout } from "./system-management-layout";
+import { WorkOrderRootSetting } from "../work-orders/work-order-settings";
 
 export function SystemSettingsPage() {
   const { t } = useT("settings");
@@ -23,6 +24,7 @@ export function SystemSettingsPage() {
   const update = useUpdateSystemSettings();
   const [environmentURL, setEnvironmentURL] = useState("");
   const [integrationKey, setIntegrationKey] = useState("");
+  const [ocIntegrationKey, setOCIntegrationKey] = useState("");
 
   useEffect(() => {
     if (!settingsQuery.data) return;
@@ -36,6 +38,7 @@ export function SystemSettingsPage() {
     update.mutate(
       {
         kb_environment_url: environmentURL.trim(),
+        ...(ocIntegrationKey.trim() ? { oc_integration_key: ocIntegrationKey.trim() } : {}),
         ...(integrationKey.trim()
           ? { kb_integration_key: integrationKey.trim() }
           : {}),
@@ -43,6 +46,7 @@ export function SystemSettingsPage() {
       {
         onSuccess: () => {
           setIntegrationKey("");
+          setOCIntegrationKey("");
           toast.success(t(($) => $.system_settings.saved));
         },
         onError: (error: unknown) => {
@@ -90,6 +94,8 @@ export function SystemSettingsPage() {
                 : t(($) => $.system_settings.load_failed)}
             </p>
           ) : (
+            <>
+            <WorkOrderRootSetting />
             <Card>
               <CardHeader>
                 <CardTitle className="text-body">
@@ -145,6 +151,26 @@ export function SystemSettingsPage() {
                   </p>
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="oc-integration-key">
+                    <KeyRound className="size-4" />
+                    {t(($) => $.system_settings.kb.oc_integration_key)}
+                  </Label>
+                  <Input
+                    id="oc-integration-key"
+                    type="password"
+                    maxLength={4096}
+                    value={ocIntegrationKey}
+                    onChange={(event) => setOCIntegrationKey(event.target.value)}
+                    placeholder={settingsQuery.data?.oc_integration_key_configured
+                      ? t(($) => $.system_settings.kb.integration_key_configured)
+                      : t(($) => $.system_settings.kb.integration_key_placeholder)}
+                    autoComplete="new-password"
+                  />
+                  <p className="text-caption text-muted-foreground">
+                    {t(($) => $.system_settings.kb.oc_integration_key_hint)}
+                  </p>
+                </div>
                 <div className="flex justify-end border-t border-surface-border pt-5">
                   <Button className="gap-2" onClick={save} disabled={update.isPending}>
                     <Save className="size-4" />
@@ -155,6 +181,7 @@ export function SystemSettingsPage() {
                 </div>
               </CardContent>
             </Card>
+            </>
           )}
         </div>
       </div>
