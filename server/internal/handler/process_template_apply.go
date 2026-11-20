@@ -407,6 +407,9 @@ func applyProcessTemplateSquads(ctx context.Context, qtx *db.Queries, workspaceI
 			return applyErrorf("squad %q is missing leader agent %q", firstNonEmptyName(tmpl.DisplayName, tmpl.Key), tmpl.Leader)
 		}
 		matches := findMatchingSquads(existing, tmpl)
+		if len(matches) > 1 {
+			return applyErrorf("multiple active squads match %q; archive or rename duplicate squads before applying the template", firstNonEmptyName(tmpl.DisplayName, tmpl.Key))
+		}
 		if len(matches) == 0 {
 			created, err := qtx.CreateSquad(ctx, db.CreateSquadParams{
 				WorkspaceID: workspaceID,
@@ -539,10 +542,21 @@ func findMatchingAgents(agents []db.Agent, tmpl processtemplate.Agent) []db.Agen
 
 func findMatchingSquads(squads []db.Squad, tmpl processtemplate.Squad) []db.Squad {
 	var matches []db.Squad
+	var archived *db.Squad
 	for _, squad := range squads {
 		if processtemplate.MatchesIdentity(squad.Name, tmpl.DisplayName, tmpl.Key) {
-			matches = append(matches, squad)
+			if !squad.ArchivedAt.Valid {
+				matches = append(matches, squad)
+			} else if archived == nil || squad.ArchivedAt.Time.After(archived.ArchivedAt.Time) ||
+				(squad.ArchivedAt.Time.Equal(archived.ArchivedAt.Time) && squad.CreatedAt.Time.After(archived.CreatedAt.Time)) {
+				copy := squad
+				archived = &copy
+			}
 		}
+	}
+	// Restore only the last archived instance, not every historical namesake.
+	if len(matches) == 0 && archived != nil {
+		return []db.Squad{*archived}
 	}
 	return matches
 }

@@ -517,6 +517,7 @@ type UpdateWorkspaceRequest struct {
 	IssuePrefix         *string `json:"issue_prefix"`
 	AvatarURL           *string `json:"avatar_url"`
 	OCKey               *string `json:"oc_key"`
+	OCAccount           *string `json:"oc_account"`
 	ClearOCKey          bool    `json:"clear_oc_key"`
 	ZentaoURL           *string `json:"zentao_url"`
 	ZentaoAccount       *string `json:"zentao_account"`
@@ -597,7 +598,13 @@ func (h *Handler) UpdateWorkspace(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "zentao password is too long")
 		return
 	}
-	needsSettings := req.Settings != nil ||
+	if req.OCAccount != nil {
+		if _, err := validateOCAccount(*req.OCAccount); err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+	}
+	needsSettings := req.Settings != nil || req.OCAccount != nil ||
 		(req.OCKey != nil && strings.TrimSpace(*req.OCKey) != "") ||
 		req.ClearOCKey ||
 		req.ZentaoURL != nil ||
@@ -643,12 +650,16 @@ func (h *Handler) UpdateWorkspace(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		delete(incoming, workspaceOCKeySettingsField)
+		delete(incoming, "oc_account")
 		delete(incoming, workspaceZentaoPasswordSettingsField)
 		delete(incoming, "zentao_password")
 		reconcilePRMergeSettings(settingsMap, incoming)
 		for key, value := range incoming {
 			settingsMap[key] = value
 		}
+	}
+	if req.OCAccount != nil {
+		setWorkspaceSettingString(settingsMap, "oc_account", *req.OCAccount)
 	}
 	if req.OCKey != nil && strings.TrimSpace(*req.OCKey) != "" {
 		if h.SystemSettingsSecretBox == nil {

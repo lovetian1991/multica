@@ -29,6 +29,7 @@ export interface ProcessTemplate {
   applied_at?: string;
   applied_by?: string;
   can_upgrade: boolean;
+  squads?: { key: string; name: string; id?: string }[];
 }
 
 export interface ListProcessTemplatesResponse {

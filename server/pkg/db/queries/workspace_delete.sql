@@ -350,6 +350,15 @@ deleted_draft_restores AS (
 deleted_agent_builder_drafts AS (
     DELETE FROM agent_builder_draft WHERE workspace_id = $1
 ),
+deleted_work_order_events AS (
+    DELETE FROM work_order_event WHERE workspace_id = $1
+),
+deleted_work_orders AS (
+    DELETE FROM work_order WHERE workspace_id = $1
+),
+deleted_work_order_workspace AS (
+    DELETE FROM work_order_workspace WHERE workspace_id = $1
+),
 deleted_comment_reactions AS (
     DELETE FROM comment_reaction WHERE workspace_id = $1
 ),

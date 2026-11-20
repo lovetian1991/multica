@@ -53,6 +53,13 @@ type processTemplateResponse struct {
 	AppliedAt        string                         `json:"applied_at,omitempty"`
 	AppliedBy        string                         `json:"applied_by,omitempty"`
 	CanUpgrade       bool                           `json:"can_upgrade"`
+	Squads           []processTemplateSquad         `json:"squads,omitempty"`
+}
+
+type processTemplateSquad struct {
+	Key  string `json:"key"`
+	Name string `json:"name"`
+	ID   string `json:"id,omitempty"`
 }
 
 type processTemplateForm struct {
@@ -658,10 +665,51 @@ func (h *Handler) ListWorkspaceProcessTemplates(w http.ResponseWriter, r *http.R
 		return
 	}
 	resp := make([]processTemplateResponse, 0, len(rows))
+	var squads []db.Squad
+	if r.URL.Query().Get("include_squads") == "true" {
+		squads, err = h.Queries.ListSquads(r.Context(), wsUUID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to list squads")
+			return
+		}
+	}
 	for _, row := range rows {
-		resp = append(resp, workspaceProcessTemplateToResponse(row))
+		item := workspaceProcessTemplateToResponse(row)
+		if r.URL.Query().Get("include_squads") == "true" {
+			versionID := row.LatestVersionID
+			if row.InstalledVersionID.Valid {
+				versionID = row.InstalledVersionID
+			}
+			if versionID.Valid {
+				data, loadErr := h.Queries.GetProcessTemplateVersionZip(r.Context(), versionID)
+				if loadErr != nil {
+					writeError(w, http.StatusInternalServerError, "failed to load template squads")
+					return
+				}
+				archive, parseErr := processtemplate.ParseZip(data)
+				if parseErr != nil {
+					writeError(w, http.StatusInternalServerError, "failed to read template squads")
+					return
+				}
+				item.Squads = processTemplateSquadBindings(archive, squads)
+			}
+		}
+		resp = append(resp, item)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"templates": resp, "total": len(resp)})
+}
+
+func processTemplateSquadBindings(archive processtemplate.Archive, squads []db.Squad) []processTemplateSquad {
+	result := make([]processTemplateSquad, 0, len(archive.Squads))
+	for _, squad := range archive.Squads {
+		binding := processTemplateSquad{Key: squad.Key, Name: squad.DisplayName}
+		matches := findMatchingSquads(squads, squad)
+		if len(matches) == 1 && !matches[0].ArchivedAt.Valid {
+			binding.ID = uuidToString(matches[0].ID)
+		}
+		result = append(result, binding)
+	}
+	return result
 }
 
 var errProcessTemplateTooLarge = errors.New("zip archive exceeds 20MB")
