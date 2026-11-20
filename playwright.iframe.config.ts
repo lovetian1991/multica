@@ -10,6 +10,8 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./e2e",
   testMatch: /iframe-scroll-bridge\.spec\.ts/,
+  // Disposable artifact tree — see docs/engineering/artifacts.md.
+  outputDir: "artifacts/e2e-iframe",
   timeout: 60000,
   workers: 1,
   retries: 0,

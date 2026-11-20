@@ -49,9 +49,22 @@ server/migrate
 server/daemon
 server/multica
 
-# Test artifacts
+# Run artifacts — one directory per feature or task. Everything a test, e2e
+# run, perf run, or agent verification writes belongs under artifacts/, never
+# at the repo root. The whole tree is disposable: delete a subdirectory (or the
+# whole directory) whenever it gets large. See docs/engineering/artifacts.md.
+artifacts/
+
+# Playwright's own defaults, kept ignored in case a config or an ad-hoc run
+# still emits them outside artifacts/.
 test-results/
 apps/web/test-results/
+playwright-report/
+blob-report/
+.last-run.json
+
+# Local operator notes (may contain host credentials — never commit)
+env/e.txt
 
 # context (agent workspace)
 .context

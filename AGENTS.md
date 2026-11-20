@@ -119,6 +119,14 @@ Workspace-scoped queries filter by `workspace_id`; membership gates access and `
 - Default tests must not resolve or execute user-installed agent CLIs; pass test-created fake or missing executable paths. New default agent commands go in `scripts/agent-cli-command-names.txt`.
 - Only run real-agent smoke tests when explicitly authorized. Gate them behind `agentintegration` and check `MULTICA_RUN_REAL_AGENT_SMOKE=1` before executable lookup/account access. Run the specific test: `(cd server && MULTICA_RUN_REAL_AGENT_SMOKE=1 go test -tags=agentintegration ./pkg/agent -run '<test-name>' -count=1 -v)`.
 
+## Run Artifacts
+
+- Every file produced by a test, E2E run, perf run, verification script, or debugging session goes under `artifacts/<feature-or-task>/` at the repo root. Never write run output to the repo root, a package directory, or an ad-hoc temp folder.
+- `artifacts/` is gitignored and disposable; name the first-level directory after the feature or task (`artifacts/work-order/`, `artifacts/TANY-23/`), not after a date or a person.
+- Keep the output path a default of the tool you add (Playwright configs already point at `artifacts/`), so a plain run never scatters files.
+- Anything that must be versioned (design docs, specs, baselines) belongs in `docs/` or the source tree, never in `artifacts/`.
+- See [docs/engineering/artifacts.zh.md](docs/engineering/artifacts.zh.md).
+
 ## Change and Delivery Rules
 
 - Keep changes scoped; reuse existing patterns.

@@ -10,6 +10,8 @@ import { defineConfig } from "@playwright/test";
  */
 export default defineConfig({
   testDir: "./e2e/perf",
+  // Disposable artifact tree — see docs/engineering/artifacts.md.
+  outputDir: "artifacts/perf",
   timeout: 180_000,
   workers: 1,
   retries: 0,
