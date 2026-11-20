@@ -53,6 +53,7 @@ import { PluginsTab } from "./plugins-tab";
 import { McpTab } from "./mcp-tab";
 import { BillingTab } from "./billing-tab";
 import { ProcessTemplatesTab } from "./process-templates-tab";
+import { WorkspaceSetupTab } from "./workspace-setup-tab";
 import {
   SETTINGS_ANCHOR_ATTR,
   SettingsHeaderContext,
@@ -168,6 +169,9 @@ export function SettingsPage({ extraDeviceTabs = [] }: SettingsPageProps = {}) {
         {
           key: "workspace",
           entries: [
+            entry("setup", t(($) => $.setup.title), Zap, <WorkspaceSetupTab />, {
+              adminOnly: true,
+            }),
             entry("workspace", t(($) => $.page.tabs.general), Settings, <WorkspaceTab />, {
               adminOnly: true,
             }),

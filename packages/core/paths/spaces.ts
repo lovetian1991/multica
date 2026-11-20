@@ -29,6 +29,7 @@ export const RAIL_SPACES: readonly RailSpaceId[] = [
 const SPACE_BY_SEGMENT: Record<string, AppSpaceId> = {
   inbox: "inbox",
   "my-issues": "work",
+  "work-orders": "work",
   issues: "work",
   projects: "work",
   views: "work",

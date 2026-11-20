@@ -70,7 +70,7 @@ func (h *Handler) externalWorkOrderQuery(w http.ResponseWriter, r *http.Request,
 	ctx, cancel := context.WithTimeout(r.Context(), 25*time.Second)
 	defer cancel()
 	rows, total, err := workorder.QueryMIS(ctx, base, credentials, workorder.MISQuery{
-		Mine: mine, Page: page, Size: 20, Search: search, ID: chi.URLParam(r, "externalId"),
+		Mine: mine, Page: page, Size: workOrderPageSize, Search: search, ID: chi.URLParam(r, "externalId"),
 	})
 	if err != nil {
 		writeError(w, http.StatusBadGateway, err.Error())
@@ -117,6 +117,9 @@ func (h *Handler) ListExternalWorkOrders(w http.ResponseWriter, r *http.Request)
 	}
 	out := make([]externalWorkOrderResponse, 0, len(rows))
 	for _, row := range rows {
+		if chi.URLParam(r, "externalId") == "" {
+			row = row.Summary()
+		}
 		item := externalWorkOrderResponse{MISOrder: row}
 		local, err := h.Queries.GetWorkOrderBySource(r.Context(), db.GetWorkOrderBySourceParams{
 			WorkspaceID: scope.workspace, Source: "mis", ExternalID: row.ID,
@@ -130,7 +133,14 @@ func (h *Handler) ListExternalWorkOrders(w http.ResponseWriter, r *http.Request)
 		}
 		out = append(out, item)
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"orders": out, "total": total, "can_manage": scope.manager})
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"orders": out, "total": total, "can_manage": scope.manager,
+		"page": page, "page_size": workOrderPageSize,
+	})
 }
 
 func (h *Handler) ImportExternalWorkOrder(w http.ResponseWriter, r *http.Request) {

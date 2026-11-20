@@ -39,8 +39,13 @@ async function createFixture() {
   const androidDir = path.join(mobileDir, "android");
 
   await mkdir(path.join(mobileDir, "assets"), { recursive: true });
+  await mkdir(path.join(mobileDir, "plugins"), { recursive: true });
   await mkdir(androidDir, { recursive: true });
   await writeFile(path.join(mobileDir, "app.config.ts"), "app config");
+  await writeFile(
+    path.join(mobileDir, "plugins", "with-android-fbjni.cjs"),
+    "fbjni plugin",
+  );
   await writeFile(path.join(mobileDir, "package.json"), "{}");
   await writeFile(
     path.join(mobileDir, ".env.production"),
@@ -318,6 +323,16 @@ describe("Android fast build", () => {
     const args = getGradleArguments({ clean: false, universal: true });
     expect(args).not.toContain("-PreactNativeArchitectures=arm64-v8a");
     expect(args).not.toContain("--configuration-cache");
+  });
+
+  it("invalidates the native fingerprint when the fbjni plugin changes", async () => {
+    const fixture = await createFixture();
+    const before = await computeNativeFingerprint(fixture);
+    await writeFile(
+      path.join(fixture.mobileDir, "plugins", "with-android-fbjni.cjs"),
+      "updated fbjni plugin",
+    );
+    expect(await computeNativeFingerprint(fixture)).not.toBe(before);
   });
 
   it("injects CMAKE_OBJECT_PATH_MAX for Windows universal native builds", () => {

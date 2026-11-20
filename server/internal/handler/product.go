@@ -11,8 +11,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/multica-ai/multica/server/internal/logger"
+	"github.com/multica-ai/multica/server/internal/workorder"
 	db "github.com/multica-ai/multica/server/pkg/db/generated"
 )
 
@@ -25,14 +27,16 @@ const (
 type ProductResponse struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
+	Slug        string `json:"slug"`
 	Description string `json:"description"`
 	CreatedAt   string `json:"created_at"`
 	UpdatedAt   string `json:"updated_at"`
 }
 
 type ProductRequest struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	Name        string  `json:"name"`
+	Slug        *string `json:"slug"`
+	Description string  `json:"description"`
 }
 
 type productVersionBinding struct {
@@ -44,6 +48,7 @@ func productToResponse(product db.Product) ProductResponse {
 	return ProductResponse{
 		ID:          uuidToString(product.ID),
 		Name:        product.Name,
+		Slug:        product.Slug,
 		Description: product.Description,
 		CreatedAt:   timestampToString(product.CreatedAt),
 		UpdatedAt:   timestampToString(product.UpdatedAt),
@@ -198,10 +203,17 @@ func (h *Handler) CreateSystemProduct(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	slug, ok := productSlug(w, request.Slug)
+	if !ok {
+		return
+	}
 	product, err := h.Queries.CreateProduct(r.Context(), db.CreateProductParams{
-		Name: name, Description: description,
+		Name: name, Description: description, Slug: slug.String,
 	})
 	if err != nil {
+		if productSlugConflict(w, err) {
+			return
+		}
 		slog.Warn("CreateSystemProduct failed", append(logger.RequestAttrs(r), "error", err)...)
 		writeError(w, http.StatusInternalServerError, "failed to create product")
 		return
@@ -232,19 +244,47 @@ func (h *Handler) UpdateSystemProduct(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	slug, ok := productSlug(w, request.Slug)
+	if !ok {
+		return
+	}
 	product, err := h.Queries.UpdateProduct(r.Context(), db.UpdateProductParams{
-		ID: idUUID, Name: name, Description: description,
+		ID: idUUID, Name: name, Description: description, Slug: slug,
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		writeError(w, http.StatusNotFound, "product not found")
 		return
 	}
 	if err != nil {
+		if productSlugConflict(w, err) {
+			return
+		}
 		slog.Warn("UpdateSystemProduct failed", append(logger.RequestAttrs(r), "error", err)...)
 		writeError(w, http.StatusInternalServerError, "failed to update product")
 		return
 	}
 	writeJSON(w, http.StatusOK, productToResponse(product))
+}
+
+func productSlug(w http.ResponseWriter, raw *string) (pgtype.Text, bool) {
+	if raw == nil {
+		return pgtype.Text{}, true
+	}
+	value := strings.TrimSpace(*raw)
+	if !workorder.ValidProductSlug(value) {
+		writeError(w, http.StatusBadRequest, "产品英文标识须以小写字母开头，仅包含小写字母、数字、连字符或下划线，最长 64 位")
+		return pgtype.Text{}, false
+	}
+	return pgtype.Text{String: value, Valid: true}, true
+}
+
+func productSlugConflict(w http.ResponseWriter, err error) bool {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "product_slug_unique" {
+		writeError(w, http.StatusConflict, "产品英文标识已被使用")
+		return true
+	}
+	return false
 }
 
 func (h *Handler) DeleteSystemProduct(w http.ResponseWriter, r *http.Request) {

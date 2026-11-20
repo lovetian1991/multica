@@ -51,6 +51,7 @@ import { useViewedIssuesStore } from "@/data/viewed-issues-store";
 import { useCommentSelectStore } from "@/data/comment-select-store";
 import { useReplyTargetStore } from "@/data/stores/reply-target-store";
 import { useT } from "@/lib/i18n";
+import { getCurrentWebUrl } from "@/lib/server-url";
 
 export default function IssueDetail() {
   // `highlight` + `h` come from inbox deep-link (apps/mobile/app/(app)/
@@ -115,7 +116,7 @@ export default function IssueDetail() {
   const deletePin = useDeletePin();
   const { t } = useT("issues");
 
-  const webUrl = process.env.EXPO_PUBLIC_WEB_URL;
+  const webUrl = getCurrentWebUrl();
   const issueLink =
     issue && wsSlug && webUrl
       ? `${webUrl}/${wsSlug}/issue/${issue.identifier}`

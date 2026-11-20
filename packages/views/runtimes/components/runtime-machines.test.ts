@@ -6,6 +6,7 @@ import {
   buildRuntimeMachines,
   countRuntimeMachines,
   filterRuntimeMachines,
+  mergeRuntimeMachinesByTitle,
   runtimeMachineCounts,
   runtimeRowLabel,
   sharedCustomName,
@@ -485,5 +486,65 @@ describe("runtimeRowLabel", () => {
         "Dev Box",
       ),
     ).toBe("just this one");
+  });
+});
+
+describe("mergeRuntimeMachinesByTitle", () => {
+  it("folds a rebuilt daemon into the offline machine it replaced", () => {
+    const machines = mergeRuntimeMachinesByTitle(
+      buildRuntimeMachines(
+        [
+          makeRuntime({
+            id: "rt-old",
+            daemon_id: "daemon-old",
+            name: "Claude (weishuanbao)",
+            status: "offline",
+            owner_id: "user-1",
+          }),
+          makeRuntime({
+            id: "rt-new",
+            daemon_id: "daemon-new",
+            name: "Claude (weishuanbao)",
+            status: "online",
+            owner_id: "user-1",
+          }),
+        ],
+        { now: NOW, currentUserId: "user-1" },
+      ),
+    );
+
+    expect(machines).toHaveLength(1);
+    expect(machines[0]).toMatchObject({
+      title: "weishuanbao",
+      onlineCount: 1,
+    });
+    expect(machines[0].runtimes.map((runtime) => runtime.id)).toEqual([
+      "rt-new",
+      "rt-old",
+    ]);
+  });
+
+  it("does not combine another member's machine that happens to share the title", () => {
+    const machines = mergeRuntimeMachinesByTitle(
+      buildRuntimeMachines(
+        [
+          makeRuntime({
+            id: "rt-mine",
+            daemon_id: "daemon-mine",
+            name: "Claude (weishuanbao)",
+            owner_id: "user-1",
+          }),
+          makeRuntime({
+            id: "rt-other",
+            daemon_id: "daemon-other",
+            name: "Claude (weishuanbao)",
+            owner_id: "user-2",
+          }),
+        ],
+        { now: NOW },
+      ),
+    );
+
+    expect(machines).toHaveLength(2);
   });
 });

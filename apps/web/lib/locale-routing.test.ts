@@ -32,7 +32,7 @@ describe("locale routing", () => {
     ).toBe("en");
   });
 
-  it("falls back to Accept-Language when no cookie is set", () => {
+  it("defaults to simplified Chinese when no cookie is set", () => {
     expect(
       resolveLocaleFromSignals({
         acceptLanguage: "zh-CN,zh;q=0.9,en;q=0.8",
@@ -40,19 +40,23 @@ describe("locale routing", () => {
     ).toBe("zh-Hans");
   });
 
-  it("matches Korean browser language signals", () => {
+  it("does not let browser language override the Chinese default", () => {
     expect(
       resolveLocaleFromSignals({
         acceptLanguage: "ko-KR,ko;q=0.9,en;q=0.8",
       }),
-    ).toBe("ko");
+    ).toBe("zh-Hans");
   });
 
-  it("matches Japanese browser language signals", () => {
+  it("preserves an explicit Japanese selection", () => {
     expect(
       resolveLocaleFromSignals({
-        acceptLanguage: "ja-JP,ja;q=0.9,en;q=0.8",
+        cookieLocale: "ja", acceptLanguage: "en-US,en;q=0.9",
       }),
     ).toBe("ja");
+  });
+
+  it("uses simplified Chinese for an English browser without a saved selection", () => {
+    expect(resolveLocaleFromSignals({ acceptLanguage: "en-US,en;q=0.9" })).toBe("zh-Hans");
   });
 });

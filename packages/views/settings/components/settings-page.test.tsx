@@ -61,6 +61,7 @@ vi.mock("./plugins-tab", stub("PluginsTab"));
 vi.mock("./mcp-tab", stub("McpTab"));
 vi.mock("./billing-tab", stub("BillingTab"));
 vi.mock("./process-templates-tab", stub("ProcessTemplatesTab"));
+vi.mock("./workspace-setup-tab", stub("WorkspaceSetupTab"));
 
 const shell = vi.hoisted(() => ({
   appsAvailable: false,
@@ -185,6 +186,14 @@ describe("SettingsPage header", () => {
   function pageHeader() {
     return within(screen.getByRole("banner"));
   }
+
+  it("opens quick setup from the workspace settings navigation", () => {
+    navigationState.search = "tab=setup";
+    renderWithI18n(<SettingsPage />);
+    expect(screen.getByText("WorkspaceSetupTab")).toBeInTheDocument();
+    expect(within(nav()).getByRole("link", { name: "Quick setup" }))
+      .toHaveAttribute("href", "/acme/settings?tab=setup");
+  });
 
   it.each([
     { search: "", label: "Profile" },

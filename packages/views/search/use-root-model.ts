@@ -36,6 +36,7 @@ const PAGE_KEYWORDS: Record<WorkspacePageKey, string[]> = {
   inbox: ["inbox", "notifications", "收件箱", "通知"],
   chat: ["chat", "messages", "conversation", "聊天", "消息", "对话"],
   myIssues: ["my", "issues", "assigned", "mine", "我的", "任务"],
+  workOrders: ["work orders", "tickets", "工单", "工单处理"],
   issues: ["issues", "tasks", "bugs", "任务"],
   views: ["views", "saved", "filters", "视图", "筛选"],
   projects: ["projects", "kanban", "项目"],

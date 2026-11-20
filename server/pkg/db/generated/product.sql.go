@@ -12,18 +12,19 @@ import (
 )
 
 const createProduct = `-- name: CreateProduct :one
-INSERT INTO product (name, description)
-VALUES ($1, $2)
-RETURNING id, name, created_at, updated_at, description
+INSERT INTO product (name, description, slug)
+VALUES ($1, $2, $3)
+RETURNING id, name, created_at, updated_at, description, slug
 `
 
 type CreateProductParams struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
+	Slug        string `json:"slug"`
 }
 
 func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error) {
-	row := q.db.QueryRow(ctx, createProduct, arg.Name, arg.Description)
+	row := q.db.QueryRow(ctx, createProduct, arg.Name, arg.Description, arg.Slug)
 	var i Product
 	err := row.Scan(
 		&i.ID,
@@ -31,14 +32,22 @@ func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (P
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Description,
+		&i.Slug,
 	)
 	return i, err
 }
 
 const deleteProduct = `-- name: DeleteProduct :one
+WITH deleted_code AS (
+    DELETE FROM product_version_code
+    WHERE version_id IN (SELECT product_version.id FROM product_version WHERE product_id = $1)
+), deleted_branches AS (
+    DELETE FROM work_order_project_branch
+    WHERE version_id IN (SELECT product_version.id FROM product_version WHERE product_id = $1)
+)
 DELETE FROM product
-WHERE id = $1
-RETURNING id
+WHERE product.id = $1
+RETURNING product.id
 `
 
 func (q *Queries) DeleteProduct(ctx context.Context, id pgtype.UUID) (pgtype.UUID, error) {
@@ -49,7 +58,7 @@ func (q *Queries) DeleteProduct(ctx context.Context, id pgtype.UUID) (pgtype.UUI
 }
 
 const getProduct = `-- name: GetProduct :one
-SELECT id, name, created_at, updated_at, description
+SELECT id, name, created_at, updated_at, description, slug
 FROM product
 WHERE id = $1
 `
@@ -63,12 +72,13 @@ func (q *Queries) GetProduct(ctx context.Context, id pgtype.UUID) (Product, erro
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Description,
+		&i.Slug,
 	)
 	return i, err
 }
 
 const listProducts = `-- name: ListProducts :many
-SELECT id, name, created_at, updated_at, description
+SELECT id, name, created_at, updated_at, description, slug
 FROM product
 ORDER BY created_at DESC, id DESC
 `
@@ -88,6 +98,7 @@ func (q *Queries) ListProducts(ctx context.Context) ([]Product, error) {
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Description,
+			&i.Slug,
 		); err != nil {
 			return nil, err
 		}
@@ -103,19 +114,26 @@ const updateProduct = `-- name: UpdateProduct :one
 UPDATE product
 SET name = $2,
     description = $3,
+    slug = COALESCE($4::text, slug),
     updated_at = now()
 WHERE id = $1
-RETURNING id, name, created_at, updated_at, description
+RETURNING id, name, created_at, updated_at, description, slug
 `
 
 type UpdateProductParams struct {
 	ID          pgtype.UUID `json:"id"`
 	Name        string      `json:"name"`
 	Description string      `json:"description"`
+	Slug        pgtype.Text `json:"slug"`
 }
 
 func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error) {
-	row := q.db.QueryRow(ctx, updateProduct, arg.ID, arg.Name, arg.Description)
+	row := q.db.QueryRow(ctx, updateProduct,
+		arg.ID,
+		arg.Name,
+		arg.Description,
+		arg.Slug,
+	)
 	var i Product
 	err := row.Scan(
 		&i.ID,
@@ -123,6 +141,7 @@ func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (P
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Description,
+		&i.Slug,
 	)
 	return i, err
 }

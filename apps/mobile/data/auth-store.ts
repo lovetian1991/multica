@@ -13,7 +13,7 @@ import { create } from "zustand";
 import type { User } from "@multica/core/types";
 import { api, ApiError } from "./api";
 import { clearToken, getToken, setToken } from "./secure-storage";
-import { invalidateSessionEpoch } from "./session-epoch";
+import { currentSessionEpoch, invalidateSessionEpoch, sessionEpochChanged } from "./session-epoch";
 import { useWorkspaceStore } from "./workspace-store";
 import { queryClient } from "./query-client";
 import { restoreServerUrl, saveServerUrl } from "./server-config";
@@ -37,22 +37,26 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: true,
 
   initialize: async () => {
-    await restoreServerUrl();
+    const epoch = currentSessionEpoch();
     // Restore the persisted workspace slug alongside the auth token so the
     // entry redirect (app/index.tsx) can route directly to the last-used
     // workspace without flashing /select-workspace.
-    await useWorkspaceStore.getState().restoreSlug();
-
-    const token = await getToken();
-    if (!token) {
-      set({ isLoading: false });
-      return;
-    }
-    api.setToken(token);
     try {
+      await restoreServerUrl();
+      if (sessionEpochChanged(epoch)) return;
+      await useWorkspaceStore.getState().restoreSlug();
+      const token = await getToken();
+      if (sessionEpochChanged(epoch)) return;
+      if (!token) {
+        set({ user: null, isLoading: false });
+        return;
+      }
+      api.setToken(token);
       const user = await api.getMe();
+      if (sessionEpochChanged(epoch)) return;
       set({ user, isLoading: false });
     } catch (err) {
+      if (sessionEpochChanged(epoch)) return;
       // Only clear token on a genuine 401. Network blips / 5xx keep the
       // token so the next launch (or a manual refresh) can retry.
       if (err instanceof ApiError && err.status === 401) {
@@ -70,7 +74,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   configureServer: async (url) => {
     const normalized = normalizeServerUrl(url);
     if (normalized !== getCurrentServerUrl()) {
-      // Clear the old origin's credentials and cached data before switching.
+      // Drop credentials before changing the request origin; never send an
+      // old server's token or workspace headers to the newly selected host.
       invalidateSessionEpoch();
       api.setToken(null);
       set({ user: null, isLoading: false });
@@ -103,7 +108,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     invalidateSessionEpoch();
     await clearToken();
     api.setToken(null);
-    set({ user: null });
+    set({ user: null, isLoading: false });
   },
 
   setUser: (user) => set({ user }),

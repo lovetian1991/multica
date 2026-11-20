@@ -62,25 +62,25 @@ func NewIssueService(q *db.Queries, tx TxStarter, bus *events.Bus, ac analytics.
 // to IssueService.Create. The handler owns the parsing step that turns its
 // request payload into this struct; the service stays transport-agnostic.
 type IssueCreateParams struct {
-	WorkspaceID   pgtype.UUID
-	Title         string
-	Description   pgtype.Text
-	Status        string
-	Priority      string
-	AssigneeType  pgtype.Text
-	AssigneeID    pgtype.UUID
-	CreatorType   string // "agent" or "member"
-	CreatorID     pgtype.UUID
-	ParentIssueID pgtype.UUID
-	ProjectID     pgtype.UUID
-	ProductID     pgtype.UUID
+	WorkspaceID      pgtype.UUID
+	Title            string
+	Description      pgtype.Text
+	Status           string
+	Priority         string
+	AssigneeType     pgtype.Text
+	AssigneeID       pgtype.UUID
+	CreatorType      string // "agent" or "member"
+	CreatorID        pgtype.UUID
+	ParentIssueID    pgtype.UUID
+	ProjectID        pgtype.UUID
+	ProductID        pgtype.UUID
 	ProductVersionID pgtype.UUID
-	KBFolderID    pgtype.Text
-	StartDate     pgtype.Date
-	DueDate       pgtype.Date
-	OriginType    pgtype.Text
-	OriginID      pgtype.UUID
-	AttachmentIDs []pgtype.UUID
+	KBFolderID       pgtype.Text
+	StartDate        pgtype.Date
+	DueDate          pgtype.Date
+	OriginType       pgtype.Text
+	OriginID         pgtype.UUID
+	AttachmentIDs    []pgtype.UUID
 	// LabelIDs are the issue-scoped labels to attach to the new issue. They
 	// are validated and written inside the create transaction (see Create),
 	// so the issue is never committed with a partial or wrong label set. An
@@ -99,7 +99,17 @@ type IssueCreateParams struct {
 	// Its immutable snapshot and cloned attachment rows commit in the same
 	// transaction as the new issue.
 	SourceContext *SourceContextCapture
+	WorkOrder     *IssueWorkOrder
 }
+
+type IssueWorkOrder struct {
+	ID        pgtype.UUID
+	UpdatedAt pgtype.Timestamptz
+	Plan      json.RawMessage
+}
+
+var ErrWorkOrderChanged = errors.New("work order changed")
+var ErrWorkOrderWorkflow = errors.New("work order execution workflow must include backlog")
 
 // IssueCreateOpts groups optional knobs for IssueService.Create. Most
 // callers leave it zero-valued.
@@ -249,6 +259,20 @@ func (s *IssueService) Create(ctx context.Context, p IssueCreateParams, opts Iss
 	defer tx.Rollback(ctx)
 	qtx := s.Queries.WithTx(tx)
 
+	if p.WorkOrder != nil {
+		order, err := qtx.LockWorkOrder(ctx, db.LockWorkOrderParams{ID: p.WorkOrder.ID, WorkspaceID: p.WorkspaceID})
+		if err != nil {
+			return IssueCreateResult{}, fmt.Errorf("lock work order: %w", err)
+		}
+		if order.IssueID.Valid {
+			issue, err := qtx.GetIssue(ctx, order.IssueID)
+			return IssueCreateResult{Issue: issue}, err
+		}
+		if !order.UpdatedAt.Time.Equal(p.WorkOrder.UpdatedAt.Time) {
+			return IssueCreateResult{}, ErrWorkOrderChanged
+		}
+	}
+
 	properties, err := validateIssueCreateProperties(ctx, tx, qtx, p.WorkspaceID, p.Properties)
 	if err != nil {
 		return IssueCreateResult{}, err
@@ -292,6 +316,9 @@ func (s *IssueService) Create(ctx context.Context, p IssueCreateParams, opts Iss
 	if def, err := s.createWorkflow(ctx, qtx, p); err != nil {
 		return IssueCreateResult{}, err
 	} else if def != nil && def.Limits() && !def.Has(p.Status) {
+		if p.WorkOrder != nil {
+			return IssueCreateResult{}, ErrWorkOrderWorkflow
+		}
 		p.Status = issueworkflow.StartStatus
 	}
 
@@ -396,53 +423,53 @@ func (s *IssueService) Create(ctx context.Context, p IssueCreateParams, opts Iss
 	var assignedTask db.AgentTaskQueue
 	if p.OriginType.Valid {
 		issue, err = qtx.CreateIssueWithOrigin(ctx, db.CreateIssueWithOriginParams{
-			ID:            dbid.NewV7(),
-			WorkspaceID:   p.WorkspaceID,
-			Title:         p.Title,
-			Description:   p.Description,
-			Status:        p.Status,
-			Priority:      p.Priority,
-			AssigneeType:  p.AssigneeType,
-			AssigneeID:    p.AssigneeID,
-			CreatorType:   p.CreatorType,
-			CreatorID:     p.CreatorID,
-			ParentIssueID: p.ParentIssueID,
-			Position:      newPosition,
-			StartDate:     p.StartDate,
-			DueDate:       p.DueDate,
-			Number:        issueNumber,
-			ProjectID:     projectID,
-			ProductID:     p.ProductID,
+			ID:               dbid.NewV7(),
+			WorkspaceID:      p.WorkspaceID,
+			Title:            p.Title,
+			Description:      p.Description,
+			Status:           p.Status,
+			Priority:         p.Priority,
+			AssigneeType:     p.AssigneeType,
+			AssigneeID:       p.AssigneeID,
+			CreatorType:      p.CreatorType,
+			CreatorID:        p.CreatorID,
+			ParentIssueID:    p.ParentIssueID,
+			Position:         newPosition,
+			StartDate:        p.StartDate,
+			DueDate:          p.DueDate,
+			Number:           issueNumber,
+			ProjectID:        projectID,
+			ProductID:        p.ProductID,
 			ProductVersionID: p.ProductVersionID,
-			KBFolderID:    p.KBFolderID,
-			OriginType:    p.OriginType,
-			OriginID:      p.OriginID,
-			Stage:         p.Stage,
-			Properties:    properties,
+			KBFolderID:       p.KBFolderID,
+			OriginType:       p.OriginType,
+			OriginID:         p.OriginID,
+			Stage:            p.Stage,
+			Properties:       properties,
 		})
 	} else {
 		issue, err = qtx.CreateIssue(ctx, db.CreateIssueParams{
-			ID:            dbid.NewV7(),
-			WorkspaceID:   p.WorkspaceID,
-			Title:         p.Title,
-			Description:   p.Description,
-			Status:        p.Status,
-			Priority:      p.Priority,
-			AssigneeType:  p.AssigneeType,
-			AssigneeID:    p.AssigneeID,
-			CreatorType:   p.CreatorType,
-			CreatorID:     p.CreatorID,
-			ParentIssueID: p.ParentIssueID,
-			Position:      newPosition,
-			StartDate:     p.StartDate,
-			DueDate:       p.DueDate,
-			Number:        issueNumber,
-			ProjectID:     projectID,
-			ProductID:     p.ProductID,
+			ID:               dbid.NewV7(),
+			WorkspaceID:      p.WorkspaceID,
+			Title:            p.Title,
+			Description:      p.Description,
+			Status:           p.Status,
+			Priority:         p.Priority,
+			AssigneeType:     p.AssigneeType,
+			AssigneeID:       p.AssigneeID,
+			CreatorType:      p.CreatorType,
+			CreatorID:        p.CreatorID,
+			ParentIssueID:    p.ParentIssueID,
+			Position:         newPosition,
+			StartDate:        p.StartDate,
+			DueDate:          p.DueDate,
+			Number:           issueNumber,
+			ProjectID:        projectID,
+			ProductID:        p.ProductID,
 			ProductVersionID: p.ProductVersionID,
-			KBFolderID:    p.KBFolderID,
-			Stage:         p.Stage,
-			Properties:    properties,
+			KBFolderID:       p.KBFolderID,
+			Stage:            p.Stage,
+			Properties:       properties,
 		})
 	}
 	if err != nil {
@@ -537,6 +564,21 @@ func (s *IssueService) Create(ctx context.Context, p IssueCreateParams, opts Iss
 		}
 	}
 
+	if p.WorkOrder != nil {
+		if _, err := qtx.LinkWorkOrderIssue(ctx, db.LinkWorkOrderIssueParams{
+			ID: p.WorkOrder.ID, WorkspaceID: p.WorkspaceID, IssueID: issue.ID,
+			UpdatedBy: p.CreatorID, ExecutionPlan: p.WorkOrder.Plan,
+		}); err != nil {
+			return IssueCreateResult{}, fmt.Errorf("link work order: %w", err)
+		}
+		detail, _ := json.Marshal(map[string]string{"issue_id": util.UUIDToString(issue.ID)})
+		if err := qtx.AddWorkOrderEvent(ctx, db.AddWorkOrderEventParams{
+			WorkOrderID: p.WorkOrder.ID, WorkspaceID: p.WorkspaceID, ActorID: p.CreatorID,
+			Action: "convert", Detail: detail,
+		}); err != nil {
+			return IssueCreateResult{}, fmt.Errorf("record work order conversion: %w", err)
+		}
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return IssueCreateResult{}, fmt.Errorf("commit: %w", err)
 	}

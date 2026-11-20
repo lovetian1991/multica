@@ -77,6 +77,7 @@ function workspaceScoped(slug: string) {
     chatSession: (sessionId: string) =>
       `${ws}/chat?session=${encode(sessionId)}`,
     myIssues: () => `${ws}/my-issues`,
+    workOrders: () => `${ws}/work-orders`,
     myAgents: () => `${ws}/my-issues?scope=${MY_AGENTS_SCOPE}`,
     views: () => `${ws}/views`,
     runtimes: () => `${ws}/runtimes`,
@@ -99,6 +100,8 @@ export const paths = {
     products: () => "/system/products",
     processTemplates: () => "/system/process-templates",
     settings: () => "/system/settings",
+    workOrders: () => "/system/work-orders",
+    projects: () => "/system/projects",
   },
   login: () => "/login",
   newWorkspace: () => "/workspaces/new",

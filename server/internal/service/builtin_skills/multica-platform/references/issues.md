@@ -386,20 +386,32 @@ delivery issue, not an implementer's child issue. This uses your existing
 Multica identity; never request or copy the server's GitLab token.
 
 ```bash
-multica issue delivery projects
-multica issue delivery register <issue> --project-config-id <configuration-uuid> --sha <full-pushed-sha> --ref <remote-ref>
+multica issue delivery register <issue> --repo <actual-push-remote-url> --sha <full-pushed-sha> --ref <remote-ref>
 multica issue delivery list <issue>
 multica issue delivery resume <issue> <delivery-id>
 ```
 
-Match the returned `instance_url` and configured project path to the actual remote repository; the
-configuration UUID is not GitLab's numeric project ID. Do not guess if several
-connections match. Confirm the full SHA and remote ref from push evidence.
-Repeated registration of the same issue/configuration/SHA/ref is idempotent.
+Use the actual push remote (not a fetch URL if they differ). The backend matches
+one workspace GitLab connection, resolves the project ID, and applies workspace
+defaults or existing repository overrides. No per-repository setup is required.
+Do not guess if multiple connections match. Confirm the full SHA and remote ref
+from push evidence. Repeated registration of the same issue/repository/SHA/ref is idempotent.
+For explicit overrides only, `multica issue delivery projects` lists configuration
+UUIDs usable with `--project-config-id` instead of `--repo`, never both. A configuration
+UUID is not GitLab's numeric project ID.
+
+Deployment hosts and ports may vary per run; no host configuration is required.
+An admin configures the exact log marker once in workspace defaults. An empty
+job name detects a unique deployment-stage job; ambiguous candidates require an
+explicit override. Successful pipelines without a deployment-stage job report
+`ci_passed`, not deployment. A deployment requires both the pipeline and selected
+job to succeed and a valid marked URL in that job's output.
+Defaults changes apply to new registrations, not deliveries already being tracked.
 
 The backend checks the bound pipeline and deployment job, displays progress,
 and posts one terminal system comment without dispatching an agent. Finish
-your run after registration: no sleep loops, timer wakeups, CI-watcher roles,
+your run after the required delivery registration (or the authorized version
+integration below): no sleep loops, timer wakeups, CI-watcher roles,
 or repeated progress comments. Resume only when explicitly asked after a
 terminal result; it rechecks the same pipeline, never retries GitLab jobs.
 
@@ -419,6 +431,32 @@ from the configured successful deployment job. It does not support downstream
 pipelines or prove that an address is healthy or still serves that SHA.
 After `deployed`, ask the user to verify the original acceptance criteria;
 record their decision on the issue. No automated acceptance state exists.
+
+### Version-Branch Integration
+
+When the development workflow authorizes integration, combine each repository's
+member changes into one feature branch and independently review its full pushed
+SHA. Register that feature delivery first, then preview its configured target:
+
+```bash
+multica issue delivery integrate <issue> <feature-delivery-id>
+multica issue delivery integrate <issue> <feature-delivery-id> --merge --target <preview-target>
+```
+
+Preview is read-only. The explicit merge command writes to GitLab and requires
+existing authorization and independent review. The target comes from the product
+version, customer project, or work-order plan, never an assumed `main` branch.
+GitLab must accept the exact reviewed head, permissions, conflicts, and required
+checks. A blocked merge retains the branch and returns its MR for resolution;
+do not bypass checks, auto-approve reviews, or poll the MR.
+
+Successful integration registers the actual merged target commit for existing
+push CI and requests cleanup of only that MR's source branch. Do not rewrite CI,
+trigger duplicate pipelines, delete historical branches or local worktrees, or
+claim cleanup before the provider confirms it. Finish the run once target
+tracking is registered. CI failure does not authorize rollback, agent redispatch,
+or business acceptance. Without merge authorization, hand the feature delivery
+to the user via "Merge into version" in the original issue.
 
 ## Issue wakeups
 

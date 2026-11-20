@@ -3,6 +3,7 @@
 import type { IconComponent } from "@multica/ui/icons";
 import {
   Database,
+  Folder,
   Package,
   Settings2,
   ShieldCheck,
@@ -26,18 +27,20 @@ import {
 } from "@multica/ui/components/ui/sidebar";
 
 interface SystemMenuItem {
-  key: "products" | "process_templates" | "workspaces" | "users" | "settings";
+  key: "products" | "projects" | "process_templates" | "workspaces" | "users" | "settings" | "work_orders";
   href?: string;
   icon: IconComponent;
 }
 
 const catalogItems: SystemMenuItem[] = [
   { key: "products", href: paths.system.products(), icon: Package },
+  { key: "projects", href: paths.system.projects(), icon: Folder },
   { key: "process_templates", href: paths.system.processTemplates(), icon: Workflow },
   { key: "workspaces", icon: Database },
 ];
 
 const configurationItems: SystemMenuItem[] = [
+  { key: "work_orders", href: paths.system.workOrders(), icon: Workflow },
   { key: "users", icon: Users },
   { key: "settings", href: paths.system.settings(), icon: Settings2 },
 ];
@@ -67,7 +70,9 @@ export function SystemManagementSidebar() {
           items={catalogItems}
           pathname={pathname}
           labels={{
+            work_orders: t(($) => $.work_orders.admin),
             products: t(($) => $.system_management.products),
+            projects: t(($) => $.work_orders.project_management),
             process_templates: t(($) => $.system_management.process_templates),
             workspaces: t(($) => $.system_management.workspaces),
             users: t(($) => $.system_management.users),
@@ -80,7 +85,9 @@ export function SystemManagementSidebar() {
           items={configurationItems}
           pathname={pathname}
           labels={{
+            work_orders: t(($) => $.work_orders.admin),
             products: t(($) => $.system_management.products),
+            projects: t(($) => $.work_orders.project_management),
             process_templates: t(($) => $.system_management.process_templates),
             workspaces: t(($) => $.system_management.workspaces),
             users: t(($) => $.system_management.users),

@@ -137,6 +137,7 @@ describe("WSClient session renewal", () => {
       type: "auth",
       payload: { token: "token-v2" },
     });
+    client.disconnect();
   });
 
   it("falls back to the constructor token when no reader is supplied", () => {
@@ -154,6 +155,7 @@ describe("WSClient session renewal", () => {
       type: "auth",
       payload: { token: "token-only" },
     });
+    client.disconnect();
   });
 });
 

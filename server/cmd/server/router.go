@@ -1657,6 +1657,7 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 		r.Get("/ws", h.DaemonWebSocket)
 		r.Get("/workspaces", h.ListDaemonWorkspaces)
 		r.Get("/workspaces/{workspaceId}/repos", h.GetDaemonWorkspaceRepos)
+		r.Post("/workspaces/{workspaceId}/gitlab/credential", h.ResolveDaemonGitLabCredential)
 		r.Get("/workspaces/{workspaceId}/runtime-profiles", h.DaemonListRuntimeProfiles)
 
 		// Agent-triggered plugin hooks. The daemon's local MCP server calls
@@ -1774,6 +1775,7 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 			r.Get("/{id}", h.GetProduct)
 			r.Get("/{id}/versions", h.ListProductVersions)
 			r.Get("/{id}/versions/{versionId}", h.GetProductVersion)
+			r.Get("/{id}/versions/{versionId}/code", h.GetVersionCode)
 			// Picker-facing reads of a version's knowledge-base folders. The
 			// version supplies the parent folder server-side, so a signed-in human
 			// can list it without the whole-tree access /api/system/kb/folders
@@ -1801,6 +1803,8 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 					r.Get("/", h.GetSystemProductVersion)
 					r.Put("/", h.UpdateSystemProductVersion)
 					r.Delete("/", h.DeleteSystemProductVersion)
+					r.Get("/code", h.GetVersionCode)
+					r.Put("/code", h.SaveVersionCode)
 				})
 			})
 		})
@@ -1821,6 +1825,35 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 			r.Use(handler.RequireHumanActor)
 			r.Get("/", h.GetSystemSettings)
 			r.Put("/", h.UpdateSystemSettings)
+			r.Get("/work-orders", h.GetWorkOrderRoot)
+			r.Put("/work-orders", h.SaveWorkOrderRoot)
+		})
+		r.Route("/api/system/work-orders", func(r chi.Router) {
+			r.Use(handler.RequireHumanActor)
+			r.Get("/", h.ListWorkOrders)
+			r.Post("/", h.ImportWorkOrder)
+			r.Post("/sync", h.SyncWorkOrders)
+			r.Get("/external", h.ListExternalWorkOrders)
+			r.Get("/external/{externalId}", h.ListExternalWorkOrders)
+			r.Post("/external/{externalId}/import", h.ImportExternalWorkOrder)
+			r.Get("/options", h.GetWorkOrderOptions)
+			r.Get("/branches", h.GetWorkOrderBranches)
+			r.Put("/branches", h.SaveWorkOrderBranches)
+			r.Get("/version-branches", h.ListWorkOrderVersionBranches)
+			r.Get("/project-baseline", h.GetWorkOrderProjectBaseline)
+			r.Get("/projects", h.ListCustomerProjects)
+			r.Post("/projects", h.CreateCustomerProject)
+			r.Patch("/projects/{projectId}", h.RenameCustomerProject)
+			r.Delete("/projects/{projectId}", h.DeleteCustomerProject)
+			r.Put("/projects", h.SaveWorkOrderProject)
+			r.Get("/members", h.GetWorkOrderMembers)
+			r.Get("/settings", h.GetWorkOrderSettings)
+			r.Put("/settings", h.SaveWorkOrderSettings)
+			r.Get("/{orderId}", h.GetWorkOrder)
+			r.Put("/{orderId}", h.UpdateWorkOrder)
+			r.Get("/{orderId}/plan", h.PreviewWorkOrderPlan)
+			r.Post("/{orderId}/convert", h.ConvertWorkOrder)
+			r.Post("/{orderId}/project", h.RegisterWorkOrderProject)
 		})
 		r.Route("/api/system/kb", func(r chi.Router) {
 			r.Use(handler.RequireHumanActor)
@@ -1877,6 +1910,7 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 					// disconnect are admin-gated in the group below.
 					r.Get("/vcs/connections", h.ListVCSConnections)
 					r.Get("/vcs/delivery-projects", h.ListVCSDeliveryProjects)
+					r.Get("/vcs/delivery-defaults", h.GetVCSDeliveryDefaults)
 					r.Get("/qoder", h.GetQoderConnection)
 					r.Get("/qoder/agents", h.ListQoderAgents)
 					// Custom runtime profiles — listing/reading is member-visible
@@ -1903,6 +1937,7 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 					r.Use(middleware.RequireWorkspaceRoleFromURL(queries, "id", "owner", "admin"))
 					r.Put("/", h.UpdateWorkspace)
 					r.Patch("/", h.UpdateWorkspace)
+					r.Post("/oc/check", h.CheckWorkspaceOC)
 					r.Post("/members", h.CreateInvitation)
 					r.Route("/members/{memberId}", func(r chi.Router) {
 						r.Patch("/", h.UpdateMember)
@@ -1965,6 +2000,7 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 					// VCS connect / disconnect / webhook regeneration (admin-only).
 					r.Post("/vcs/connections", h.ConnectVCS)
 					r.Post("/vcs/delivery-projects", h.SaveVCSDeliveryProject)
+					r.Put("/vcs/delivery-defaults", h.SaveVCSDeliveryDefaults)
 					r.Delete("/vcs/delivery-projects/{projectId}", h.DeleteVCSDeliveryProject)
 					r.Put("/qoder", h.SaveQoderConnection)
 					r.Post("/qoder/check", h.CheckQoderConnection)
@@ -2171,6 +2207,29 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.RequireWorkspaceMember(queries))
 
+			r.Route("/api/work-orders", func(r chi.Router) {
+				r.Use(handler.RequireHumanActor)
+				r.Get("/", h.ListWorkOrders)
+				r.Post("/", h.ImportWorkOrder)
+				r.Post("/sync", h.SyncWorkOrders)
+				r.Get("/external", h.ListExternalWorkOrders)
+				r.Get("/external/{externalId}", h.ListExternalWorkOrders)
+				r.Post("/external/{externalId}/import", h.ImportExternalWorkOrder)
+				r.Get("/options", h.GetWorkOrderOptions)
+				r.Get("/branches", h.GetWorkOrderBranches)
+				r.Put("/branches", h.SaveWorkOrderBranches)
+				r.Get("/project-baseline", h.GetWorkOrderProjectBaseline)
+				r.Put("/projects", h.SaveWorkOrderProject)
+				r.Get("/members", h.GetWorkOrderMembers)
+				r.Get("/settings", h.GetWorkOrderSettings)
+				r.Put("/settings", h.SaveWorkOrderSettings)
+				r.Get("/{orderId}", h.GetWorkOrder)
+				r.Put("/{orderId}", h.UpdateWorkOrder)
+				r.Get("/{orderId}/plan", h.PreviewWorkOrderPlan)
+				r.Post("/{orderId}/convert", h.ConvertWorkOrder)
+				r.Post("/{orderId}/project", h.RegisterWorkOrderProject)
+			})
+
 			// Assignee frequency
 			r.Get("/api/assignee-frequency", h.GetAssigneeFrequency)
 
@@ -2263,6 +2322,7 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 					r.Get("/deliveries", h.ListIssueDeliveries)
 					r.Post("/deliveries", h.RegisterIssueDelivery)
 					r.Post("/deliveries/{deliveryId}/resume", h.RetryIssueDelivery)
+					r.Post("/deliveries/{deliveryId}/integrate", h.IntegrateIssueDelivery)
 					r.Post("/pull-requests", h.LinkIssuePullRequest)
 					r.Delete("/pull-requests/{prId}", h.UnlinkIssuePullRequest)
 					r.Put("/pr-auto-complete", h.SetIssuePRAutoComplete)

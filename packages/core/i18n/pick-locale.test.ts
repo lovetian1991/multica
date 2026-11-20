@@ -13,7 +13,7 @@ function makeAdapter(overrides: Partial<LocaleAdapter> = {}): LocaleAdapter {
 
 describe("matchLocale", () => {
   it("returns DEFAULT_LOCALE when given an empty list", () => {
-    expect(matchLocale([])).toBe("en");
+    expect(matchLocale([])).toBe("zh-Hans");
   });
 
   it("matches a clean supported tag", () => {
@@ -37,7 +37,7 @@ describe("matchLocale", () => {
   });
 
   it("falls back to DEFAULT_LOCALE when no candidate matches", () => {
-    expect(matchLocale(["pt", "de"])).toBe("en");
+    expect(matchLocale(["pt", "de"])).toBe("zh-Hans");
   });
 
   it("Traditional-script and TW/HK tags resolve to zh-Hant, mainland tags to zh-Hans", () => {
@@ -54,8 +54,8 @@ describe("matchLocale", () => {
   });
 
   it("returns DEFAULT_LOCALE for malformed BCP-47 tags rather than throwing", () => {
-    expect(matchLocale(["----"])).toBe("en");
-    expect(matchLocale(["x-private-only"])).toBe("en");
+    expect(matchLocale(["----"])).toBe("zh-Hans");
+    expect(matchLocale(["x-private-only"])).toBe("zh-Hans");
   });
 });
 
@@ -68,26 +68,30 @@ describe("pickLocale", () => {
     expect(pickLocale(adapter)).toBe("zh-Hans");
   });
 
-  it("falls back to system preferences when no user choice", () => {
+  it("defaults to simplified Chinese even when the system uses English", () => {
     const adapter = makeAdapter({
-      getSystemPreferences: () => ["zh-Hans-CN", "en-US"],
+      getSystemPreferences: () => ["en-US"],
     });
     expect(pickLocale(adapter)).toBe("zh-Hans");
   });
 
-  it("returns DEFAULT_LOCALE when neither choice nor preference yields a match", () => {
+  it("returns DEFAULT_LOCALE without a saved choice", () => {
     const adapter = makeAdapter({
       getUserChoice: () => null,
       getSystemPreferences: () => ["pt", "de"],
     });
-    expect(pickLocale(adapter)).toBe("en");
+    expect(pickLocale(adapter)).toBe("zh-Hans");
   });
 
-  it("ignores empty-string user choice and falls through to system", () => {
+  it("ignores empty-string user choice and uses the default", () => {
     const adapter = makeAdapter({
       getUserChoice: () => "",
       getSystemPreferences: () => ["zh-Hans"],
     });
     expect(pickLocale(adapter)).toBe("zh-Hans");
+  });
+
+  it("preserves an explicitly selected English interface", () => {
+    expect(pickLocale(makeAdapter({ getUserChoice: () => "en" }))).toBe("en");
   });
 });

@@ -7,6 +7,7 @@ import enCommon from "../../locales/en/common.json";
 import enSettings from "../../locales/en/settings.json";
 
 const mockUpdateWorkspace = vi.hoisted(() => vi.fn());
+const mockCheckWorkspaceOC = vi.hoisted(() => vi.fn());
 const mockSetQueryData = vi.hoisted(() => vi.fn());
 const mockInvalidateQueries = vi.hoisted(() => vi.fn());
 const mockToastSuccess = vi.hoisted(() => vi.fn());
@@ -67,6 +68,7 @@ vi.mock("@multica/core/workspace/mutations", () => ({
 vi.mock("@multica/core/api", () => ({
   api: {
     updateWorkspace: mockUpdateWorkspace,
+    checkWorkspaceOC: mockCheckWorkspaceOC,
     getBaseUrl: () => "http://127.0.0.1:8080",
   },
 }));
@@ -140,6 +142,23 @@ describe("WorkspaceTab — automatic updates", () => {
   function setupUser() {
     return userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   }
+
+  it("saves the workspace OC account without replacing the OC key", async () => {
+    render(<WorkspaceTab />, { wrapper: I18nWrapper });
+    const user = setupUser();
+    await user.type(screen.getByRole("textbox", { name: "OC account" }), "yong.tian");
+    await user.click(screen.getByRole("button", { name: "Save account" }));
+    expect(mockUpdateWorkspace).toHaveBeenCalledWith("workspace-1", { oc_account: "yong.tian" });
+  });
+
+  it("checks the saved account connection without exposing a token", async () => {
+    workspaceRef.current.settings = { oc_account: "yong.tian" };
+    mockCheckWorkspaceOC.mockResolvedValue({ connected: true });
+    render(<WorkspaceTab />, { wrapper: I18nWrapper });
+    await setupUser().click(screen.getByRole("button", { name: "Test connection" }));
+    expect(mockCheckWorkspaceOC).toHaveBeenCalledWith("workspace-1");
+    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledWith("OC connected"));
+  });
 
   it("shows the prefix and slug as values, not editable fields", () => {
     render(<WorkspaceTab />, { wrapper: I18nWrapper });

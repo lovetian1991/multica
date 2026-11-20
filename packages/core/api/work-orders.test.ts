@@ -89,11 +89,26 @@ it("parses personal inventories and preserves unknown future stages", async () =
   expect(fetcher.mock.calls[0]?.[0]).toContain("workspace_id=workspace-a");
   expect(fetcher.mock.calls[0]?.[0]).toContain("all=false");
   expect(fetcher.mock.calls[0]?.[0]).toContain("search=old+%26+new");
+  expect(result.pageSize).toBe(50);
+});
+
+it("uses server pagination metadata and sends search with the requested page", async () => {
+  const fetcher = reply({ orders: [wireOrder], total: 21, can_manage: true, page_size: 20 });
+  expect((await client.listWorkOrders(target, true, "ECM & OC", 2)).pageSize).toBe(20);
+  const url = new URL(fetcher.mock.calls[0]?.[0]);
+  expect(url.searchParams.get("page")).toBe("2");
+  expect(url.searchParams.get("page_size")).toBe("20");
+  expect(url.searchParams.get("summary")).toBe("true");
+  expect(url.searchParams.get("search")).toBe("ECM & OC");
+  for (const size of [0, -1, 1.5, 101, "20"]) {
+    reply({ orders: [wireOrder], total: 21, page_size: size });
+    expect((await client.listWorkOrders(target)).orders).toEqual([]);
+  }
 });
 
 it("degrades malformed reads without granting administrative controls", async () => {
   reply({ orders: [{ id: "partial" }], total: 1, can_manage: true });
-  expect(await client.listWorkOrders(target)).toEqual({ orders: [], total: 0, canManage: false });
+  expect(await client.listWorkOrders(target)).toEqual({ orders: [], total: 0, canManage: false, pageSize: 50 });
   reply({ projects: [{ id: "partial" }], squads: "bad" });
   expect(await client.getWorkOrderOptions(target)).toEqual({ projects: [], squads: [] });
   reply({ bindings: null, resources: "bad" });

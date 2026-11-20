@@ -54,6 +54,7 @@ import { useAuthStore } from "@/data/auth-store";
 import { useProjectRealtime } from "@/data/realtime/use-project-realtime";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { useT } from "@/lib/i18n";
+import { getCurrentWebUrl } from "@/lib/server-url";
 
 export default function ProjectDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -119,7 +120,7 @@ export default function ProjectDetail() {
     );
   }, [canDelete, deleteProject, t]);
 
-  const webUrl = process.env.EXPO_PUBLIC_WEB_URL;
+  const webUrl = getCurrentWebUrl();
   const projectLink =
     project && wsSlug && webUrl
       ? `${webUrl}/${wsSlug}/projects/${project.id}`

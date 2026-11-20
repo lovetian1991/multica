@@ -68,7 +68,8 @@ export const OrderSchema = z.object({
 export type WorkOrder = z.output<typeof OrderSchema>;
 export const OrdersSchema = z.object({
   orders: z.array(OrderSchema).default([]), total: z.number().default(0), can_manage: z.boolean().default(false),
-}).transform((v) => ({ orders: v.orders, total: v.total, canManage: v.can_manage }));
+  page_size: z.number().int().min(1).max(100).default(50),
+}).transform((v) => ({ orders: v.orders, total: v.total, canManage: v.can_manage, pageSize: v.page_size }));
 export const MembersSchema = z.object({ members: z.array(z.object({ id: z.string(), name: z.string(), email: z.string() })) });
 const NamedOptionSchema = z.object({ id: z.string(), name: z.string() });
 export const CustomerProjectSchema = NamedOptionSchema.extend({

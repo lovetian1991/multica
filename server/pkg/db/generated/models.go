@@ -654,6 +654,15 @@ type ContactSalesInquiry struct {
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 }
 
+type CustomerProject struct {
+	ID               pgtype.UUID        `json:"id"`
+	Name             string             `json:"name"`
+	ProductID        pgtype.UUID        `json:"product_id"`
+	ProductVersionID pgtype.UUID        `json:"product_version_id"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
 type DaemonConnection struct {
 	ID              pgtype.UUID        `json:"id"`
 	AgentID         pgtype.UUID        `json:"agent_id"`
@@ -1402,6 +1411,7 @@ type Product struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 	Description string             `json:"description"`
+	Slug        string             `json:"slug"`
 }
 
 type ProductVersion struct {
@@ -1414,6 +1424,12 @@ type ProductVersion struct {
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 	FolderID  string             `json:"folder_id"`
 	Enabled   bool               `json:"enabled"`
+}
+
+type ProductVersionCode struct {
+	VersionID pgtype.UUID        `json:"version_id"`
+	Config    []byte             `json:"config"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Project struct {
@@ -1615,6 +1631,7 @@ type SystemSetting struct {
 	KbIntegrationKeyEncrypted string             `json:"kb_integration_key_encrypted"`
 	CreatedAt                 pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt                 pgtype.Timestamptz `json:"updated_at"`
+	OcIntegrationKeyEncrypted string             `json:"oc_integration_key_encrypted"`
 }
 
 type TaskMessage struct {
@@ -1897,6 +1914,66 @@ type WecomInstallSession struct {
 	ErrorReason        pgtype.Text        `json:"error_reason"`
 	ErrorMessage       pgtype.Text        `json:"error_message"`
 	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+}
+
+type WorkOrder struct {
+	ID                pgtype.UUID        `json:"id"`
+	WorkspaceID       pgtype.UUID        `json:"workspace_id"`
+	Source            string             `json:"source"`
+	ExternalID        string             `json:"external_id"`
+	Title             string             `json:"title"`
+	Description       string             `json:"description"`
+	SourceStatus      string             `json:"source_status"`
+	SourceProduct     string             `json:"source_product"`
+	SourceVersion     string             `json:"source_version"`
+	SourceProject     string             `json:"source_project"`
+	SourceBranch      string             `json:"source_branch"`
+	ProductVersionID  pgtype.UUID        `json:"product_version_id"`
+	CustomerProjectID pgtype.UUID        `json:"customer_project_id"`
+	AssigneeID        pgtype.UUID        `json:"assignee_id"`
+	Draft             string             `json:"draft"`
+	BranchOverrides   []byte             `json:"branch_overrides"`
+	Stage             string             `json:"stage"`
+	IssueID           pgtype.UUID        `json:"issue_id"`
+	ExecutionPlan     []byte             `json:"execution_plan"`
+	CreatedBy         pgtype.UUID        `json:"created_by"`
+	UpdatedBy         pgtype.UUID        `json:"updated_by"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+type WorkOrderEvent struct {
+	ID          pgtype.UUID        `json:"id"`
+	WorkOrderID pgtype.UUID        `json:"work_order_id"`
+	WorkspaceID pgtype.UUID        `json:"workspace_id"`
+	ActorID     pgtype.UUID        `json:"actor_id"`
+	Action      string             `json:"action"`
+	Detail      []byte             `json:"detail"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type WorkOrderProjectBranch struct {
+	ProjectID pgtype.UUID `json:"project_id"`
+	VersionID pgtype.UUID `json:"version_id"`
+	ModuleKey string      `json:"module_key"`
+	ID        pgtype.UUID `json:"id"`
+	RepoUrl   string      `json:"repo_url"`
+	Ref       string      `json:"ref"`
+}
+
+type WorkOrderSetting struct {
+	ID        bool               `json:"id"`
+	KbRootID  string             `json:"kb_root_id"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+type WorkOrderWorkspace struct {
+	WorkspaceID        pgtype.UUID        `json:"workspace_id"`
+	ExecutionProjectID pgtype.UUID        `json:"execution_project_id"`
+	SquadID            pgtype.UUID        `json:"squad_id"`
+	MisUrl             string             `json:"mis_url"`
+	MisCredentials     string             `json:"mis_credentials"`
 	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
 }
 

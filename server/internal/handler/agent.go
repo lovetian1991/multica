@@ -603,6 +603,8 @@ type AgentTaskResponse struct {
 	ProductVersionName        string            `json:"product_version_name,omitempty"`        // product version name, used as ZenTao resolve --build
 	ProductVersionDescription string            `json:"product_version_description,omitempty"` // product version remark injected into task context
 	ProductVersionDirectory   string            `json:"product_version_directory,omitempty"`   // product version directory / code path
+	WorkOrderPlan             json.RawMessage   `json:"work_order_plan,omitempty"`
+	WorkOrderError            string            `json:"work_order_error,omitempty"`
 	// RequestingUserName + RequestingUserProfileDescription mirror the user
 	// the agent is acting on behalf of (see daemon/types.go). v1 sources them
 	// from the runtime owner so they're populated for daemon runtimes and

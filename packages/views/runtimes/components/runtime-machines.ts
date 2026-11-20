@@ -125,6 +125,97 @@ export function buildRuntimeMachines(
   return machines.sort(compareRuntimeMachines);
 }
 
+// A rebuilt daemon mints a new daemon id, so the replacement runtime is a
+// second machine even when it is the same host (same title). Agent pickers
+// fold those together; otherwise the open menu lands inside the stale
+// offline machine and the new runtime cannot be selected. Owner and mode
+// stay part of the key so two people, or a local runtime and a cloud
+// worker, are never combined just because their labels match.
+export function mergeRuntimeMachinesByTitle(
+  machines: RuntimeMachine[],
+): RuntimeMachine[] {
+  const merged: RuntimeMachine[] = [];
+  const indexByKey = new Map<string, number>();
+
+  for (const machine of machines) {
+    const key = runtimeMachineMergeKey(machine);
+    const index = indexByKey.get(key);
+    if (index == null) {
+      indexByKey.set(key, merged.length);
+      merged.push({
+        ...machine,
+        runtimes: sortRuntimesOnlineFirst(machine.runtimes),
+      });
+      continue;
+    }
+    const target = merged[index]!;
+    const seen = new Set(target.runtimes.map((runtime) => runtime.id));
+    const extras = machine.runtimes.filter((runtime) => !seen.has(runtime.id));
+    if (extras.length === 0) continue;
+    const runtimes = sortRuntimesOnlineFirst([...target.runtimes, ...extras]);
+    const onlineCount = target.onlineCount + machine.onlineCount;
+    const isCurrent = target.isCurrent || machine.isCurrent;
+    merged[index] = {
+      ...target,
+      isCurrent,
+      section: isCurrent ? "local" : target.section,
+      runtimes,
+      providerNames: Array.from(
+        new Set([...target.providerNames, ...machine.providerNames]),
+      ).sort(),
+      onlineCount,
+      issueCount: target.issueCount + machine.issueCount,
+      runningCount: target.runningCount + machine.runningCount,
+      queuedCount: target.queuedCount + machine.queuedCount,
+      health:
+        onlineCount > 0
+          ? "online"
+          : HEALTH_SEVERITY[machine.health] > HEALTH_SEVERITY[target.health]
+            ? machine.health
+            : target.health,
+      lastSeenAt: latestIso(target.lastSeenAt, machine.lastSeenAt),
+    };
+  }
+  return merged;
+}
+
+function runtimeMachineMergeKey(machine: RuntimeMachine): string {
+  const title = machine.title.trim().toLowerCase();
+  const ownerId = soleMachineOwnerId(machine);
+  if (!title || !ownerId) return `id:${machine.id}`;
+  return `${machine.mode}:${ownerId}:${title}`;
+}
+
+function soleMachineOwnerId(machine: RuntimeMachine): string | null {
+  let ownerId: string | null = null;
+  for (const runtime of machine.runtimes) {
+    if (!runtime.owner_id) return null;
+    if (ownerId == null) {
+      ownerId = runtime.owner_id;
+      continue;
+    }
+    if (ownerId !== runtime.owner_id) return null;
+  }
+  return ownerId;
+}
+
+function sortRuntimesOnlineFirst(runtimes: AgentRuntime[]): AgentRuntime[] {
+  return runtimes.toSorted((a, b) => {
+    const onlineDelta =
+      Number(b.status === "online") - Number(a.status === "online");
+    if (onlineDelta !== 0) return onlineDelta;
+    const providerDelta = a.provider.localeCompare(b.provider);
+    if (providerDelta !== 0) return providerDelta;
+    return a.id.localeCompare(b.id);
+  });
+}
+
+function latestIso(left: string | null, right: string | null): string | null {
+  if (!left) return right;
+  if (!right) return left;
+  return new Date(left) > new Date(right) ? left : right;
+}
+
 function placeholderLocalMachine(
   options: RuntimeMachineOptions,
 ): RuntimeMachine {
@@ -279,7 +370,7 @@ function finalizeRuntimeMachine(
   };
 }
 
-function runtimeMachineId(runtime: AgentRuntime): string {
+export function runtimeMachineId(runtime: AgentRuntime): string {
   if (runtime.daemon_id) return `${runtime.runtime_mode}:${runtime.daemon_id}`;
   const deviceName = runtimeDeviceName(runtime);
   if (deviceName) return `${runtime.runtime_mode}:device:${deviceName}`;

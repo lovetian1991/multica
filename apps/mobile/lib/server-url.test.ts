@@ -1,5 +1,7 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  DEFAULT_SERVER_URL,
+  getCurrentWebUrl,
   normalizeServerUrl,
   setCurrentServerUrl,
   toWebSocketUrl,
@@ -53,5 +55,19 @@ describe("runtime server selection", () => {
     expect(setCurrentServerUrl("http://localhost:8080/")).toBe(
       "http://localhost:8080",
     );
+  });
+
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("preserves a separate configured web origin for the default server", () => {
+    vi.stubEnv("EXPO_PUBLIC_WEB_URL", "https://web.example.test/");
+    setCurrentServerUrl(DEFAULT_SERVER_URL);
+    expect(getCurrentWebUrl()).toBe("https://web.example.test");
+  });
+
+  it("uses the selected custom server for web links instead of the bundled origin", () => {
+    vi.stubEnv("EXPO_PUBLIC_WEB_URL", "https://web.example.test");
+    setCurrentServerUrl("https://selected.example.test/multica");
+    expect(getCurrentWebUrl()).toBe("https://selected.example.test/multica");
   });
 });

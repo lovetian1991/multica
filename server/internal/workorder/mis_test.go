@@ -43,6 +43,39 @@ func TestMISListUsesDocumentedReadContract(t *testing.T) {
 	}
 }
 
+func TestMISSearchAndPaginationUseSameUpstreamRequest(t *testing.T) {
+	for _, mine := range []bool{false, true} {
+		t.Run(fmt.Sprint(mine), func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if err := r.ParseForm(); err != nil {
+					t.Fatal(err)
+				}
+				wantFilter := "(title like '%OC''85%' or no like '%OC''85%')"
+				wantPath := "/QcWorkOrder/ListWorkOrderTask"
+				if !mine {
+					wantFilter = "status!='草稿' and " + wantFilter
+					wantPath = "/QcWorkOrder/List"
+				}
+				if r.URL.Path != wantPath || r.Form.Get("index") != "2" || r.Form.Get("size") != "20" ||
+					r.Form.Get("filterStr") != wantFilter {
+					t.Errorf("search or pagination not forwarded correctly")
+				}
+				if mine && (r.Form.Get("taskUser") != "user-a" || r.Form.Get("taskStatus") != "0") {
+					t.Error("personal search lost its scope")
+				}
+				fmt.Fprint(w, `{"success":true,"total":21,"data":[]}`)
+			}))
+			defer server.Close()
+			_, total, err := QueryMIS(context.Background(), server.URL,
+				MISCredentials{Token: "test-token", TaskUser: "user-a"},
+				MISQuery{Mine: mine, Page: 2, Size: 20, Search: "OC'85"})
+			if err != nil || total != 21 {
+				t.Fatalf("query total=%d error=%v", total, err)
+			}
+		})
+	}
+}
+
 func TestMISRejectsMalformedResponsesWithoutLeakingSecrets(t *testing.T) {
 	for _, body := range []string{
 		`{"success":false,"error":"private-upstream-secret"}`,
@@ -92,6 +125,21 @@ func TestMISRejectsOversizedResponse(t *testing.T) {
 		MISQuery{Page: 1, Size: 20})
 	if err == nil || !strings.Contains(err.Error(), "size limit") {
 		t.Fatalf("expected response size limit, got %v", err)
+	}
+}
+
+func TestMISSummaryExcludesRichTextWithoutChangingDetail(t *testing.T) {
+	order := MISOrder{
+		ID: "1", Title: "Repair", Description: strings.Repeat("x", 2000000),
+		Fields: map[string]string{"customername": "Acme", "solution": strings.Repeat("y", 2000000)},
+	}
+	summary := order.Summary()
+	raw, err := json.Marshal(summary)
+	if err != nil || len(raw) > 1000 || summary.Fields["customername"] != "Acme" {
+		t.Fatalf("invalid list summary: size=%d error=%v", len(raw), err)
+	}
+	if len(order.Description) != 2000000 || len(order.Fields["solution"]) != 2000000 {
+		t.Fatal("list projection changed the full detail")
 	}
 }
 

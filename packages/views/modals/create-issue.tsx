@@ -208,8 +208,8 @@ function CreateRunHint({
 function WorkflowHandoffHint({ projectId, status }: { projectId?: string; status: IssueStatus }) {
   const { t } = useT("issues");
   const wsId = useWorkspaceId();
-  const workflow = useProjectWorkflow(wsId, projectId);
-  const { data: projects } = useQuery({ ...projectListOptions(wsId), enabled: !!workflow });
+  const workflow = useProjectWorkflow(wsId, projectId ?? null);
+  const { data: projects } = useQuery({ ...projectListOptions(wsId), enabled: !!projectId });
   const project = projects?.find((p) => p.id === projectId);
   const handlerLabel = useStepHandlerLabel(project);
   const step = workflowStep(workflow, status);
@@ -447,7 +447,7 @@ export function ManualCreatePanel({
   // An issue only takes its workflow's columns — its project's, or Default's
   // outside a project: a status it does not list moves to todo, which every
   // workflow keeps. (MUL-7420, MUL-8250)
-  const { workflow: projectWorkflow, defaultWorkflow: workspaceDefault } = useProjectWithWorkflow(wsId, projectId);
+  const { workflow: projectWorkflow, defaultWorkflow: workspaceDefault } = useProjectWithWorkflow(wsId, projectId ?? null);
   const createWorkflow = projectId ? projectWorkflow : workspaceDefault;
   useEffect(() => {
     if (createWorkflow && !workflowAllowsStatus(createWorkflow, status)) {

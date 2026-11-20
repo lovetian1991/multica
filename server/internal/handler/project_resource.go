@@ -994,6 +994,8 @@ func inheritClaimProductFromProject(resp *AgentTaskResponse, c claimProjectConte
 }
 
 func (h *Handler) applyProductVersionToClaim(ctx context.Context, taskID string, resp *AgentTaskResponse) {
+	h.applyWorkOrderToClaim(ctx, resp)
+	h.applyProductCodeToClaim(ctx, resp)
 	if strings.TrimSpace(resp.ProductVersionID) != "" {
 		id, err := parseUUIDLoose(resp.ProductVersionID)
 		if err != nil {

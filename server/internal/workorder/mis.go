@@ -58,6 +58,18 @@ type MISQuery struct {
 	Search, ID string
 }
 
+func (order MISOrder) Summary() MISOrder {
+	order.Description = ""
+	fields := map[string]string{}
+	for _, key := range []string{"customername", "taskname", "createname", "actorusername", "creationtime", "urgentlevel", "questiontype"} {
+		if value := order.Fields[key]; value != "" {
+			fields[key] = value
+		}
+	}
+	order.Fields = fields
+	return order
+}
+
 // FetchMISPage only calls the documented read-list endpoint. Redirects are disabled
 // because the integration authenticates using custom headers.
 func FetchMISPage(ctx context.Context, base string, c MISCredentials, page int) ([]MISOrder, int, error) {

@@ -18,6 +18,9 @@ import { ProjectsPage } from "@multica/views/projects/components";
 import { DashboardPage } from "@multica/views/dashboard";
 import { AutopilotsPage } from "@multica/views/autopilots/components";
 import { MyIssuesPage } from "@multica/views/my-issues";
+import { ProjectManagementPage, WorkOrdersPage, WorkOrderRootSetting } from "@multica/views/work-orders";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@multica/core/api";
 import { SkillsPage } from "@multica/views/skills";
 import { DesktopRuntimesPage } from "./components/desktop-runtimes-page";
 import { DesktopAgentsPage } from "./components/desktop-agents-page";
@@ -33,7 +36,7 @@ import { InboxPage } from "@multica/views/inbox";
 import { ChatPage } from "@multica/views/chat";
 import { SettingsPage } from "@multica/views/settings";
 import { useT } from "@multica/views/i18n";
-import { Cloud, Download, Server } from "@multica/ui/icons";
+import { Cloud, Download, FileText, Folder, Server } from "@multica/ui/icons";
 import { DaemonSettingsTab } from "./components/daemon-settings-tab";
 import { ServerSettingsTab } from "./components/server-settings-tab";
 import { UpdatesSettingsTab } from "./components/updates-settings-tab";
@@ -52,6 +55,7 @@ const MY_VIEW_SCOPE = { scope_type: "my" } as const;
  */
 function DesktopSettingsRoute() {
   const { t } = useT("settings");
+  const admin = useQuery({ queryKey: ["work-order-root"], queryFn: () => api.getWorkOrderRoot(), retry: false });
   return (
     <SettingsPage
       extraDeviceTabs={[
@@ -73,6 +77,17 @@ function DesktopSettingsRoute() {
           icon: Download,
           content: <UpdatesSettingsTab />,
         },
+        ...(admin.isSuccess ? [{
+          value: "work-orders",
+          label: t(($) => $.work_orders.admin),
+          icon: FileText,
+          content: <div className="min-w-0"><WorkOrderRootSetting /><div className="h-[640px] max-h-[80vh]"><WorkOrdersPage system embedded /></div></div>,
+        }, {
+          value: "customer-projects",
+          label: t(($) => $.work_orders.project_management),
+          icon: Folder,
+          content: <div className="h-[720px] max-h-[85vh]"><ProjectManagementPage embedded /></div>,
+        }] : []),
       ]}
     />
   );
@@ -198,6 +213,7 @@ export const appRoutes: RouteObject[] = [
             ),
             handle: { title: "My Issues" },
           },
+          { path: "work-orders", element: <WorkOrdersPage />, handle: { title: "Work Orders" } },
           {
             path: "runtimes",
             element: <DesktopRuntimesPage />,

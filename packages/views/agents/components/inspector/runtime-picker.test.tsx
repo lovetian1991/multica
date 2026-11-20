@@ -242,4 +242,45 @@ describe("RuntimePicker (agent settings)", () => {
     expect(screen.getByRole("button", { name: /^Claude/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /^Codex/ })).toBeTruthy();
   });
+
+  it("lets a rebuilt runtime on the same machine be selected from the stale one", () => {
+    const rebuilt = makeRuntime({
+      id: "rt-claude-new",
+      daemon_id: "daemon-new",
+      name: "Claude (mbp.local)",
+      custom_name: "Jiayuan's MacBook Pro",
+      provider: "claude",
+      status: "online",
+    });
+    const { onChange } = renderPicker({
+      value: RT_CLAUDE.id,
+      runtimes: [{ ...RT_CLAUDE, status: "offline" }, RT_CODEX, rebuilt],
+    });
+    openPicker();
+
+    expect(screen.getByText("2/3 online")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /^Claudeonline$/ }));
+    expect(onChange).toHaveBeenCalledWith("rt-claude-new");
+  });
+
+  it("opens the machine list when the bound machine is offline and a new one is online", () => {
+    const rebuilt = makeRuntime({
+      id: "rt-new-host",
+      daemon_id: "daemon-new",
+      name: "Claude (new-host.local)",
+      custom_name: undefined,
+      provider: "claude",
+      status: "online",
+    });
+    const { onChange } = renderPicker({
+      value: RT_CLAUDE.id,
+      runtimes: [{ ...RT_CLAUDE, status: "offline" }, rebuilt],
+    });
+    openPicker();
+
+    expect(screen.queryByRole("button", { name: "Back to machines" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /^new-host\.local/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Claudeonline$/ }));
+    expect(onChange).toHaveBeenCalledWith("rt-new-host");
+  });
 });

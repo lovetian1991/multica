@@ -32,6 +32,11 @@ WHERE id = $1
 RETURNING *;
 
 -- name: DeleteProductVersion :one
+WITH deleted_code AS (
+    DELETE FROM product_version_code WHERE version_id = $1
+), deleted_branches AS (
+    DELETE FROM work_order_project_branch WHERE version_id = $1
+)
 DELETE FROM product_version
-WHERE id = $1
-RETURNING id;
+WHERE product_version.id = $1
+RETURNING product_version.id;

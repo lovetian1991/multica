@@ -24,6 +24,7 @@ const windowsVirtualStoreMaxLength = 32;
 
 const fingerprintInputs = [
   ["mobile/app.config.ts", "app.config.ts"],
+  ["mobile/plugins/with-android-fbjni.cjs", "plugins/with-android-fbjni.cjs"],
   ["mobile/package.json", "package.json"],
   ["mobile/.env.production", ".env.production"],
   ["mobile/assets/icon.png", "assets/icon.png"],

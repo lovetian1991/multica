@@ -226,6 +226,8 @@ class ApiClient {
     const rid = createRequestId();
     const start = Date.now();
     const method = init.method ?? "GET";
+    const baseUrl = this.getBaseUrl();
+    const requestToken = this.token;
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
@@ -271,7 +273,7 @@ class ApiClient {
 
     let res: Response;
     try {
-      res = await fetch(`${this.getBaseUrl()}${path}`, {
+      res = await fetch(`${baseUrl}${path}`, {
         ...init,
         signal: controller.signal,
         headers,
@@ -306,7 +308,11 @@ class ApiClient {
       // 401 sign-out hook: invoke once, let the platform layer (auth-store)
       // clear the token + navigate. Subsequent requests in flight will also
       // 401 and re-enter here, so the callback must be idempotent.
-      if (res.status === 401) {
+      if (
+        res.status === 401 &&
+        this.getBaseUrl() === baseUrl &&
+        this.token === requestToken
+      ) {
         this.options.onUnauthorized?.();
       }
 

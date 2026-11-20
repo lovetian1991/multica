@@ -1,9 +1,10 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { api } from "./api";
+import { api, ApiError } from "./api";
+import { setCurrentServerUrl } from "@/lib/server-url";
 
-// api.ts refuses to load without a base URL; set it before the import runs.
+// Pin the default server before server-url.ts is imported.
 vi.hoisted(() => {
   process.env.EXPO_PUBLIC_API_URL = "https://api.example.test";
 });
@@ -31,6 +32,7 @@ describe("api.deleteComment", () => {
   const fetchMock = vi.fn(async () => new Response(null, { status: 204 }));
 
   beforeEach(() => {
+    setCurrentServerUrl("https://api.example.test");
     fetchMock.mockClear();
     vi.stubGlobal("fetch", fetchMock);
     vi.spyOn(console, "log").mockImplementation(() => {});
@@ -67,6 +69,7 @@ describe("api.listProductVersionFolders", () => {
   });
 
   beforeEach(() => {
+    setCurrentServerUrl("https://api.example.test");
     fetchMock.mockClear();
     requestedUrls.length = 0;
     vi.stubGlobal("fetch", fetchMock);
@@ -89,5 +92,107 @@ describe("api.listProductVersionFolders", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(requestedUrls).toEqual([url]);
+  });
+});
+
+describe("mobile API transport", () => {
+  const fetchMock = vi.fn<typeof fetch>();
+
+  beforeEach(() => {
+    setCurrentServerUrl("https://api.example.test");
+    api.setToken(null);
+    api.setOptions({ onUnauthorized: undefined });
+    fetchMock.mockReset().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    api.setToken(null);
+    api.setOptions({ onUnauthorized: undefined });
+    setCurrentServerUrl("https://api.example.test");
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("uses the currently selected server, including its path prefix", async () => {
+    setCurrentServerUrl("https://selected.example.test/multica/");
+    await api.deleteComment("comment-1");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://selected.example.test/multica/api/comments/comment-1",
+      expect.any(Object),
+    );
+  });
+
+  it("sends bearer credentials and Android client metadata", async () => {
+    api.setToken("test-token");
+    await api.deleteComment("comment-1");
+    expect(fetchMock.mock.calls[0][1]?.headers).toMatchObject({
+      Authorization: "Bearer test-token",
+      "X-Client-Platform": "mobile",
+      "X-Client-OS": "android",
+      "X-Client-Version": "0.1.0",
+      "X-Request-ID": expect.any(String),
+    });
+  });
+
+  it("omits bearer credentials after signing out", async () => {
+    api.setToken("test-token");
+    api.setToken(null);
+    await api.deleteComment("comment-1");
+    expect(fetchMock.mock.calls[0][1]?.headers).not.toHaveProperty("Authorization");
+  });
+
+  it("routes unauthorized errors to the session cleanup handler", async () => {
+    const onUnauthorized = vi.fn();
+    api.setOptions({ onUnauthorized });
+    fetchMock.mockResolvedValue(new Response('{"message":"expired"}', { status: 401 }));
+    await expect(api.getMe()).rejects.toMatchObject({ status: 401, message: "expired" });
+    expect(onUnauthorized).toHaveBeenCalledOnce();
+  });
+
+  it("does not sign out on server errors", async () => {
+    const onUnauthorized = vi.fn();
+    api.setOptions({ onUnauthorized });
+    fetchMock.mockResolvedValue(new Response("unavailable", { status: 503 }));
+    await expect(api.getMe()).rejects.toBeInstanceOf(ApiError);
+    expect(onUnauthorized).not.toHaveBeenCalled();
+  });
+
+  it.each(["server", "token"])("ignores a stale 401 after the %s has changed", async (changed) => {
+    const onUnauthorized = vi.fn();
+    api.setOptions({ onUnauthorized });
+    api.setToken("old-token");
+    fetchMock.mockImplementation(async () => {
+      if (changed === "server") setCurrentServerUrl("https://new.example.test");
+      else api.setToken("new-token");
+      return new Response("expired", { status: 401 });
+    });
+    await expect(api.getMe()).rejects.toMatchObject({ status: 401 });
+    expect(onUnauthorized).not.toHaveBeenCalled();
+  });
+
+  it("forwards caller cancellation to the native fetch signal", async () => {
+    const controller = new AbortController();
+    fetchMock.mockImplementation(async (_url, init) => {
+      controller.abort();
+      expect(init?.signal?.aborted).toBe(true);
+      throw new DOMException("cancelled", "AbortError");
+    });
+    await expect(api.getMe({ signal: controller.signal })).rejects.toMatchObject({ name: "AbortError" });
+  });
+
+  it("aborts hung requests after 30 seconds", async () => {
+    vi.useFakeTimers();
+    fetchMock.mockImplementation((_url, init) => new Promise((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => reject(new DOMException("timeout", "AbortError")));
+    }));
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const pending = expect(api.getMe()).rejects.toMatchObject({ status: 0 });
+    await vi.advanceTimersByTimeAsync(30_000);
+    await pending;
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

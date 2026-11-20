@@ -19,6 +19,8 @@ import {
 import { ProviderLogo } from "../../../runtimes/components/provider-logo";
 import {
   buildRuntimeMachines,
+  mergeRuntimeMachinesByTitle,
+  runtimeMachineId,
   runtimeRowLabel,
   type RuntimeMachine,
 } from "../../../runtimes/components/runtime-machines";
@@ -80,15 +82,15 @@ export function RuntimePicker({
   // runtime's machine for the trigger label regardless of the Mine/All
   // scope, and is reused as-is for the list whenever the scope is "all".
   const allMachines = useMemo(
-    () => buildRuntimeMachines(runtimes, { now: Date.now(), currentUserId }),
+    () => pickerMachines(runtimes, currentUserId),
     [runtimes, currentUserId],
   );
   const machines = useMemo(
     () =>
       filter === "mine" && currentUserId
-        ? buildRuntimeMachines(
+        ? pickerMachines(
             runtimes.filter((r) => r.owner_id === currentUserId),
-            { now: Date.now(), currentUserId },
+            currentUserId,
           )
         : allMachines,
     [runtimes, filter, currentUserId, allMachines],
@@ -205,9 +207,9 @@ export function RuntimePicker({
       setFilter(nextFilter);
       const visible =
         nextFilter === "mine" && currentUserId
-          ? buildRuntimeMachines(
+          ? pickerMachines(
               runtimes.filter((r) => r.owner_id === currentUserId),
-              { now: Date.now(), currentUserId },
+              currentUserId,
             )
           : allMachines;
       const landing = selected
@@ -215,7 +217,14 @@ export function RuntimePicker({
         : visible.length === 1
           ? visible[0]
           : null;
-      setMachineId(landing?.id ?? null);
+      // A rebuilt runtime lands on a new daemon id. If that successor is
+      // online and this machine is not, stay on the machine list so the
+      // replacement can be chosen. The single-machine case still drills in.
+      const hasOnlineAlternative =
+        !!landing &&
+        landing.onlineCount === 0 &&
+        visible.some((m) => m.id !== landing.id && m.onlineCount > 0);
+      setMachineId(hasOnlineAlternative ? null : (landing?.id ?? null));
     }
     setOpen(next);
   };
@@ -226,7 +235,7 @@ export function RuntimePicker({
   };
 
   const drilled = machineId
-    ? machines.find((m) => m.id === machineId) ?? null
+    ? machines.find((m) => machineMatches(m, machineId)) ?? null
     : null;
 
   const onlineCountLabel = (machine: RuntimeMachine) =>
@@ -351,7 +360,7 @@ export function RuntimePicker({
       }
     >
       {drilled ? (
-        drilled.runtimes.map((rt) => {
+        sortRuntimesOnlineFirst(drilled.runtimes).map((rt) => {
           const owner = getOwner(rt.owner_id);
           const rtOnline = rt.status === "online";
           const locked = isDisabled(rt);
@@ -492,6 +501,33 @@ export function RuntimePicker({
   }
 
   return picker;
+}
+
+function pickerMachines(
+  runtimes: AgentRuntime[],
+  currentUserId: string | null,
+): RuntimeMachine[] {
+  return mergeRuntimeMachinesByTitle(
+    buildRuntimeMachines(runtimes, { now: Date.now(), currentUserId }),
+  );
+}
+
+function machineMatches(machine: RuntimeMachine, machineId: string): boolean {
+  return (
+    machine.id === machineId ||
+    machine.runtimes.some((runtime) => runtimeMachineId(runtime) === machineId)
+  );
+}
+
+function sortRuntimesOnlineFirst(runtimes: AgentRuntime[]): AgentRuntime[] {
+  return runtimes.toSorted((a, b) => {
+    const onlineDelta =
+      Number(b.status === "online") - Number(a.status === "online");
+    if (onlineDelta !== 0) return onlineDelta;
+    const providerDelta = a.provider.localeCompare(b.provider);
+    if (providerDelta !== 0) return providerDelta;
+    return a.id.localeCompare(b.id);
+  });
 }
 
 function FilterButton({

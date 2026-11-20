@@ -3,7 +3,9 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -385,6 +387,61 @@ func TestWorkOrderPersonalPermissions(t *testing.T) {
 	}))
 	testutil.Call(t, testHandler.GetWorkOrder, req).Want(http.StatusNotFound)
 	testutil.Call(t, testHandler.ListWorkOrders, orderRequest(http.MethodGet, "/api/system/work-orders?workspace_id="+testWorkspaceID, "", "owner", nil)).Want(http.StatusForbidden)
+}
+
+func TestWorkOrderPaginationAndSearch(t *testing.T) {
+	prefix := t.Name()
+	for i := 0; i < 21; i++ {
+		dbfx.Insert(t, "work_order", testutil.Cols{
+			"workspace_id": testWorkspaceID, "external_id": fmt.Sprintf("%s-%02d", prefix, i),
+			"title": prefix + " Repair", "assignee_id": testUserID,
+			"description": "Full source content", "draft": "Keep my draft",
+			"created_by": testUserID, "updated_by": testUserID,
+		})
+	}
+	type inventory struct {
+		Orders   []workOrderResponse `json:"orders"`
+		Total    int                 `json:"total"`
+		PageSize int                 `json:"page_size"`
+	}
+	list := func(search string, page int) inventory {
+		t.Helper()
+		var result inventory
+		path := fmt.Sprintf("/api/work-orders?search=%s&page=%d&page_size=20&summary=true", url.QueryEscape(search), page)
+		testutil.Call(t, testHandler.ListWorkOrders, orderRequest(http.MethodGet, path, "", "member", nil)).
+			Want(http.StatusOK).JSON(&result)
+		return result
+	}
+	first, second := list(prefix, 1), list(prefix, 2)
+	if first.Total != 21 || first.PageSize != 20 || len(first.Orders) != 20 || second.Total != 21 || len(second.Orders) != 1 {
+		t.Fatalf("unexpected pages: first=%d/%d second=%d/%d size=%d", len(first.Orders), first.Total, len(second.Orders), second.Total, first.PageSize)
+	}
+	seen := map[string]bool{}
+	for _, order := range first.Orders {
+		seen[order.ID] = true
+		if order.Description != "" || order.Draft != "" || string(order.ExecutionPlan) != "null" {
+			t.Fatal("list contains full work order content")
+		}
+	}
+	if seen[second.Orders[0].ID] {
+		t.Fatal("pages overlap")
+	}
+	exact := list(prefix+"-00", 1)
+	if exact.Total != 1 || len(exact.Orders) != 1 || exact.Orders[0].ExternalID != prefix+"-00" {
+		t.Fatal("external id search did not apply before pagination")
+	}
+	if empty := list(prefix+"-missing", 1); empty.Total != 0 || len(empty.Orders) != 0 {
+		t.Fatal("search returned unrelated work orders")
+	}
+	var detail struct {
+		Order workOrderResponse `json:"order"`
+	}
+	id := first.Orders[0].ID
+	testutil.Call(t, testHandler.GetWorkOrder, orderRequest(http.MethodGet, "/api/work-orders/"+id, id, "member", nil)).
+		Want(http.StatusOK).JSON(&detail)
+	if detail.Order.Description != "Full source content" || detail.Order.Draft != "Keep my draft" {
+		t.Fatal("detail content was lost by list projection")
+	}
 }
 
 func TestWorkOrderReimportPreservesLocalEdits(t *testing.T) {

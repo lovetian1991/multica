@@ -70,7 +70,7 @@ export function WorkOrdersPage({ system = false, embedded = false }: { system?: 
       </Tabs>
     </div>
     {(ws.error || list.error) && <p role="alert" className="p-4 text-body text-destructive">{(ws.error || list.error)?.message}</p>}
-    <div className="min-h-0 flex-1 overflow-auto">
+    <div className="min-h-0 flex-1 overflow-auto" aria-busy={list.isFetching}>
       {list.isLoading ? <p className="p-8 text-body text-muted-foreground">{t(($) => $.work_orders.loading)}</p> :
         !list.data?.orders.length ? <p className="p-8 text-body text-muted-foreground">{t(($) => $.work_orders.empty)}</p> :
           <table className="w-full min-w-[640px] text-left text-body">
@@ -90,15 +90,41 @@ export function WorkOrdersPage({ system = false, embedded = false }: { system?: 
     </div>
     <footer className="flex items-center justify-end gap-3 border-t border-surface-border p-3 text-caption">
       <span>{list.data?.total ?? 0}</span>
-      <Button variant="ghost" size="icon-sm" disabled={page <= 1} aria-label={t(($) => $.work_orders.previous)} onClick={() => setPage(page - 1)}><ArrowLeft className="size-4" /></Button>
-      <span>{page}</span>
-      <Button variant="ghost" size="icon-sm" disabled={page * 50 >= (list.data?.total ?? 0)} aria-label={t(($) => $.work_orders.next)} onClick={() => setPage(page + 1)}><ArrowRight className="size-4" /></Button>
+      <Button variant="ghost" size="icon-sm" disabled={page <= 1 || list.isFetching} title={t(($) => $.work_orders.previous)} aria-label={t(($) => $.work_orders.previous)} onClick={() => setPage(page - 1)}><ArrowLeft className="size-4" /></Button>
+      <span>{page} / {Math.max(page, Math.ceil((list.data?.total ?? 0) / (list.data?.pageSize ?? 20)))}</span>
+      <Button variant="ghost" size="icon-sm" disabled={list.isFetching || !!list.error || page * (list.data?.pageSize ?? 20) >= (list.data?.total ?? 0)} title={t(($) => $.work_orders.next)} aria-label={t(($) => $.work_orders.next)} onClick={() => setPage(page + 1)}><ArrowRight className="size-4" /></Button>
     </footer>
-    {selected && <OrderEditor key={selected.id} initial={selected} target={target} manager={!!list.data?.canManage} workspaceSlug={system ? ws.data?.find((w) => w.id === target.wsId)?.slug ?? "" : workspace?.slug ?? ""} onClose={() => setSelected(null)} />}
+    {selected && <OrderDetail key={`${target.wsId}/${selected.id}`} initial={selected} target={target} manager={!!list.data?.canManage} workspaceSlug={system ? ws.data?.find((w) => w.id === target.wsId)?.slug ?? "" : workspace?.slug ?? ""} onClose={() => setSelected(null)} />}
     {importOpen && <OrderImport target={target} onClose={() => setImportOpen(false)} />}
     <Dialog open={configOpen} onOpenChange={setConfigOpen}><DialogContent className="max-h-[85vh] overflow-y-auto"><DialogHeader><DialogTitle>{t(($) => $.work_orders.config)}</DialogTitle></DialogHeader><WorkOrderSettings target={target} /></DialogContent></Dialog>
   </div>;
   return system && !embedded ? <SystemManagementLayout><div className="h-svh min-w-0">{body}</div></SystemManagementLayout> : body;
+}
+
+function OrderDetail(props: {
+  initial: WorkOrder; target: OrderTarget; manager: boolean; workspaceSlug: string; onClose: () => void;
+}) {
+  const { t } = useT("settings");
+  const detail = useQuery({
+    queryKey: [...workOrderKeys.all(props.target), "detail", props.initial.id],
+    queryFn: async () => {
+      const result = await api.getWorkOrder(props.target, props.initial.id);
+      if (!result) throw new Error(t(($) => $.work_orders.failed));
+      return result;
+    },
+    staleTime: 0,
+  });
+  if (detail.data) {
+    return <OrderEditor {...props} initial={detail.data.order} />;
+  }
+  return <Dialog open onOpenChange={(open) => { if (!open) props.onClose(); }}>
+    <DialogContent><DialogHeader><DialogTitle>{props.initial.title}</DialogTitle></DialogHeader>
+      {detail.error ? <>
+        <p role="alert" className="text-body text-destructive">{detail.error.message}</p>
+        <Button variant="outline" onClick={() => void detail.refetch()}><RefreshCw className="size-4" />{t(($) => $.work_orders.refresh)}</Button>
+      </> : <p role="status" className="text-body text-muted-foreground">{t(($) => $.work_orders.loading)}</p>}
+    </DialogContent>
+  </Dialog>;
 }
 
 function OrderEditor({ initial, target, manager, workspaceSlug, onClose }: {

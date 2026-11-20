@@ -166,6 +166,9 @@ export function WorkspaceTab() {
   const [prefixSaveStatus, setPrefixSaveStatus] =
     useState<SettingsSaveStatus>("idle");
   const [ocKey, setOcKey] = useState("");
+  const [ocAccount, setOCAccount] = useState(workspaceStringSetting(workspace, "oc_account"));
+  const [ocAccountSaving, setOCAccountSaving] = useState(false);
+  const [ocChecking, setOCChecking] = useState(false);
   const [ocKeySaveStatus, setOcKeySaveStatus] =
     useState<SettingsSaveStatus>("idle");
   const [zentaoURL, setZentaoURL] = useState(
@@ -207,6 +210,7 @@ export function WorkspaceTab() {
     setContext(workspace?.context ?? "");
     setPrefixDraft(null);
     setOcKey("");
+    setOCAccount(workspaceStringSetting(workspace, "oc_account"));
     setOcKeySaveStatus("idle");
     setZentaoURL(workspaceStringSetting(workspace, "zentao_url"));
     setZentaoAccount(workspaceStringSetting(workspace, "zentao_account"));
@@ -284,6 +288,36 @@ export function WorkspaceTab() {
           ? error.message
           : t(($) => $.workspace.toast_save_failed),
       );
+    }
+  };
+
+  const handleOCAccountSave = async () => {
+    if (!workspace || !canManageWorkspace) return;
+    setOCAccountSaving(true);
+    try {
+      const updated = await api.updateWorkspace(workspace.id, { oc_account: ocAccount.trim() });
+      qc.setQueryData(workspaceKeys.list(), (old: Workspace[] | undefined) =>
+        old?.map((ws) => ws.id === updated.id ? updated : ws),
+      );
+      toast.success(t(($) => $.workspace.oc_key_saved));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t(($) => $.workspace.oc_key_save_failed));
+    } finally {
+      setOCAccountSaving(false);
+    }
+  };
+
+  const handleOCCheck = async () => {
+    if (!workspace || !canManageWorkspace) return;
+    setOCChecking(true);
+    try {
+      const result = await api.checkWorkspaceOC(workspace.id);
+      if (!result.connected) throw new Error(t(($) => $.workspace.oc_connection_failed));
+      toast.success(t(($) => $.workspace.oc_connected));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t(($) => $.workspace.oc_connection_failed));
+    } finally {
+      setOCChecking(false);
     }
   };
 
@@ -684,6 +718,31 @@ export function WorkspaceTab() {
         }
       >
         <SettingsCard>
+          <SettingsRow
+            label={t(($) => $.workspace.oc_account_label)}
+            size="text"
+            align="start"
+          >
+            <div className="space-y-2">
+              <Input
+                aria-label={t(($) => $.workspace.oc_account_label)}
+                autoComplete="username"
+                maxLength={256}
+                value={ocAccount}
+                onChange={(event) => setOCAccount(event.target.value)}
+                disabled={!canManageWorkspace || ocAccountSaving || ocChecking}
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" onClick={handleOCAccountSave} disabled={!canManageWorkspace || ocAccountSaving || ocChecking}>
+                  {t(($) => $.workspace.oc_account_save)}
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleOCCheck}
+                  disabled={!canManageWorkspace || ocChecking || ocAccountSaving || !ocAccount.trim() || ocAccount.trim() !== workspaceStringSetting(workspace, "oc_account")}>
+                  {t(($) => $.workspace.oc_check)}
+                </Button>
+              </div>
+            </div>
+          </SettingsRow>
           <SettingsRow
             label={t(($) => $.workspace.oc_key_label)}
             description={t(($) => $.workspace.oc_key_description)}

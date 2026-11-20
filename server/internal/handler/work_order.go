@@ -27,6 +27,8 @@ type workOrderScope struct {
 	manager   bool
 }
 
+const workOrderPageSize = 20
+
 func (h *Handler) workOrderScope(w http.ResponseWriter, r *http.Request) (workOrderScope, bool) {
 	var scope workOrderScope
 	if isMachineCredentialActor(r) {
@@ -144,6 +146,15 @@ func (h *Handler) ListWorkOrders(w http.ResponseWriter, r *http.Request) {
 	if page > 100000 {
 		page = 100000
 	}
+	pageSize := 50
+	if raw := r.URL.Query().Get("page_size"); raw != "" {
+		var err error
+		pageSize, err = strconv.Atoi(raw)
+		if err != nil || pageSize < 1 || pageSize > 100 {
+			writeError(w, http.StatusBadRequest, "invalid page size")
+			return
+		}
+	}
 	search := strings.TrimSpace(r.URL.Query().Get("search"))
 	if len(search) > 256 {
 		writeError(w, http.StatusBadRequest, "search is too long")
@@ -151,7 +162,7 @@ func (h *Handler) ListWorkOrders(w http.ResponseWriter, r *http.Request) {
 	}
 	rows, err := h.Queries.ListWorkOrders(r.Context(), db.ListWorkOrdersParams{
 		WorkspaceID: scope.workspace, AssigneeID: assignee, Search: search,
-		Limit: 50, Offset: int32((page - 1) * 50),
+		Limit: int32(pageSize), Offset: int32((page - 1) * pageSize),
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to load work orders")
@@ -167,8 +178,16 @@ func (h *Handler) ListWorkOrders(w http.ResponseWriter, r *http.Request) {
 	out := make([]workOrderResponse, len(rows))
 	for i, row := range rows {
 		out[i] = workOrderToResponse(row)
+		if r.URL.Query().Get("summary") == "true" {
+			out[i].Description, out[i].Draft = "", ""
+			out[i].ExecutionPlan = json.RawMessage("null")
+			out[i].BranchOverrides = map[string]string{}
+		}
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"orders": out, "total": total, "can_manage": scope.manager})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"orders": out, "total": total, "can_manage": scope.manager,
+		"page": page, "page_size": pageSize,
+	})
 }
 
 func (h *Handler) loadWorkOrder(w http.ResponseWriter, r *http.Request, scope workOrderScope) (db.WorkOrder, bool) {

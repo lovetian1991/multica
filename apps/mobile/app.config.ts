@@ -70,6 +70,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           : "ai.multica.mobile.dev",
     },
     plugins: [
+      "./plugins/with-android-fbjni.cjs",
       "expo-router",
       [
         "expo-splash-screen",

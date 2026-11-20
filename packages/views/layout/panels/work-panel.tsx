@@ -15,7 +15,8 @@ import type { Project } from "@multica/core/types";
 import { useNavigation } from "../../navigation";
 import { IssueContextMenuProvider } from "../../issues/actions";
 import { useT } from "../../i18n";
-import { PanelBody, PanelHeader, isPathWithin } from "../panel-nav";
+import { PanelBody, PanelHeader, PanelLink, isPathWithin } from "../panel-nav";
+import { FileText } from "@multica/ui/icons";
 import { PinnedSection, usePanelPins } from "./pinned-section";
 import { useKeptActiveItem } from "./sidebar-tree";
 import { ProjectsSection, useIssueIdInTree } from "./work-tree";
@@ -62,6 +63,7 @@ export function KeptRowsRelease() {
 
 export function WorkPanel() {
   const { t } = useT("layout");
+  const { t: settingsT } = useT("settings");
   const p = useWorkspacePaths();
   const { pathname } = useNavigation();
   const wsId = useCurrentWorkspace()?.id;
@@ -132,6 +134,7 @@ export function WorkPanel() {
           through the React tree, and must not reach rememberClickedIssue. */}
       <IssueContextMenuProvider variant="sidebar">
         <PanelBody onClickCapture={rememberClickedIssue}>
+          <ul><PanelLink href={p.workOrders()} label={settingsT(($) => $.work_orders.title)} active={isPathWithin(pathname, p.workOrders())} icon={<FileText />} /></ul>
           {wsId && (
             <ViewsSection
               wsId={wsId}

@@ -42,6 +42,13 @@ export function getCurrentServerUrl(): string {
   return currentServerUrl;
 }
 
+export function getCurrentWebUrl(): string {
+  const configuredWebUrl = process.env.EXPO_PUBLIC_WEB_URL;
+  return currentServerUrl === DEFAULT_SERVER_URL && configuredWebUrl
+    ? normalizeServerUrl(configuredWebUrl)
+    : currentServerUrl;
+}
+
 export function setCurrentServerUrl(rawUrl: string): string {
   const normalized = normalizeServerUrl(rawUrl);
   currentServerUrl = normalized;

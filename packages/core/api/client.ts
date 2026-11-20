@@ -1,7 +1,14 @@
 import type { ZodType } from "zod";
+import { OCConnectionSchema } from "./schemas";
 import {
-  DeliveryProjectSchema, DeliveryProjectsSchema, DeliverySchema, IssueDeliveriesSchema,
-  type Delivery, type DeliveryProject, type SaveDeliveryProjectInput, type RegisterDeliveryInput,
+  OrderSchema, OrdersSchema, PlanSchema, VersionCodeSchema, MembersSchema, SettingsSchema,
+  OrderOptionsSchema, OrderBranchesSchema, VersionBranchesSchema, SyncSchema, SavedSchema, CustomerProjectSchema, type CustomerProject,
+  RootSchema, ConvertSchema, DetailSchema, EMPTY_CODE, orderEndpoint, orderCatalogEndpoint, updateToWire, codeToWire,
+  type OrderTarget, type WorkOrder, type VersionCode, type WorkOrderSettings, type WorkOrderPlan,
+} from "../work-orders/schema";
+import {
+  DeliveryProjectSchema, DeliveryProjectsSchema, DeliverySchema, IssueDeliveriesSchema, DeliveryDefaultsSchema, IntegrateDeliverySchema,
+  type Delivery, type DeliveryProject, type SaveDeliveryProjectInput, type RegisterDeliveryInput, type DeliveryDefaults, type IntegrateDeliveryResponse,
 } from "../vcs/delivery-schema";
 import { AgentRuntimeSchema, EMPTY_RUNTIME } from "../runtimes/schema";
 import type { IssueWakeup, IssueWakeupInput, IssueWakeupSummaryRow, PausedWakeup, SystemWakeup, WakeupRun, WorkspaceSystemWakeup } from "../types/issue-wakeup";
@@ -3238,7 +3245,12 @@ export class ApiClient {
     });
   }
 
-  async updateWorkspace(id: string, data: { name?: string; description?: string; context?: string; settings?: Record<string, unknown>; repos?: WorkspaceRepo[]; issue_prefix?: string; avatar_url?: string; oc_key?: string; clear_oc_key?: boolean; zentao_url?: string; zentao_account?: string; zentao_password?: string; clear_zentao_password?: boolean }): Promise<Workspace> {
+  async checkWorkspaceOC(id: string): Promise<{ connected: boolean }> {
+    const data = await this.fetch<unknown>(`/api/workspaces/${id}/oc/check`, { method: "POST" });
+    return parseWithFallback(data, OCConnectionSchema, { connected: false }, { endpoint: "POST /api/workspaces/:id/oc/check" });
+  }
+
+  async updateWorkspace(id: string, data: { name?: string; description?: string; context?: string; settings?: Record<string, unknown>; repos?: WorkspaceRepo[]; issue_prefix?: string; avatar_url?: string; oc_key?: string; oc_account?: string; clear_oc_key?: boolean; zentao_url?: string; zentao_account?: string; zentao_password?: string; clear_zentao_password?: boolean }): Promise<Workspace> {
     return this.fetch(`/api/workspaces/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -4413,6 +4425,160 @@ export class ApiClient {
     );
   }
 
+  async listWorkOrders(target: OrderTarget, all = false, search = "", page = 1) {
+    const url = orderEndpoint(target, "", new URLSearchParams({ all: String(all), search, page: String(page), page_size: "20", summary: "true" }));
+    const raw = await this.fetch<unknown>(url);
+    return parseWithFallback(raw, OrdersSchema, { orders: [] as WorkOrder[], total: 0, canManage: false, pageSize: 50 }, { endpoint: "GET /api/work-orders" });
+  }
+
+  async getWorkOrder(target: OrderTarget, id: string) {
+    const raw = await this.fetch<unknown>(orderEndpoint(target, `/${encodeURIComponent(id)}`));
+    return parseWithFallback(raw, DetailSchema, null as import("zod").output<typeof DetailSchema> | null, { endpoint: "GET /api/work-orders/{id}" });
+  }
+
+  async saveWorkOrder(target: OrderTarget, order: WorkOrder) {
+    const raw = await this.fetch<unknown>(orderEndpoint(target, `/${encodeURIComponent(order.id)}`), { method: "PUT", body: JSON.stringify(updateToWire(order)) });
+    return parseWithFallback(raw, OrderSchema, null as WorkOrder | null, { endpoint: "PUT /api/work-orders/{id}" });
+  }
+
+  async importWorkOrder(target: OrderTarget, data: {
+    externalId: string; title: string; description: string; assigneeId: string; productVersionId: string;
+  }) {
+    const raw = await this.fetch<unknown>(orderEndpoint(target), {
+      method: "POST", body: JSON.stringify({
+        external_id: data.externalId, title: data.title, description: data.description,
+        assignee_id: data.assigneeId, product_version_id: data.productVersionId,
+      }),
+    });
+    return parseWithFallback(raw, OrderSchema, null as WorkOrder | null, { endpoint: "POST /api/work-orders" });
+  }
+
+  async previewWorkOrder(target: OrderTarget, id: string) {
+    const raw = await this.fetch<unknown>(orderEndpoint(target, `/${encodeURIComponent(id)}/plan`));
+    return parseWithFallback(raw, PlanSchema, null as WorkOrderPlan | null, { endpoint: "GET /api/work-orders/{id}/plan" });
+  }
+
+  async convertWorkOrder(target: OrderTarget, id: string) {
+    const raw = await this.fetch<unknown>(orderEndpoint(target, `/${encodeURIComponent(id)}/convert`), { method: "POST" });
+    return parseWithFallback(raw, ConvertSchema, { issueId: "" }, { endpoint: "POST /api/work-orders/{id}/convert" });
+  }
+
+  async getWorkOrderMembers(target: OrderTarget) {
+    const raw = await this.fetch<unknown>(orderEndpoint(target, "/members"));
+    return parseWithFallback(raw, MembersSchema, { members: [] as { id: string; name: string; email: string }[] }, { endpoint: "GET /api/work-orders/members" });
+  }
+
+  async getWorkOrderOptions(target: OrderTarget) {
+    const raw = await this.fetch<unknown>(orderEndpoint(target, "/options"));
+    return parseWithFallback(raw, OrderOptionsSchema, OrderOptionsSchema.parse({}), { endpoint: "GET /api/work-orders/options" });
+  }
+
+  async listCustomerProjects() {
+    const raw = await this.fetch<unknown>("/api/system/work-orders/projects");
+    return parseWithFallback(raw, OrderOptionsSchema, OrderOptionsSchema.parse({}), { endpoint: "GET /api/system/work-orders/projects" });
+  }
+
+  async createCustomerProject(name: string) {
+    const raw = await this.fetch<unknown>("/api/system/work-orders/projects", {
+      method: "POST", body: JSON.stringify({ name }),
+    });
+    return parseWithFallback(raw, CustomerProjectSchema, null as CustomerProject | null, { endpoint: "POST /api/system/work-orders/projects" });
+  }
+
+  async renameCustomerProject(projectId: string, name: string) {
+    const endpoint = `/api/system/work-orders/projects/${encodeURIComponent(projectId)}`;
+    const raw = await this.fetch<unknown>(endpoint, { method: "PATCH", body: JSON.stringify({ name }) });
+    return parseWithFallback(raw, CustomerProjectSchema, null as CustomerProject | null, { endpoint: `PATCH ${endpoint}` });
+  }
+
+  async deleteCustomerProject(projectId: string) {
+    const endpoint = `/api/system/work-orders/projects/${encodeURIComponent(projectId)}`;
+    const raw = await this.fetch<unknown>(endpoint, { method: "DELETE" });
+    return parseWithFallback(raw, SavedSchema, { saved: false }, { endpoint: `DELETE ${endpoint}` });
+  }
+
+  async getWorkOrderBranches(target: OrderTarget | null, projectId: string) {
+    const raw = await this.fetch<unknown>(orderCatalogEndpoint(target, "/branches", new URLSearchParams({ project_id: projectId })));
+    return parseWithFallback(raw, OrderBranchesSchema, OrderBranchesSchema.parse({}), { endpoint: "GET /api/work-orders/branches" });
+  }
+
+  async getWorkOrderVersionBranches(versionId: string) {
+    const raw = await this.fetch<unknown>(orderCatalogEndpoint(null, "/version-branches", new URLSearchParams({ version_id: versionId })));
+    return parseWithFallback(raw, VersionBranchesSchema, VersionBranchesSchema.parse({}), { endpoint: "GET /api/system/work-orders/version-branches" });
+  }
+
+  async saveWorkOrderBranches(target: OrderTarget, projectId: string, versionId: string, bindings: Record<string, string>) {
+    const raw = await this.fetch<unknown>(orderEndpoint(target, "/branches"), {
+      method: "PUT", body: JSON.stringify({ project_id: projectId, version_id: versionId, bindings }),
+    });
+    return parseWithFallback(raw, SavedSchema, { saved: false }, { endpoint: "PUT /api/work-orders/branches" });
+  }
+
+  async getWorkOrderProjectBaseline(target: OrderTarget | null, versionId: string) {
+    const raw = await this.fetch<unknown>(orderCatalogEndpoint(target, "/project-baseline", new URLSearchParams({ version_id: versionId })));
+    return parseWithFallback(raw, PlanSchema, null as WorkOrderPlan | null, { endpoint: "GET /api/work-orders/project-baseline" });
+  }
+
+  async saveWorkOrderProject(target: OrderTarget | null, projectId: string, versionId: string, refs: Record<string, string>) {
+    const raw = await this.fetch<unknown>(orderCatalogEndpoint(target, "/projects"), {
+      method: "PUT", body: JSON.stringify({ project_id: projectId, version_id: versionId, refs }),
+    });
+    return parseWithFallback(raw, SavedSchema, { saved: false }, { endpoint: "PUT /api/work-orders/projects" });
+  }
+
+  async registerWorkOrderProject(target: OrderTarget, order: WorkOrder, name: string, rememberRefs: boolean) {
+    const raw = await this.fetch<unknown>(orderEndpoint(target, `/${encodeURIComponent(order.id)}/project`), {
+      method: "POST", body: JSON.stringify({ name, remember_refs: rememberRefs, updated_at: order.updatedAt }),
+    });
+    return parseWithFallback(raw, OrderSchema, null as WorkOrder | null, { endpoint: "POST /api/work-orders/{id}/project" });
+  }
+
+  async syncWorkOrders(target: OrderTarget, page = 1) {
+    const raw = await this.fetch<unknown>(orderEndpoint(target, "/sync"), { method: "POST", body: JSON.stringify({ page }) });
+    return parseWithFallback(raw, SyncSchema, null as import("zod").output<typeof SyncSchema> | null, { endpoint: "POST /api/work-orders/sync" });
+  }
+
+  async getWorkOrderSettings(target: OrderTarget) {
+    const raw = await this.fetch<unknown>(orderEndpoint(target, "/settings"));
+    return parseWithFallback(raw, SettingsSchema, {
+      executionProjectId: "", squadId: "", misUrl: "", misCredentialsConfigured: false,
+    } satisfies WorkOrderSettings, { endpoint: "GET /api/work-orders/settings" });
+  }
+
+  async saveWorkOrderSettings(target: OrderTarget, data: WorkOrderSettings & { misCredentials?: string }) {
+    const raw = await this.fetch<unknown>(orderEndpoint(target, "/settings"), {
+      method: "PUT", body: JSON.stringify({
+        execution_project_id: data.executionProjectId, squad_id: data.squadId,
+        mis_url: data.misUrl, mis_credentials: data.misCredentials ?? "",
+      }),
+    });
+    return parseWithFallback(raw, SettingsSchema, null as WorkOrderSettings | null, { endpoint: "PUT /api/work-orders/settings" });
+  }
+
+  async getWorkOrderRoot() {
+    const raw = await this.fetch<unknown>("/api/system/settings/work-orders");
+    return parseWithFallback(raw, RootSchema, { kbRootId: "" }, { endpoint: "GET /api/system/settings/work-orders" });
+  }
+
+  async saveWorkOrderRoot(kbRootId: string) {
+    const raw = await this.fetch<unknown>("/api/system/settings/work-orders", {
+      method: "PUT", body: JSON.stringify({ kb_root_id: kbRootId }),
+    });
+    return parseWithFallback(raw, RootSchema, null as { kbRootId: string } | null, { endpoint: "PUT /api/system/settings/work-orders" });
+  }
+
+  async getVersionCode(productId: string, versionId: string) {
+    const raw = await this.fetch<unknown>(`/api/products/${encodeURIComponent(productId)}/versions/${encodeURIComponent(versionId)}/code`);
+    return parseWithFallback(raw, VersionCodeSchema, EMPTY_CODE, { endpoint: "GET /api/products/{id}/versions/{id}/code" });
+  }
+
+  async saveVersionCode(productId: string, versionId: string, code: VersionCode) {
+    const raw = await this.fetch<unknown>(`/api/system/products/${encodeURIComponent(productId)}/versions/${encodeURIComponent(versionId)}/code`, {
+      method: "PUT", body: JSON.stringify(codeToWire(code)),
+    });
+    return parseWithFallback(raw, VersionCodeSchema, null as VersionCode | null, { endpoint: "PUT /api/system/products/{id}/versions/{id}/code" });
+  }
+
   async getSystemProduct(id: string): Promise<Product> {
     const raw = await this.fetch<unknown>(`/api/system/products/${id}`);
     return parseWithFallback(raw, ProductSchema, { ...EMPTY_PRODUCT, id }, {
@@ -4630,8 +4796,8 @@ export class ApiClient {
     };
   }
 
-  async listWorkspaceProcessTemplates(): Promise<ListProcessTemplatesResponse> {
-    const raw = await this.fetch<unknown>("/api/process-templates");
+  async listWorkspaceProcessTemplates(includeSquads = false): Promise<ListProcessTemplatesResponse> {
+    const raw = await this.fetch<unknown>(`/api/process-templates${includeSquads ? "?include_squads=true" : ""}`);
     return parseWithFallback(
       raw,
       ListProcessTemplatesResponseSchema,
@@ -5591,6 +5757,29 @@ export class ApiClient {
   }
 
   // VCS integration (Forgejo / Gitea / GitLab)
+  async getDeliveryDefaults(workspaceId: string) {
+    const endpoint = `/api/workspaces/${workspaceId}/vcs/delivery-defaults`;
+    const data = parseWithFallback<DeliveryDefaults | null>(
+      await this.fetch(endpoint), DeliveryDefaultsSchema, null, { endpoint },
+    );
+    if (!data) throw new Error("Could not load CI tracking defaults");
+    return data;
+  }
+
+  async saveDeliveryDefaults(workspaceId: string, input: DeliveryDefaults) {
+    const endpoint = `/api/workspaces/${workspaceId}/vcs/delivery-defaults`;
+    const r = input.rules;
+    const data = parseWithFallback<DeliveryDefaults | null>(
+      await this.fetch(endpoint, { method: "PUT", body: JSON.stringify({
+        enabled: input.enabled,
+        rules: { auto_discover: true, deployment_job: r.deploymentJob, pipeline_source: r.pipelineSource,
+          url_prefix: r.urlPrefix, allowed_hosts: r.allowedHosts, timeout_minutes: r.timeoutMinutes },
+      }) }), DeliveryDefaultsSchema, null, { endpoint },
+    );
+    if (!data) throw new Error("Invalid CI tracking defaults response");
+    return data;
+  }
+
   async listDeliveryProjects(workspaceId: string) {
     const endpoint = `/api/workspaces/${workspaceId}/vcs/delivery-projects`;
     const data = parseWithFallback<{ projects: DeliveryProject[] } | null>(
@@ -5607,7 +5796,8 @@ export class ApiClient {
       await this.fetch(endpoint, { method: "POST", body: JSON.stringify({
         connection_id: input.connectionId, project_id: input.projectId,
         rules: { deployment_job: r.deploymentJob, pipeline_source: r.pipelineSource,
-          url_prefix: r.urlPrefix, allowed_hosts: r.allowedHosts, timeout_minutes: r.timeoutMinutes },
+          url_prefix: r.urlPrefix, allowed_hosts: r.allowedHosts, timeout_minutes: r.timeoutMinutes,
+          ...(r.autoDiscover === undefined ? {} : { auto_discover: r.autoDiscover }) },
       }) }), DeliveryProjectSchema, null, { endpoint },
     );
     if (!data) throw new Error("Invalid delivery project response");
@@ -5632,6 +5822,7 @@ export class ApiClient {
     const data = parseWithFallback<Delivery | null>(
       await this.fetch(endpoint, { method: "POST", body: JSON.stringify({
         project_config_id: input.projectConfigId, sha: input.sha, ref: input.ref,
+        repository_url: input.repositoryUrl,
       }) }), DeliverySchema, null, { endpoint },
     );
     if (!data) throw new Error("Invalid delivery response");
@@ -5644,6 +5835,17 @@ export class ApiClient {
       await this.fetch(endpoint, { method: "POST" }), DeliverySchema, null, { endpoint },
     );
     if (!data) throw new Error("Invalid delivery response");
+    return data;
+  }
+
+  async integrateDelivery(issueId: string, deliveryId: string, input: { merge?: boolean; targetRef?: string } = {}) {
+    const endpoint = `/api/issues/${issueId}/deliveries/${deliveryId}/integrate`;
+    const data = parseWithFallback<IntegrateDeliveryResponse | null>(
+      await this.fetch(endpoint, { method: "POST", body: JSON.stringify({
+        merge: input.merge === true, target_ref: input.targetRef,
+      }) }), IntegrateDeliverySchema, null, { endpoint },
+    );
+    if (!data) throw new Error("Invalid integration response");
     return data;
   }
 

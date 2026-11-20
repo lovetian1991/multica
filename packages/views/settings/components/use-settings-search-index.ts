@@ -128,6 +128,11 @@ export function useSettingsSearchIndex(
         description: t(($) => $.composio.page_description),
       },
       // Workspace
+      {
+        tab: "setup",
+        title: t(($) => $.setup.title),
+        description: t(($) => $.setup.search),
+      },
       { tab: "workspace", anchor: "name", title: t(($) => $.workspace.name_label) },
       { tab: "workspace", anchor: "description", title: t(($) => $.workspace.description_label) },
       {

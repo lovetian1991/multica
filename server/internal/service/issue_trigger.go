@@ -17,7 +17,7 @@ const (
 	// is being handed to an agent/squad. Parks silently on backlog.
 	RunSourceAssign RunEnqueueSource = "assign"
 	// RunSourceStatus covers promoting an already-assigned issue out of
-	// backlog into an active status.
+	// backlog or starting idle todo work by moving it to in_progress.
 	RunSourceStatus RunEnqueueSource = "status"
 )
 
@@ -128,6 +128,7 @@ func (s *IssueService) WillEnqueueRun(ctx context.Context, in IssueTriggerInput,
 		return IssueRunTrigger{}, false
 	}
 
+	startingTodo := prevStatus == issuestatus.Todo && currentStatus == issuestatus.InProgress
 	var source RunEnqueueSource
 	switch {
 	case in.IsCreate || in.AssigneeChanged:
@@ -136,7 +137,7 @@ func (s *IssueService) WillEnqueueRun(ctx context.Context, in IssueTriggerInput,
 			return IssueRunTrigger{}, false
 		}
 		source = RunSourceAssign
-	case in.StatusChanged && prevStatus == "backlog" &&
+	case in.StatusChanged && (prevStatus == "backlog" || startingTodo) &&
 		currentStatus != "backlog" &&
 		currentStatus != "done" && currentStatus != "cancelled":
 		if probe.IsSelfLoop != nil && probe.IsSelfLoop() {
@@ -163,6 +164,9 @@ func (s *IssueService) WillEnqueueRun(ctx context.Context, in IssueTriggerInput,
 		// A step entered under the agent's own run queues behind it; one
 		// already queued covers the new step too.
 		if (source == RunSourceStatus || in.EnteredHandoffStep) && s.hasPendingRun(ctx, issue.ID, issue.AssigneeID) {
+			return IssueRunTrigger{}, false
+		}
+		if source == RunSourceStatus && startingTodo && s.hasActiveStartRun(ctx, issue.ID, issue.AssigneeID) {
 			return IssueRunTrigger{}, false
 		}
 		return IssueRunTrigger{
@@ -200,6 +204,9 @@ func (s *IssueService) WillEnqueueRun(ctx context.Context, in IssueTriggerInput,
 		if source == RunSourceStatus && s.hasPendingRun(ctx, issue.ID, squad.LeaderID) {
 			return IssueRunTrigger{}, false
 		}
+		if source == RunSourceStatus && startingTodo && s.hasActiveStartRun(ctx, issue.ID, squad.LeaderID) {
+			return IssueRunTrigger{}, false
+		}
 		return IssueRunTrigger{
 			IssueID:      issue.ID,
 			AgentID:      squad.LeaderID,
@@ -208,6 +215,16 @@ func (s *IssueService) WillEnqueueRun(ctx context.Context, in IssueTriggerInput,
 		}, true
 	}
 	return IssueRunTrigger{}, false
+}
+
+// Starting todo work must not duplicate a run that already advanced past the
+// pending queue, including one paused for a local directory choice.
+func (s *IssueService) hasActiveStartRun(ctx context.Context, issueID, agentID pgtype.UUID) bool {
+	active, err := s.Queries.HasActiveTaskForIssueAndAgent(ctx, db.HasActiveTaskForIssueAndAgentParams{
+		IssueID: issueID,
+		AgentID: agentID,
+	})
+	return active || err != nil
 }
 
 // hasPendingRun reports whether the agent already holds a queued or dispatched

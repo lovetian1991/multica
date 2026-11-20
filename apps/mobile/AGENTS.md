@@ -9,6 +9,7 @@ These rules apply only to `apps/mobile/`, in addition to the [root instructions]
 - Add SDK-aligned native packages with `pnpm exec expo install <package>` from this directory. Check compatibility before adding other dependencies; do not pick versions from memory.
 - Follow [README.md](README.md) for setup, simulator/device builds, and environment variants. Keep iOS scripts routed through `scripts/ios-run.sh`, which prebuilds before running iOS so config plugins are reapplied. Preserve the caller's `APP_ENV`; avoid clean prebuilds in the normal edit loop.
 - Generated `ios/` and `android/` directories are not source. Check new source paths with `git check-ignore -v <path>` when they could match the root ignore rules, particularly `data/`, `build/`, and `bin/`.
+- Persist Android native configuration fixes in Expo config plugins. Include local Android plugins in `scripts/android-build.mjs` native fingerprint inputs so cached builds reapply plugin changes.
 
 ## Behavioral Parity
 
